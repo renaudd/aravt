@@ -1,318 +1,635 @@
 import 'dart:math';
 import 'package:aravt/models/soldier_action.dart';
-import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/soldier_data.dart';
-
+import 'package:aravt/models/social_interaction_data.dart';
+import 'package:aravt/models/game_event.dart';
+import 'package:aravt/providers/game_state.dart';
+import 'package:aravt/services/unassigned_actions_helpers/zodiac_helper.dart';
+import 'package:aravt/services/unassigned_actions_helpers/social_helper.dart';
+import 'package:aravt/services/unassigned_actions_helpers/proselytize_helper.dart';
+import 'package:aravt/services/unassigned_actions_helpers/gossip_helper.dart';
+import 'package:aravt/services/unassigned_actions_helpers/advice_helper.dart';
 
 /// Service to handle all of Step 4: Unassigned Soldier Actions
+/// This is the core system that drives emergent social dynamics in the horde
 class UnassignedActionsService {
- final Random _random = Random();
+  final Random _random = Random();
 
+  /// Main entry point. Resolves unassigned actions for all soldiers.
+  Future<void> resolveUnassignedActions(GameState gameState) async {
+    print("Step 4: Resolving unassigned soldier actions...");
 
- /// Main entry point. Resolves unassigned actions for all soldiers.
- Future<void> resolveUnassignedActions(GameState gameState) async {
-   print("Step 4: Resolving unassigned soldier actions...");
+    List<Soldier> allSoldiers = gameState.horde;
+    List<Soldier> soldiersToProcess = List.from(allSoldiers);
+    List<Soldier> processedSoldiers = [];
 
+    // --- Resolve plot-driven actions first (sorted by priority) ---
+    List<Soldier> plotDrivenSoldiers = soldiersToProcess
+        .where((s) => s.plotDrivenActionPriority != null)
+        .toList();
+    plotDrivenSoldiers.sort((a, b) =>
+        a.plotDrivenActionPriority!.compareTo(b.plotDrivenActionPriority!));
 
-   List<Soldier> allSoldiers = gameState.horde; // Get all soldiers
-   List<Soldier> soldiersToProcess = List.from(allSoldiers);
-   List<Soldier> processedSoldiers = [];
+    for (Soldier soldier in plotDrivenSoldiers) {
+      if (processedSoldiers.contains(soldier)) continue;
 
+      // Plot-driven actions would be handled here
+      // For now, just mark as processed
+      processedSoldiers.add(soldier);
+    }
 
-   // --- 4.l: Resolve plot-driven actions first ---
-   // (We'll need a way to flag soldiers with plot actions)
-   // ...
+    // --- Process remaining soldiers in random order ---
+    soldiersToProcess.shuffle(_random);
 
+    for (Soldier soldier in soldiersToProcess) {
+      if (processedSoldiers.contains(soldier)) {
+        continue; // Soldier was involved in another action
+      }
 
-   // --- Process remaining soldiers in random order ---
-   soldiersToProcess.shuffle(_random);
+      // 1. Generate the "event chart" for this soldier
+      List<SoldierActionProposal> actionTable =
+          _generateActionTable(soldier, gameState);
 
+      // 2. Select and execute one action from the chart
+      SoldierActionProposal chosenAction = _selectAction(actionTable);
 
-   for (Soldier soldier in soldiersToProcess) {
-     if (processedSoldiers.contains(soldier)) {
-       continue; // Soldier was involved in another action and "used" their turn
-     }
+      // 3. Execute the action
+      await _executeAction(chosenAction, gameState, processedSoldiers);
 
+      processedSoldiers.add(soldier);
+    }
+  }
 
-     // 1. Generate the "event chart" for this soldier
-     List<SoldierActionProposal> actionTable =
-         _generateActionTable(soldier, gameState);
+  /// 1. Generates the weighted "event chart" for a single soldier
+  List<SoldierActionProposal> _generateActionTable(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> table = [];
 
+    // --- Hostile Actions (Fight, Murder) ---
+    table.addAll(_generateHostileActions(soldier, gameState));
 
-     // 2. Select and execute one action from the chart
-     SoldierActionProposal chosenAction = _selectAction(actionTable);
+    // --- Social Interactions ---
+    table.addAll(_generateSocialActions(soldier, gameState));
 
+    // --- Zodiac Interactions ---
+    table.addAll(_generateZodiacActions(soldier, gameState));
 
-     // 3. Execute the action
-     await _executeAction(chosenAction, gameState, processedSoldiers);
-    
-     processedSoldiers.add(soldier);
-   }
- }
+    // --- Proselytize ---
+    table.addAll(_generateProselytizeActions(soldier, gameState));
 
+    // --- Gossip ---
+    table.addAll(_generateGossipActions(soldier, gameState));
 
- /// 1. Generates the weighted "event chart" for a single soldier
- List<SoldierActionProposal> _generateActionTable(
-     Soldier soldier, GameState gameState) {
-   List<SoldierActionProposal> table = [];
+    // --- Give Advice ---
+    table.addAll(_generateAdviceActions(soldier, gameState));
 
+    // --- Trait-Based Actions ---
+    table.addAll(_generateTraitActions(soldier, gameState));
 
-   // --- 4: Barter ---
-   table.addAll(_generateBarterActions(soldier, gameState));
+    // --- Gifting ---
+    table.addAll(_generateGiftingActions(soldier, gameState));
 
+    // --- Divulge Info (Default for player's aravt/captains) ---
+    table.addAll(_generateDivulgeInfoActions(soldier, gameState));
 
-   // --- 4.a: Hostile Actions (Fight, Murder) ---
-   table.addAll(_generateHostileActions(soldier, gameState));
+    // Add a default "Idle" action with baseline probability
+    table.add(SoldierActionProposal(
+        actionType: UnassignedActionType.idle,
+        soldier: soldier,
+        probability: 5.0)); // Higher weight for idle
 
+    return table;
+  }
 
-   // --- 4.b: Lodge Request ---
-   table.addAll(_generateRequestActions(soldier, gameState));
-  
-   // --- 4.c / 4.c.1: Social Interaction (Insult, Compliment, Zodiac) ---
-   table.addAll(_generateSocialActions(soldier, gameState));
+  /// 2. Selects one action based on weighted probabilities
+  SoldierActionProposal _selectAction(List<SoldierActionProposal> actionTable) {
+    if (actionTable.isEmpty) {
+      throw Exception("Action table was empty.");
+    }
 
+    double totalWeight =
+        actionTable.fold(0.0, (prev, e) => prev + e.probability);
+    double roll = _random.nextDouble() * totalWeight;
 
-   // --- 4.d: Responsive Action (Mourning, etc.) ---
-   table.addAll(_generateResponsiveActions(soldier, gameState));
+    double cumulativeWeight = 0.0;
+    for (var proposal in actionTable) {
+      cumulativeWeight += proposal.probability;
+      if (roll <= cumulativeWeight) {
+        return proposal;
+      }
+    }
+    return actionTable.last; // Fallback
+  }
 
-
-   // --- 4.e, 4.f, 4.g, 4.h: Trait-Based Actions ---
-   table.addAll(_generateTraitActions(soldier, gameState));
-
-
-   // --- 4.i: Proselytize ---
-   table.addAll(_generateProselytizeActions(soldier, gameState));
-
-
-   // --- 4.j: Gossip ---
-   table.addAll(_generateGossipActions(soldier, gameState));
-  
-   // --- 4.k: Give Advice ---
-   table.addAll(_generateAdviceActions(soldier, gameState));
-
-
-   // --- 4.m: Spread Disease ---
-   table.addAll(_generateDiseaseActions(soldier, gameState));
-  
-   // --- 4.n: Gifting ---
-   table.addAll(_generateGiftingActions(soldier, gameState));
-
-
-   // --- 4.o: Divulge Info (Default for player's Aravt) ---
-   table.addAll(_generateDivulgeInfoActions(soldier, gameState));
-
-
-   // Add a default "Idle" action with a low probability
-   table.add(SoldierActionProposal(
-       actionType: UnassignedActionType.idle,
-       soldier: soldier,
-       probability: 1.0)); // Always have at least one option
-
-
-   return table;
- }
-
-
- /// 2. Selects one action based on weighted probabilities
- SoldierActionProposal _selectAction(List<SoldierActionProposal> actionTable) {
-   if (actionTable.isEmpty) {
-     throw Exception("Action table was empty.");
-   }
-
-
-   double totalWeight =
-       actionTable.fold(0.0, (prev, e) => prev + e.probability);
-   double roll = _random.nextDouble() * totalWeight;
-
-
-   double cumulativeWeight = 0.0;
-   for (var proposal in actionTable) {
-     cumulativeWeight += proposal.probability;
-     if (roll <= cumulativeWeight) {
-       return proposal;
-     }
-   }
-   return actionTable.last; // Fallback
- }
-
-
- /// 3. Executes the chosen action
- Future<void> _executeAction(SoldierActionProposal action,
-     GameState gameState, List<Soldier> processedSoldiers) async {
-      
-   // --- 4.l: Check for multi-soldier actions and add them to processed list
-   if (action.targetSoldierId != null) {
-     final targetSoldier = gameState.findSoldierById(action.targetSoldierId!);
-     if (targetSoldier != null) {
-        // This action consumes the target's turn as well
+  /// 3. Executes the chosen action
+  Future<void> _executeAction(SoldierActionProposal action, GameState gameState,
+      List<Soldier> processedSoldiers) async {
+    // Mark target as processed if this is a multi-soldier action
+    if (action.targetSoldierId != null) {
+      final targetSoldier = gameState.findSoldierById(action.targetSoldierId!);
+      if (targetSoldier != null && !processedSoldiers.contains(targetSoldier)) {
         processedSoldiers.add(targetSoldier);
-     }
-   }
+      }
+    }
 
+    // Execute based on action type
+    switch (action.actionType) {
+      case UnassignedActionType.socialInteraction:
+        _executeSocialInteraction(action, gameState);
+        break;
+      case UnassignedActionType.zodiacInteraction:
+        _executeZodiacInteraction(action, gameState);
+        break;
+      case UnassignedActionType.proselytize:
+        _executeProselytize(action, gameState);
+        break;
+      case UnassignedActionType.gossip:
+        _executeGossip(action, gameState);
+        break;
+      case UnassignedActionType.giveAdvice:
+        _executeAdvice(action, gameState);
+        break;
+      case UnassignedActionType.giftItem:
+        _executeGift(action, gameState);
+        break;
+      case UnassignedActionType.divulgeInfoToPlayer:
+        _executeDivulgeInfo(action, gameState);
+        break;
+      case UnassignedActionType.tendHorses:
+        _executeTendHorses(action, gameState);
+        break;
+      case UnassignedActionType.playGame:
+        _executePlayGame(action, gameState);
+        break;
+      case UnassignedActionType.idle:
+      default:
+        // Do nothing
+        break;
+    }
+  }
 
-   // TODO: Implement logic for each action type
-   switch (action.actionType) {
-     case UnassignedActionType.barter:
-       print("ACTION: ${action.soldier.name} tries to barter with ${action.targetSoldierId}...");
-       break;
-     case UnassignedActionType.startFight:
-       print("ACTION: ${action.soldier.name} starts a fight with ${action.targetSoldierId}!");
-       break;
-     case UnassignedActionType.murderAttempt:
-       print("ACTION: ${action.soldier.name} attempts to murder ${action.targetSoldierId}!");
-       break;
-     case UnassignedActionType.lodgeRequest:
-       print("ACTION: ${action.soldier.name} lodges a request with the player.");
-       break;
-     case UnassignedActionType.socialInteraction:
-       print("ACTION: ${action.soldier.name} has a social interaction with ${action.targetSoldierId}.");
-       break;
-     case UnassignedActionType.gossip:
-       print("ACTION: ${action.soldier.name} gossips with ${action.targetSoldierId}.");
-       break;
-     case UnassignedActionType.giveAdvice:
-       print("ACTION: ${action.soldier.name} gives advice to ${action.targetSoldierId}.");
-       break;
-     case UnassignedActionType.proselytize:
-       print("ACTION: ${action.soldier.name} proselytizes to ${action.targetSoldierId}.");
-       break;
-     case UnassignedActionType.giftItem:
-       print("ACTION: ${action.soldier.name} gives a gift to ${action.targetSoldierId}.");
-       break;
-     case UnassignedActionType.traitActionSurgeon:
-       print("ACTION: ${action.soldier.name} (Surgeon) cuts hair.");
-       break;
-     case UnassignedActionType.traitActionFalconer:
-       print("ACTION: ${action.soldier.name} (Falconer) baits birds.");
-       break;
-     case UnassignedActionType.tendHorses:
-       print("ACTION: ${action.soldier.name} tends to their horses.");
-       break;
-     case UnassignedActionType.playGame:
-       print("ACTION: ${action.soldier.name} plays a game with ${action.targetSoldierId}.");
-       break;
-     case UnassignedActionType.responsiveAction:
-       print("ACTION: ${action.soldier.name} performs a responsive action (e.g., mourning).");
-       break;
-     case UnassignedActionType.spreadDisease:
-       print("ACTION: ${action.soldier.name} (sick) spreads their disease...");
-       break;
-     case UnassignedActionType.divulgeInfoToPlayer:
-       print("ACTION: ${action.soldier.name} tells the player a piece of information.");
-       break;
-     case UnassignedActionType.idle:
-     default:
-       print("ACTION: ${action.soldier.name} does nothing in particular.");
-       break;
-   }
- }
+  // --- ACTION GENERATION METHODS ---
 
+  List<SoldierActionProposal> _generateHostileActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
 
- // --- STUBS FOR ACTION GENERATION ---
- // Each of these will return a (potentially empty) list of proposals
+    // Check all relationships for low admiration
+    for (var entry in soldier.hordeRelationships.entries) {
+      if (entry.value.admiration <= 1.0) {
+        Soldier? target = gameState.findSoldierById(entry.key);
+        if (target == null) continue;
 
+        // Calculate hostility probability (increases as admiration approaches 0)
+        double hostilityProb =
+            (1.0 - entry.value.admiration) * 0.05; // Up to 5%
 
- List<SoldierActionProposal> _generateBarterActions(
-     Soldier soldier, GameState gameState) {
-   // 4: Check if soldier wants something.
-   // Return List<SoldierActionProposal(actionType: UnassignedActionType.barter, ...)>
-   return [];
- }
+        // Check if murder attempts are allowed
+        bool canMurderPlayer = _canAttemptMurderOnPlayer(target, gameState);
 
+        if (target.isPlayer && !canMurderPlayer) {
+          // Can only fight player, not murder (yet)
+          actions.add(SoldierActionProposal(
+            actionType: UnassignedActionType.startFight,
+            soldier: soldier,
+            probability: hostilityProb,
+            targetSoldierId: target.id,
+          ));
+        } else {
+          // Can attempt murder (higher probability for lower admiration)
+          double murderProb =
+              hostilityProb * (entry.value.admiration < 0.5 ? 2.0 : 1.0);
 
- List<SoldierActionProposal> _generateHostileActions(
-     Soldier soldier, GameState gameState) {
-   // 4.a: Loop relationships. If admiration <= 1, add fight/murder proposals.
-   // Likelihood increases closer to 0. No murder until turn 8.
-   return [];
- }
+          actions.add(SoldierActionProposal(
+            actionType: UnassignedActionType.murderAttempt,
+            soldier: soldier,
+            probability: murderProb,
+            targetSoldierId: target.id,
+          ));
+        }
+      }
+    }
 
+    return actions;
+  }
 
- List<SoldierActionProposal> _generateRequestActions(
-     Soldier soldier, GameState gameState) {
-   // 4.b: Check for grievances.
-   return [];
- }
+  bool _canAttemptMurderOnPlayer(Soldier target, GameState gameState) {
+    if (!target.isPlayer) return true; // Can always murder non-players
 
+    int turnThreshold;
+    switch (gameState.difficulty) {
+      case 'easy':
+        turnThreshold = 21; // May 12
+        break;
+      case 'hard':
+        turnThreshold = 14; // May 5
+        break;
+      default: // medium
+        turnThreshold = 17; // May 8
+    }
 
- List<SoldierActionProposal> _generateSocialActions(
-     Soldier soldier, GameState gameState) {
-   // 4.c & 4.c.1: 1-2% chance of random social interaction.
-   // Check Zodiac animosity/camaraderie.
-   return [];
- }
+    return gameState.turn.turnNumber >= turnThreshold;
+  }
 
+  List<SoldierActionProposal> _generateSocialActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
 
- List<SoldierActionProposal> _generateResponsiveActions(
-     Soldier soldier, GameState gameState) {
-   // 4.d: Check for recent events (e.g., death of yurt-mate).
-   return [];
- }
+    // Get potential targets (aravt mates and random horde members)
+    List<Soldier> aravtMates = gameState.horde
+        .where((s) => s.aravt == soldier.aravt && s.id != soldier.id)
+        .toList();
+    List<Soldier> otherSoldiers = gameState.horde
+        .where((s) => s.aravt != soldier.aravt && s.id != soldier.id)
+        .toList();
 
+    // Aravt mate interactions (2% base)
+    for (var mate in aravtMates) {
+      double prob = SocialHelper.getSocialInteractionProbability(
+          soldier, mate, gameState);
+      actions.add(SoldierActionProposal(
+        actionType: UnassignedActionType.socialInteraction,
+        soldier: soldier,
+        probability: prob,
+        targetSoldierId: mate.id,
+      ));
+    }
 
- List<SoldierActionProposal> _generateTraitActions(
-     Soldier soldier, GameState gameState) {
-   // 4.e, 4.f, 4.g, 4.h: Check traits.
-   List<SoldierActionProposal> actions = [];
-   if (soldier.specialSkills.contains(SpecialSkill.surgeon)) {
-     // actions.add(...)
-   }
-   if (soldier.specialSkills.contains(SpecialSkill.falconer)) {
-     // actions.add(...)
-   }
-   // 4.g: All soldiers have a chance to tend horses.
-   // actions.add(SoldierActionProposal(
-   //   actionType: UnassignedActionType.tendHorses,
-   //   soldier: soldier,
-   //   probability: 0.5 + (soldier.animalHandling * 0.1)
-   // ));
-   // 4.h: All soldiers can play games.
-   return actions;
- }
+    // Random horde member interactions (1% base)
+    if (otherSoldiers.isNotEmpty) {
+      Soldier randomTarget =
+          otherSoldiers[_random.nextInt(otherSoldiers.length)];
+      double prob = SocialHelper.getSocialInteractionProbability(
+          soldier, randomTarget, gameState);
+      actions.add(SoldierActionProposal(
+        actionType: UnassignedActionType.socialInteraction,
+        soldier: soldier,
+        probability: prob,
+        targetSoldierId: randomTarget.id,
+      ));
+    }
 
+    return actions;
+  }
 
- List<SoldierActionProposal> _generateProselytizeActions(
-     Soldier soldier, GameState gameState) {
-   // 4.i: Check for fervor.
-   return [];
- }
+  List<SoldierActionProposal> _generateZodiacActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
 
+    // Check for zodiac-based interactions with all horde members
+    for (var other in gameState.horde) {
+      if (other.id == soldier.id) continue;
 
- List<SoldierActionProposal> _generateGossipActions(
-     Soldier soldier, GameState gameState) {
-   // 4.j: Check for 'Gossip' trait.
-   return [];
- }
+      if (ZodiacHelper.shouldZodiacInteractionOccur(
+          soldier.zodiac, other.zodiac, _random.nextDouble())) {
+        actions.add(SoldierActionProposal(
+          actionType: UnassignedActionType.zodiacInteraction,
+          soldier: soldier,
+          probability: 0.01, // 1% baseline
+          targetSoldierId: other.id,
+        ));
+      }
+    }
 
+    return actions;
+  }
 
- List<SoldierActionProposal> _generateAdviceActions(
-     Soldier soldier, GameState gameState) {
-   // 4.k: Check for 'Mentor' trait or high stats.
-   return [];
- }
+  List<SoldierActionProposal> _generateProselytizeActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
 
+    double baseProb = ProselytizeHelper.getProselytizeProbability(soldier);
+    if (baseProb == 0.0) return actions;
 
- List<SoldierActionProposal> _generateDiseaseActions(
-     Soldier soldier, GameState gameState) {
-   // 4.m: Check if soldier is contagious.
-   return [];
- }
+    // Select random targets from horde
+    List<Soldier> potentialTargets =
+        gameState.horde.where((s) => s.id != soldier.id).toList();
 
+    if (potentialTargets.isNotEmpty) {
+      // Try to convert 1-2 random people
+      int targetCount = _random.nextInt(2) + 1;
+      potentialTargets.shuffle(_random);
 
- List<SoldierActionProposal> _generateGiftingActions(
-     Soldier soldier, GameState gameState) {
-   // 4.n: Check for birthdays or high admiration.
-   return [];
- }
+      for (int i = 0; i < targetCount && i < potentialTargets.length; i++) {
+        actions.add(SoldierActionProposal(
+          actionType: UnassignedActionType.proselytize,
+          soldier: soldier,
+          probability: baseProb,
+          targetSoldierId: potentialTargets[i].id,
+        ));
+      }
+    }
 
+    return actions;
+  }
 
- List<SoldierActionProposal> _generateDivulgeInfoActions(
-     Soldier soldier, GameState gameState) {
-   // 4.o: Check if soldier is in player's aravt or a captain.
-   // Calculate probability based on horde size.
-   return [];
- }
+  List<SoldierActionProposal> _generateGossipActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
+
+    double baseProb = GossipHelper.getGossipProbability(soldier);
+
+    // Gossip with aravt mates or random horde members
+    List<Soldier> potentialTargets =
+        gameState.horde.where((s) => s.id != soldier.id).toList();
+
+    if (potentialTargets.isNotEmpty && soldier.knownInformation.isNotEmpty) {
+      potentialTargets.shuffle(_random);
+      Soldier target = potentialTargets.first;
+
+      actions.add(SoldierActionProposal(
+        actionType: UnassignedActionType.gossip,
+        soldier: soldier,
+        probability: baseProb,
+        targetSoldierId: target.id,
+      ));
+    }
+
+    return actions;
+  }
+
+  List<SoldierActionProposal> _generateAdviceActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
+
+    double baseProb = AdviceHelper.getAdviceProbability(soldier);
+
+    // Give advice to aravt mates or those with good relationships
+    List<Soldier> potentialTargets =
+        gameState.horde.where((s) => s.id != soldier.id).toList();
+
+    if (potentialTargets.isNotEmpty) {
+      potentialTargets.shuffle(_random);
+      Soldier target = potentialTargets.first;
+
+      actions.add(SoldierActionProposal(
+        actionType: UnassignedActionType.giveAdvice,
+        soldier: soldier,
+        probability: baseProb,
+        targetSoldierId: target.id,
+      ));
+    }
+
+    return actions;
+  }
+
+  List<SoldierActionProposal> _generateTraitActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
+
+    // Horse tending (all soldiers)
+    double horseTendProb = 0.1 + (soldier.animalHandling / 100.0);
+    actions.add(SoldierActionProposal(
+      actionType: UnassignedActionType.tendHorses,
+      soldier: soldier,
+      probability: horseTendProb,
+    ));
+
+    // Game playing (based on skills)
+    double gameProb =
+        0.05 + (soldier.intelligence / 200.0) + (soldier.courage / 200.0);
+    actions.add(SoldierActionProposal(
+      actionType: UnassignedActionType.playGame,
+      soldier: soldier,
+      probability: gameProb,
+    ));
+
+    return actions;
+  }
+
+  List<SoldierActionProposal> _generateGiftingActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
+
+    // Check for birthdays or high admiration targets
+    for (var other in gameState.horde) {
+      if (other.id == soldier.id) continue;
+
+      bool isBirthday = (other.dateOfBirth.month == gameState.gameDate.month &&
+          other.dateOfBirth.day == gameState.gameDate.day);
+
+      final rel = soldier.getRelationship(other.id);
+
+      if (isBirthday || rel.admiration >= 4.0) {
+        double giftProb = isBirthday ? 0.3 : (rel.admiration - 3.0) * 0.05;
+
+        // Only gift if soldier has items
+        if (soldier.personalInventory.isNotEmpty) {
+          actions.add(SoldierActionProposal(
+            actionType: UnassignedActionType.giftItem,
+            soldier: soldier,
+            probability: giftProb,
+            targetSoldierId: other.id,
+          ));
+        }
+      }
+    }
+
+    return actions;
+  }
+
+  List<SoldierActionProposal> _generateDivulgeInfoActions(
+      Soldier soldier, GameState gameState) {
+    List<SoldierActionProposal> actions = [];
+
+    // Only for player's aravt members or captains
+    bool isInPlayerAravt =
+        gameState.player != null && soldier.aravt == gameState.player!.aravt;
+    bool isCaptain = soldier.role == SoldierRole.aravtCaptain;
+
+    if (!isInPlayerAravt && !isCaptain) return actions;
+
+    // Calculate probability based on horde size
+    int hordeSize = gameState.horde.length;
+    double baseProb = 0.6; // 60% at start
+
+    if (hordeSize >= 400) {
+      baseProb = 0.05; // 5% for large hordes
+    } else if (hordeSize >= 200) {
+      baseProb = 0.2; // 20% for medium hordes
+    } else if (hordeSize >= 100) {
+      baseProb = 0.4; // 40% for growing hordes
+    }
+
+    actions.add(SoldierActionProposal(
+      actionType: UnassignedActionType.divulgeInfoToPlayer,
+      soldier: soldier,
+      probability: baseProb,
+    ));
+
+    return actions;
+  }
+
+  // --- ACTION EXECUTION METHODS ---
+
+  void _executeSocialInteraction(
+      SoldierActionProposal action, GameState gameState) {
+    if (action.targetSoldierId == null) return;
+
+    Soldier? target = gameState.findSoldierById(action.targetSoldierId!);
+    if (target == null) return;
+
+    SocialInteractionType type =
+        SocialHelper.selectInteractionType(action.soldier, target, gameState);
+
+    SocialHelper.executeSocialInteraction(
+        action.soldier, target, type, gameState);
+
+    String description = SocialHelper.generateInteractionDescription(
+        action.soldier, target, type);
+
+    gameState.logEvent(description,
+        category: EventCategory.general, severity: EventSeverity.low);
+  }
+
+  void _executeZodiacInteraction(
+      SoldierActionProposal action, GameState gameState) {
+    if (action.targetSoldierId == null) return;
+
+    Soldier? target = gameState.findSoldierById(action.targetSoldierId!);
+    if (target == null) return;
+
+    bool isPositive = ZodiacHelper.isZodiacInteractionPositive(
+        action.soldier, target, _random.nextDouble());
+
+    final rel = target.getRelationship(action.soldier.id);
+    double modifier = ZodiacHelper.getCompatibilityModifier(
+        action.soldier.zodiac, target.zodiac);
+
+    if (isPositive) {
+      rel.updateAdmiration(0.1 * modifier);
+      rel.updateRespect(0.05 * modifier);
+      gameState.logEvent(
+          "${action.soldier.name} and ${target.name} bonded over their zodiac compatibility.",
+          category: EventCategory.general,
+          severity: EventSeverity.low);
+    } else {
+      rel.updateAdmiration(-0.1 * modifier);
+      gameState.logEvent(
+          "${action.soldier.name} and ${target.name} clashed due to zodiac incompatibility.",
+          category: EventCategory.general,
+          severity: EventSeverity.low);
+    }
+  }
+
+  void _executeProselytize(SoldierActionProposal action, GameState gameState) {
+    if (action.targetSoldierId == null) return;
+
+    Soldier? target = gameState.findSoldierById(action.targetSoldierId!);
+    if (target == null) return;
+
+    Map<String, dynamic> result = ProselytizeHelper.executeProselytization(
+        action.soldier, target, gameState);
+
+    String description = ProselytizeHelper.generateProselytizationDescription(
+        action.soldier, target, result);
+
+    gameState.logEvent(description,
+        category: EventCategory.general,
+        severity: result['success'] ? EventSeverity.high : EventSeverity.low);
+  }
+
+  void _executeGossip(SoldierActionProposal action, GameState gameState) {
+    if (action.targetSoldierId == null) return;
+
+    Soldier? target = gameState.findSoldierById(action.targetSoldierId!);
+    if (target == null) return;
+
+    Map<String, InformationPiece?> result =
+        GossipHelper.executeGossip(action.soldier, target, gameState);
+
+    String description =
+        GossipHelper.generateGossipDescription(action.soldier, target, result);
+
+    if (result['shared'] != null) {
+      gameState.logEvent(description,
+          category: EventCategory.general, severity: EventSeverity.low);
+    }
+  }
+
+  void _executeAdvice(SoldierActionProposal action, GameState gameState) {
+    if (action.targetSoldierId == null) return;
+
+    Soldier? target = gameState.findSoldierById(action.targetSoldierId!);
+    if (target == null) return;
+
+    Map<String, dynamic> result =
+        AdviceHelper.executeAdvice(action.soldier, target, gameState);
+
+    String description =
+        AdviceHelper.generateAdviceDescription(action.soldier, target, result);
+
+    gameState.logEvent(description,
+        category: EventCategory.general,
+        severity:
+            result['gain'] != null ? EventSeverity.high : EventSeverity.low);
+  }
+
+  void _executeGift(SoldierActionProposal action, GameState gameState) {
+    if (action.targetSoldierId == null) return;
+
+    Soldier? target = gameState.findSoldierById(action.targetSoldierId!);
+    if (target == null || action.soldier.personalInventory.isEmpty) return;
+
+    // Select a random item to gift
+    var item = action.soldier.personalInventory[
+        _random.nextInt(action.soldier.personalInventory.length)];
+
+    // Remove from giver, add to receiver
+    action.soldier.personalInventory.remove(item);
+    target.personalInventory.add(item);
+
+    // Relationship boost
+    final rel = target.getRelationship(action.soldier.id);
+    rel.updateAdmiration(0.2);
+    rel.updateRespect(0.1);
+
+    gameState.logEvent(
+        "${action.soldier.name} gave ${item.name} to ${target.name} as a gift.",
+        category: EventCategory.general,
+        severity: EventSeverity.low);
+  }
+
+  void _executeDivulgeInfo(SoldierActionProposal action, GameState gameState) {
+    // Generate random information for the player
+    String info = _generateRandomInformation(action.soldier, gameState);
+
+    gameState.logEvent("${action.soldier.name} told you: $info",
+        category: EventCategory.general, severity: EventSeverity.low);
+  }
+
+  void _executeTendHorses(SoldierActionProposal action, GameState gameState) {
+    // Placeholder - could affect horse health/morale in future
+    // For now, just a minor event
+    if (_random.nextDouble() < 0.1) {
+      // 10% chance to log
+      gameState.logEvent(
+          "${action.soldier.name} spent time tending to the horses.",
+          category: EventCategory.general,
+          severity: EventSeverity.low);
+    }
+  }
+
+  void _executePlayGame(SoldierActionProposal action, GameState gameState) {
+    // Placeholder - could trigger mini-tournaments in future
+    if (_random.nextDouble() < 0.1) {
+      // 10% chance to log
+      gameState.logEvent(
+          "${action.soldier.name} organized a pickup game with some soldiers.",
+          category: EventCategory.games,
+          severity: EventSeverity.low);
+    }
+  }
+
+  String _generateRandomInformation(Soldier soldier, GameState gameState) {
+    List<String> infoTemplates = [
+      "The weather is changing.",
+      "I heard rumors of bandits to the east.",
+      "The horses seem restless today.",
+      "Some of the men are getting tired of rice.",
+      "I think we should scout ahead before moving.",
+    ];
+
+    return infoTemplates[_random.nextInt(infoTemplates.length)];
+  }
 }
-
-
-

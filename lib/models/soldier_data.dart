@@ -5,6 +5,8 @@ import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/aravt_models.dart';
 import 'package:aravt/models/inventory_item.dart';
+import 'package:aravt/models/social_interaction_data.dart';
+import 'package:aravt/models/disease_data.dart';
 import 'package:flutter/material.dart'; // For Color
 import 'package:aravt/game_data/item_templates.dart';
 
@@ -378,6 +380,12 @@ class Soldier {
   List<AravtDuty> despisedDuties;
   Set<String> usedDialogueTopics = {};
 
+  // Unassigned Actions System fields
+  List<SocialInteractionHistory> socialHistory = [];
+  List<InformationPiece> knownInformation = [];
+  Disease? currentDisease;
+  int? plotDrivenActionPriority; // Lower number = higher priority
+
   double get suppliesWealth {
     double itemWealth = personalInventory
         .where((item) => item.valueType == ValueType.Supply)
@@ -569,6 +577,10 @@ class Soldier {
         'queuedListenItem': queuedListenItem?.toJson(),
         'preferredDuties': preferredDuties.map((d) => d.name).toList(),
         'despisedDuties': despisedDuties.map((d) => d.name).toList(),
+        'socialHistory': socialHistory.map((h) => h.toJson()).toList(),
+        'knownInformation': knownInformation.map((i) => i.toJson()).toList(),
+        'currentDisease': currentDisease?.toJson(),
+        'plotDrivenActionPriority': plotDrivenActionPriority,
       };
 
   factory Soldier.fromJson(Map<String, dynamic> json) {
@@ -667,7 +679,17 @@ class Soldier {
       ..rightArmHealthCurrent = json['rightArmHealthCurrent']
       ..leftArmHealthCurrent = json['leftArmHealthCurrent']
       ..rightLegHealthCurrent = json['rightLegHealthCurrent']
-      ..leftLegHealthCurrent = json['leftLegHealthCurrent'];
+      ..leftLegHealthCurrent = json['leftLegHealthCurrent']
+      ..socialHistory = (json['socialHistory'] as List? ?? [])
+          .map((h) => SocialInteractionHistory.fromJson(h))
+          .toList()
+      ..knownInformation = (json['knownInformation'] as List? ?? [])
+          .map((i) => InformationPiece.fromJson(i))
+          .toList()
+      ..currentDisease = json['currentDisease'] != null
+          ? Disease.fromJson(json['currentDisease'])
+          : null
+      ..plotDrivenActionPriority = json['plotDrivenActionPriority'];
   }
 
   RelationshipValues getRelationship(int soldierId) {
