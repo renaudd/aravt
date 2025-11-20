@@ -69,6 +69,8 @@ class GameState with ChangeNotifier {
   // [GEMINI-NEW] Notification Badge Tracking
   Set<String> viewedReportTabs = {};
   bool hasPendingTradeOffer = false;
+  int? pendingTradeCaptainId; // [GEMINI-NEW] Store captain ID for trade offer
+  int? pendingTradeSoldierId; // [GEMINI-NEW] Store soldier ID for trade offer
 
   // [GEMINI-NEW] Tutorial Persistence
   bool tutorialCompleted = false;
@@ -510,6 +512,14 @@ class GameState with ChangeNotifier {
     if (eventLog.length > 1000) {
       eventLog.removeLast();
     }
+
+    // [GEMINI-FIX] If this is a critical event, remove the tab from viewed list
+    // so the badge reappears (e.g., tournament completion after viewing Games tab)
+    if (severity == EventSeverity.critical) {
+      final tabName = _getTabNameForCategory(category);
+      viewedReportTabs.remove(tabName);
+    }
+
     notifyListeners();
   }
 
@@ -667,10 +677,18 @@ class GameState with ChangeNotifier {
         ),
       ];
 
+      // [GEMINI-FIX] Log critical event for Downsizing Tournament to trigger badge
+      logEvent(
+        "The Great Downsizing Tournament has been announced! You have 7 days to prepare. The weakest Aravt will be exiled.",
+        category: EventCategory.games,
+        severity: EventSeverity.critical,
+      );
+
       logEvent(
         "The horde gathers on the steppe. A new story begins.",
         category: EventCategory.general,
-        severity: EventSeverity.high,
+        severity: EventSeverity
+            .normal, // [GEMINI-FIX] Don't count toward badge (no Event Log tab)
       );
 
       print("[GameState Provider] New game created successfully.");
@@ -1463,6 +1481,8 @@ class GameState with ChangeNotifier {
       'resourceReports': resourceReports.map((r) => r.toJson()).toList(),
       'viewedReportTabs': viewedReportTabs.toList(),
       'hasPendingTradeOffer': hasPendingTradeOffer,
+      'pendingTradeCaptainId': pendingTradeCaptainId,
+      'pendingTradeSoldierId': pendingTradeSoldierId,
       'tutorialCompleted': tutorialCompleted,
       'tutorialPermanentlyDismissed': tutorialPermanentlyDismissed,
       'tutorialDismissalCount': tutorialDismissalCount,
@@ -1606,6 +1626,8 @@ class GameState with ChangeNotifier {
       viewedReportTabs = Set<String>.from(json['viewedReportTabs']);
     }
     hasPendingTradeOffer = json['hasPendingTradeOffer'] ?? false;
+    pendingTradeCaptainId = json['pendingTradeCaptainId'];
+    pendingTradeSoldierId = json['pendingTradeSoldierId'];
     tutorialCompleted = json['tutorialCompleted'] ?? false;
     tutorialPermanentlyDismissed =
         json['tutorialPermanentlyDismissed'] ?? false;

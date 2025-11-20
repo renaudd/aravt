@@ -97,6 +97,22 @@ class TutorialService extends ChangeNotifier {
     gameState.tutorialDismissalCount++;
     _isActive = false;
 
+    // [GEMINI-FIX] Advance to next major section instead of restarting
+    // Tutorial sections: 0-3 (Camp), 4 (Horde), 5 (Inventory), 6 (Wrap-up)
+    if (_currentIndex <= 3) {
+      // Dismissed during Camp intro → jump to Horde section
+      gameState.tutorialStepIndex = 4;
+    } else if (_currentIndex == 4) {
+      // Dismissed during Horde → jump to Inventory
+      gameState.tutorialStepIndex = 5;
+    } else if (_currentIndex == 5) {
+      // Dismissed during Inventory → jump to wrap-up
+      gameState.tutorialStepIndex = 6;
+    } else {
+      // Dismissed during wrap-up → mark as completed
+      gameState.tutorialCompleted = true;
+    }
+
     final captain = _getTutorialCaptain(gameState);
     if (captain != null) {
       // 1. Apply Penalty (-0.4 Adm, -0.2 Res per dismissal)

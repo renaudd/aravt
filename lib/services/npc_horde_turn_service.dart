@@ -1,12 +1,10 @@
 // services/npc_horde_turn_service.dart
 
-
 import 'dart:math';
 import 'package:aravt/models/horde_data.dart'; // Using the correct HordeData
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
-
 
 // --- NEW IMPORTS ---
 import 'package:aravt/models/aravt_models.dart'; // Need Aravt
@@ -15,7 +13,6 @@ import 'package:aravt/models/combat_report.dart';
 import 'package:aravt/services/auto_resolve_service.dart';
 import 'package:aravt/services/loot_distribution_service.dart';
 // --- END NEW IMPORTS ---
-
 
 // Represents the macro-level goal of an entire horde for the turn
 enum NpcHordeGoal {
@@ -28,13 +25,11 @@ enum NpcHordeGoal {
   Hunt, // Local area resource gathering
 }
 
-
 /// This service manages the "macro" turn-based decisions for NPC hordes,
 /// such as moving on the map, declaring war, or raiding.
 /// This is distinct from the HordeAIService, which manages *internal* aravt assignments.
 class NpcHordeTurnService {
   final Random _random = Random();
-
 
   // --- NEW: Instantiate services ---
   final AutoResolveService _autoResolveService = AutoResolveService();
@@ -42,12 +37,10 @@ class NpcHordeTurnService {
       LootDistributionService();
   // --- END NEW ---
 
-
   Future<void> resolveNpcHordeTurns(GameState gameState) async {
     // We will loop through each NPC horde.
     // For now, we just have npcHorde1 and npcHorde2.
     // This logic can be expanded to a list of NPC Hordes later.
-
 
     if (gameState.npcHorde1.isNotEmpty) {
       await _resolveHordeAction(
@@ -67,13 +60,14 @@ class NpcHordeTurnService {
     }
   }
 
-
   /// Resolves the single macro action for one NPC horde.
   Future<void> _resolveHordeAction(
     GameState gameState,
     String hordeId,
-    List<Soldier> members, // This is the list of soldiers (e.g., gameState.npcHorde1)
-    List<Aravt> aravts, // This is the list of aravts (e.g., gameState.npcAravts1)
+    List<Soldier>
+        members, // This is the list of soldiers (e.g., gameState.npcHorde1)
+    List<Aravt>
+        aravts, // This is the list of aravts (e.g., gameState.npcAravts1)
   ) async {
     // 1. Find the leader
     Soldier? leader;
@@ -85,11 +79,9 @@ class NpcHordeTurnService {
       return;
     }
 
-
     // 2. Determine Goal (based on leader personality, needs, diplomacy)
     // This is a simplified version of the HordeAIService goal-setting
     NpcHordeGoal goal = _determineHordeGoal(leader, gameState);
-
 
     // 3. Execute Goal
     switch (goal) {
@@ -99,7 +91,6 @@ class NpcHordeTurnService {
         List<Soldier>? targetSoldiers;
         List<Aravt>? targetAravts;
         String targetHordeName = "a rival horde";
-
 
         // Simple logic: Horde 1 targets Horde 2, Horde 2 targets Horde 1
         // TODO: Expand this to include targeting the Player's horde
@@ -127,11 +118,9 @@ class NpcHordeTurnService {
           }
         }
 
-
         if (targetSoldiers != null && targetAravts != null) {
           print(
               "AI (Step 6 - ${leader.name}): Our horde marches to war against $targetHordeName!");
-
 
           // --- Call Auto-Resolve Service ---
           // We pass the raw lists of soldiers and aravts
@@ -143,10 +132,8 @@ class NpcHordeTurnService {
             allDefenderSoldiers: targetSoldiers,
           );
 
-
           bool attackerWon = (report.result == CombatResult.playerVictory ||
               report.result == CombatResult.enemyRout);
-
 
           // --- Call Loot Distribution Service ---
           // We pass the report and the FULL list of soldiers for the WINNING side
@@ -155,11 +142,11 @@ class NpcHordeTurnService {
             victoriousSoldiers: attackerWon ? members : targetSoldiers,
           );
 
-
           gameState.logEvent(
             "[${leader.name}'s Horde] has attacked $targetHordeName! ${attackerWon ? "They were victorious" : "They were defeated"}.",
             isPlayerKnown: false,
-            category: EventCategory.combat,
+            category: EventCategory
+                .general, // [GEMINI-FIX] Player doesn't know about NPC vs NPC combat
             severity: EventSeverity.critical,
           );
         } else {
@@ -176,7 +163,6 @@ class NpcHordeTurnService {
         break;
       // --- END MODIFIED ---
 
-
       case NpcHordeGoal.RaidSettlement:
         // TODO: Find a nearby settlement to raid
         print(
@@ -184,7 +170,8 @@ class NpcHordeTurnService {
         gameState.logEvent(
           "[${leader.name}'s Horde] is moving to raid a settlement.",
           isPlayerKnown: false,
-          category: EventCategory.combat,
+          category: EventCategory
+              .general, // [GEMINI-FIX] Player doesn't know about NPC raids
           severity: EventSeverity.high,
         );
         break;
@@ -212,28 +199,22 @@ class NpcHordeTurnService {
         break;
     }
 
-
     // Simulate async work
     await Future.delayed(Duration(milliseconds: _random.nextInt(20) + 10));
   }
-
 
   NpcHordeGoal _determineHordeGoal(Soldier leader, GameState gameState) {
     // This logic should be driven by leader personality, just like in Step 2.
     // For now, we'll use a simple random roll.
 
-
     // High Ambition/Courage, Low Temperament -> Aggressive
-    if (leader.ambition > 7 &&
-        leader.courage > 6 &&
-        leader.temperament < 4) {
+    if (leader.ambition > 7 && leader.courage > 6 && leader.temperament < 4) {
       if (_random.nextDouble() < 0.5) {
         return NpcHordeGoal.AttackHorde;
       } else {
         return NpcHordeGoal.RaidSettlement;
       }
     }
-
 
     // High Judgment/Patience -> Peaceful
     if (leader.judgment > 7 && leader.patience > 6) {
@@ -243,7 +224,6 @@ class NpcHordeTurnService {
         return NpcHordeGoal.Idle; // Represents local shepherding/hunting
       }
     }
-
 
     // Default: 80% chance to stay idle, 20% chance to do something else
     double roll = _random.nextDouble();
@@ -256,4 +236,3 @@ class NpcHordeTurnService {
     }
   }
 }
-

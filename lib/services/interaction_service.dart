@@ -4,6 +4,7 @@ import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/assignment_data.dart'; // For AravtDuty enum
+import 'package:aravt/services/dialogue_helpers.dart'; // [GEMINI-NEW] Birthday & response dialogue
 
 enum _InteractionTier { extraSuccess, success, lessSuccessful, unsuccessful }
 
@@ -104,7 +105,11 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.05, admiration: 0.02, fear: 0.05);
         if (_random.nextDouble() < 0.7) {
-          infoRevealed = '"${_generateSelfCriticism(target, gameState)}"';
+          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+          String dialogue = _generateDialogue(target, gameState);
+          infoRevealed = dialogue.isNotEmpty
+              ? '"$dialogue"'
+              : '"${_generateSelfCriticism(target, gameState)}"';
         }
         break;
 
@@ -119,7 +124,11 @@ class InteractionService {
         }
         _applySocialEffect(socialCircle, player.id, respect: 0.02, fear: 0.02);
         if (_random.nextDouble() < 0.4) {
-          infoRevealed = '"${_generateSelfCriticism(target, gameState)}"';
+          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+          String dialogue = _generateDialogue(target, gameState);
+          infoRevealed = dialogue.isNotEmpty
+              ? '"$dialogue"'
+              : '"${_generateSelfCriticism(target, gameState)}"';
         }
         break;
 
@@ -220,7 +229,11 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.05, admiration: 0.1, loyalty: 0.02);
         if (_random.nextDouble() < 0.7) {
-          infoRevealed = '"${_generateOtherPraise(target, gameState)}"';
+          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+          String dialogue = _generateDialogue(target, gameState);
+          infoRevealed = dialogue.isNotEmpty
+              ? '"$dialogue"'
+              : '"${_generateOtherPraise(target, gameState)}"';
         }
         break;
 
@@ -236,7 +249,11 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.02, admiration: 0.05);
         if (_random.nextDouble() < 0.4) {
-          infoRevealed = '"${_generateOtherPraise(target, gameState)}"';
+          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+          String dialogue = _generateDialogue(target, gameState);
+          infoRevealed = dialogue.isNotEmpty
+              ? '"$dialogue"'
+              : '"${_generateOtherPraise(target, gameState)}"';
         }
         break;
 
@@ -412,16 +429,38 @@ class InteractionService {
       _applySocialEffect(socialCircle, player.id,
           respect: 0.03, admiration: 0.05);
 
-      // Preference match feedback
-      if (matchesTypePreference && matchesOriginPreference) {
-        infoRevealed = "'This is exactly what I wanted! Thank you, Captain!'";
-      } else if (matchesTypePreference) {
-        infoRevealed = "'I've always wanted one of these!'";
-      } else if (matchesOriginPreference) {
-        infoRevealed =
-            "'Fine craftsmanship from ${gift.origin}. I appreciate this.'";
+      // [GEMINI-ENHANCED] Generate inquiry-type dialogue response
+      if (_random.nextDouble() < 0.6) {
+        // Use dialogue generation for more dynamic responses
+        String dynamicResponse = _generateDialogue(target, gameState);
+        if (dynamicResponse.isNotEmpty) {
+          infoRevealed = "'$dynamicResponse'";
+        } else {
+          // Fallback to preference-based responses
+          if (matchesTypePreference && matchesOriginPreference) {
+            infoRevealed =
+                "'This is exactly what I wanted! Thank you, Captain!'";
+          } else if (matchesTypePreference) {
+            infoRevealed = "'I've always wanted one of these!'";
+          } else if (matchesOriginPreference) {
+            infoRevealed =
+                "'Fine craftsmanship from ${gift.origin}. I appreciate this.'";
+          } else {
+            infoRevealed = "'Thank you for thinking of me.'";
+          }
+        }
       } else {
-        infoRevealed = "'Thank you for thinking of me.'";
+        // Preference match feedback (original logic)
+        if (matchesTypePreference && matchesOriginPreference) {
+          infoRevealed = "'This is exactly what I wanted! Thank you, Captain!'";
+        } else if (matchesTypePreference) {
+          infoRevealed = "'I've always wanted one of these!'";
+        } else if (matchesOriginPreference) {
+          infoRevealed =
+              "'Fine craftsmanship from ${gift.origin}. I appreciate this.'";
+        } else {
+          infoRevealed = "'Thank you for thinking of me.'";
+        }
       }
     } else {
       // Inappropriate gift: negative relationship impact
@@ -558,6 +597,8 @@ class InteractionService {
       () => _topicLowStat(speaker, speaker, "self"),
       () => _topicIneptitudeAdmission(speaker),
       () => _topicMurdererHint(speaker),
+      () =>
+          DialogueHelpers.topicOwnBirthday(speaker, gameState), // [GEMINI-NEW]
     ];
     topics.shuffle(_random);
     for (var topicGen in topics) {
@@ -581,6 +622,8 @@ class InteractionService {
       (s) => _topicGossipMurder(speaker, s),
       (s) => _topicHighSkill(speaker, s, "mate"),
       (s) => _topicLowSkill(speaker, s, "mate"),
+      (s) => DialogueHelpers.topicMateBirthday(
+          speaker, s, gameState), // [GEMINI-NEW]
     ];
     topics.shuffle(_random);
     for (var topicGen in topics) {

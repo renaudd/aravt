@@ -273,13 +273,11 @@ class NextTurnService {
                   aravtMembers[_random.nextInt(aravtMembers.length)];
             }
 
-            // 3. Trigger the event
+            // 3. Store trade offer data for Camp screen to trigger narrative
             gameState.hasPendingTradeOffer = true;
-            gameState.startNarrativeEvent(NarrativeEvent(
-              type: NarrativeEventType.day5Trade,
-              instigatorId: captain.id,
-              targetId: offeredSoldier.id,
-            ));
+            gameState.pendingTradeCaptainId = captain.id;
+            gameState.pendingTradeSoldierId = offeredSoldier.id;
+            // [GEMINI-FIX] Narrative will be triggered when player enters Camp screen
           }
         }
       }
@@ -338,6 +336,13 @@ class NextTurnService {
           gameState.logEvent(
             "Aravt ${loserAravt.id} finished last and has been exiled from the horde.",
             category: EventCategory.general,
+            severity: EventSeverity.critical,
+          );
+
+          // [GEMINI-FIX] Log Games category event for tournament completion
+          gameState.logEvent(
+            "The Great Downsizing Tournament has concluded! Check the Games tab for full results.",
+            category: EventCategory.games,
             severity: EventSeverity.critical,
           );
 

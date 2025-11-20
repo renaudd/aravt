@@ -350,7 +350,7 @@ class AravtAssignmentService {
       if (isPlayer && readyAttackers.length == 1) {
         gameState.logEvent(
             "${aravt.id} is waiting for reinforcements at ${poi.name} before attacking.",
-            category: EventCategory.combat,
+            category: EventCategory.general, // [GEMINI-FIX] Not actual combat
             aravtId: aravt.id);
       }
       // They wait for the next turn resolution cycle

@@ -1,0 +1,124 @@
+import 'dart:math';
+import 'package:aravt/models/soldier_data.dart';
+import 'package:aravt/models/interaction_models.dart';
+import 'package:aravt/models/inventory_item.dart';
+import 'package:aravt/providers/game_state.dart';
+import 'package:aravt/models/assignment_data.dart'; // For AravtDuty enum
+import 'package:aravt/models/game_date.dart'; // [GEMINI-NEW] For birthday calculations
+
+enum _InteractionTier { extraSuccess, success, lessSuccessful, unsuccessful }
+
+class InteractionService {
+  static final Random _random = Random();
+
+  /// Resolves the INQUIRE interaction using dynamic dialogue generation.
+  static InteractionResult resolveInquire(
+      GameState gameState, Soldier player, Soldier target) {
+    String dialogue = "";
+    bool success = true;
+
+    // Special Case: Horde Leader is harder to talk to
+    if (target.role == SoldierRole.hordeLeader) {
+      if (target.getRelationship(player.id).respect < 2.5) {
+        dialogue = "'You are not in a position to ask questions, Captain.'";
+        // Subtle shift for pestering the Khan
+        target.getRelationship(player.id).updateRespect(-0.05);
+        success = false;
+      } else {
+        // Simple non-repeating mechanic for leader for now
+        if (!target.usedDialogueTopics.contains('leader_intro')) {
+          target.usedDialogueTopics.add('leader_intro');
+          dialogue =
+              "'I am concerned about the Merkit raids to the east. A captain who solved that problem would earn my favor.'";
+        } else {
+          dialogue = "'Bring me results, Captain, not questions.'";
+        }
+      }
+    } else {
+      // Standard soldier: Use the deep dialogue engine
+      dialogue = _generateUniqueDialogue(target, gameState);
+    }
+
+    final log = InteractionLogEntry(
+      dateString: gameState.gameDate.toShortString(),
+      type: InteractionType.inquire,
+      // [GEMINI-FIX] Put dialogue directly here for cleaner log display
+      interactionSummary: dialogue,
+      outcomeSummary: "",
+      informationRevealed: "",
+    );
+
+    target.interactionLog.add(log);
+    return InteractionResult(
+      success: success,
+      outcomeSummary: "",
+      statChangeSummary: "",
+      informationRevealed: dialogue,
+      logEntry: log,
+    );
+  }
+
+  // ... [REST OF FILE CONTENT REMAINS THE SAME] ...
+  
+  // [GEMINI-NEW] Birthday Revelation Topics
+  
+  static String _topicOwnBirthday(Soldier speaker, GameState gameState) {
+    final currentDate = gameState.gameDate;
+    final daysUntilBirthday = _calculateDaysUntilBirthday(speaker.dateOfBirth, currentDate);
+    
+    // Upcoming birthday (within 14 days)
+    if (daysUntilBirthday >= 0 && daysUntilBirthday <= 14) {
+      if (daysUntilBirthday == 0) {
+        return _useTopic(speaker, 'birthday_today',
+            "'It's my birthday today, Captain. Another year older.'");
+      } else if (daysUntilBirthday <= 7) {
+        return _useTopic(speaker, 'birthday_soon',
+            "'My birthday is in $daysUntilBirthday days, Captain.'");
+      }
+    }
+    
+    // General birthday revelation (anytime)
+    final monthName = _getMonthName(speaker.dateOfBirth.month);
+    return _useTopic(speaker, 'birthday_reveal',
+        "'My birthday is on $monthName ${speaker.dateOfBirth.day}, Captain.'");
+  }
+
+  static String _topicMateBirthday(Soldier speaker, Soldier mate, GameState gameState) {
+    final currentDate = gameState.gameDate;
+    final daysUntilBirthday = _calculateDaysUntilBirthday(mate.dateOfBirth, currentDate);
+    
+    // Upcoming mate birthday (within 14 days)
+    if (daysUntilBirthday >= 0 && daysUntilBirthday <= 14) {
+      if (daysUntilBirthday <= 7) {
+        return _useTopic(speaker, 'mate_birthday_soon_${mate.id}',
+            "${mate.name}'s birthday is coming up in $daysUntilBirthday days.");
+      }
+    }
+    
+    // General mate birthday revelation (anytime)
+    final monthName = _getMonthName(mate.dateOfBirth.month);
+    return _useTopic(speaker, 'mate_birthday_reveal_${mate.id}',
+        "${mate.name}'s birthday is on $monthName ${mate.dateOfBirth.day}.");
+  }
+
+  static String _getMonthName(int month) {
+    const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[month];
+  }
+
+  static int _calculateDaysUntilBirthday(DateTime birthday, GameDate current) {
+    // Create this year's birthday as GameDate
+    int birthdayYear = current.year;
+    GameDate thisBirthday = GameDate(birthdayYear, birthday.month, birthday.day);
+    
+    // If birthday already passed this year, check next year
+    if (current.month > birthday.month || 
+        (current.month == birthday.month && current.day > birthday.day)) {
+      thisBirthday = GameDate(birthdayYear + 1, birthday.month, birthday.day);
+    }
+    
+    // Calculate days between
+    return thisBirthday.totalDays - current.totalDays;
+  }
+}
