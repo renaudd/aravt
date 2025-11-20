@@ -320,6 +320,33 @@ class Soldier {
   int spearSkill;
   int swordSkill;
   int shieldSkill;
+
+  // [GEMINI-NEW] Equip item logic
+  void equip(InventoryItem item) {
+    final slot = item.equippableSlot;
+    if (slot == null) return;
+
+    // If slot is occupied, unequip current item
+    if (equippedItems.containsKey(slot)) {
+      unequip(slot);
+    }
+
+    // Remove from inventory if present
+    personalInventory.removeWhere((i) => i.id == item.id);
+
+    // Equip
+    equippedItems[slot] = item;
+  }
+
+  // [GEMINI-NEW] Unequip item logic
+  void unequip(EquipmentSlot slot) {
+    final item = equippedItems[slot];
+    if (item == null) return;
+
+    equippedItems.remove(slot);
+    personalInventory.add(item);
+  }
+
   int perception;
   int intelligence;
   int knowledge;
@@ -775,7 +802,75 @@ class SoldierGenerator {
     'Baliq',
     'Chilaun',
     'Muqali',
-    'Subodei'
+    'Subodei',
+    'Jelme',
+    'Kaidu',
+    'Borchu',
+    'Yesui',
+    'Yesugen',
+    'Khutulun',
+    'Toregene',
+    'Oghul',
+    'Qaimish',
+    'Mandukhai',
+    'Belgutei',
+    'Temuge',
+    'Zev',
+    'Khubilai',
+    'Tsubodai',
+    'Ganbaatar',
+    'Batbayar',
+    'Enkhbat',
+    'Gansukh',
+    'Naranbaatar',
+    'Chinbat',
+    'Sukhbat',
+    'Otgonbayar',
+    'Bayarmagnai',
+    'Purev',
+    'Dorj',
+    'Dei-Sechen',
+    'Targutai',
+    'Senggum',
+    'Nilqa',
+    'Quchar',
+    'Sacha-Beki',
+    'Taichar',
+    'Megujin',
+    'Tatua',
+    'Quduqa',
+    'Buirwq',
+    'Qudu',
+    'Chiledu',
+    'Dayir',
+    'Usun',
+    'Kokochu',
+    'Qorchi',
+    'Jürchedei',
+    'Quyildar',
+    'Qara-Hulegu',
+    'Shiremun',
+    'Qadan',
+    'Kadan',
+    'Baidar',
+    'Buri',
+    'Orda',
+    'Shiban',
+    'Tangqut',
+    'Nogai',
+    'Toqta',
+    'Ozbeg',
+    'Janibeg',
+    'Tokhtamysh',
+    'Mamai',
+    'Arghun',
+    'Ghazan',
+    'Oljeitu',
+    'Abu Sa\'id',
+    'Tamerlane',
+    'Shah Rukh',
+    'Ulugh Beg',
+    'Babur'
   ];
   static const List<String> _familyNames = [
     'Borjigin',
@@ -810,7 +905,47 @@ class SoldierGenerator {
     'Qasarids',
     'Baliqids',
     'Chilaunids',
-    'Muqaliids'
+    'Muqaliids',
+    'Tayichiud',
+    'Jadaran',
+    'Kereit',
+    'Olkhunut',
+    'Ikires',
+    'Uru\'ud',
+    'Manghud',
+    'Besud',
+    'Barlas',
+    'Oirat',
+    'Kirghiz',
+    'Uyghur',
+    'Khitan',
+    'Jurchen',
+    'Tangut',
+    'Qarluq',
+    'Kipchak',
+    'Kangly',
+    'Alan',
+    'Asud',
+    'Karluk',
+    'Basmyl',
+    'Yagma',
+    'Chigil',
+    'Tukhsi',
+    'Yabaku',
+    'Argu',
+    'Pecheneg',
+    'Cuman',
+    'Khazar',
+    'Bulgar',
+    'Avar',
+    'Nogai',
+    'Shaybanid',
+    'Astrakhanid',
+    'Giray',
+    'Mangit',
+    'Qongrat',
+    'Keneges',
+    'Manchu'
   ];
   static const Map<StartingInjuryType, String> _startingInjuriesMap = {
     StartingInjuryType.oldScarLeftArm: 'Old Scar (Left Arm)',
@@ -1506,11 +1641,12 @@ class SoldierGenerator {
     final List<InventoryItem> personalInventory = [];
     if (_random.nextDouble() < 0.3) {
       final item = ItemDatabase.createItemInstance('wep_short_bow',
-          forcedQuality: 'Worn');
+          forcedQuality: 'Worn', origin: placeOrTribe.name);
       if (item != null) personalInventory.add(item);
     }
     if (_random.nextDouble() < 0.5) {
-      final item = ItemDatabase.createItemInstance('con_dried_meat');
+      final item = ItemDatabase.createItemInstance('con_dried_meat',
+          origin: placeOrTribe.name);
       if (item != null) personalInventory.add(item);
     }
 
@@ -1518,7 +1654,7 @@ class SoldierGenerator {
     try {
       void equip(String templateId, {String? forcedQuality}) {
         final item = ItemDatabase.createItemInstance(templateId,
-            forcedQuality: forcedQuality);
+            forcedQuality: forcedQuality, origin: placeOrTribe.name);
         if (item != null && item.equippableSlot != null) {
           startingEquipment[item.equippableSlot!] = item;
         }

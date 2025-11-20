@@ -16,6 +16,7 @@ import 'package:aravt/widgets/profile_tabs/soldier_profile_inventory_panel.dart'
 import 'package:aravt/widgets/profile_tabs/soldier_profile_relationships_panel.dart';
 import 'package:aravt/widgets/profile_tabs/soldier_profile_reports_panel.dart';
 import 'package:aravt/widgets/profile_tabs/soldier_profile_yurt_panel.dart';
+import 'package:aravt/widgets/gifting_dialog.dart';
 
 const Map<EquipmentSlot, IconData> _placeholderIconMap = {
   EquipmentSlot.helmet: Icons.headset,
@@ -64,6 +65,57 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  List<Soldier> _aravtMembers = [];
+  int _currentIndex = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadAravtMembers();
+  }
+
+  void _loadAravtMembers() {
+    final gameState = Provider.of<GameState>(context, listen: false);
+    try {
+      final soldier =
+          gameState.horde.firstWhere((s) => s.id == widget.soldierId);
+      // Check if soldier is in an aravt (not None)
+      if (soldier.aravt != 'None') {
+        _aravtMembers =
+            gameState.horde.where((s) => s.aravt == soldier.aravt).toList();
+        // Sort by role (Captain first) then name
+        _aravtMembers.sort((a, b) {
+          if (a.role == SoldierRole.aravtCaptain) return -1;
+          if (b.role == SoldierRole.aravtCaptain) return 1;
+          return a.name.compareTo(b.name);
+        });
+        _currentIndex = _aravtMembers.indexWhere((s) => s.id == soldier.id);
+      } else {
+        _aravtMembers = [];
+      }
+    } catch (e) {
+      _aravtMembers = [];
+    }
+  }
+
+  void _navigateToSoldier(int index) {
+    if (_aravtMembers.isEmpty) return;
+
+    // Handle wrapping
+    int targetIndex = index;
+    if (targetIndex < 0) targetIndex = _aravtMembers.length - 1;
+    if (targetIndex >= _aravtMembers.length) targetIndex = 0;
+
+    final targetSoldier = _aravtMembers[targetIndex];
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SoldierProfileScreen(soldierId: targetSoldier.id),
+      ),
+    );
   }
 
   @override
@@ -212,8 +264,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
   Widget _buildProfilePanel(Soldier soldier) {
     final textStyle = GoogleFonts.cinzel(color: Colors.white);
-    final headerStyle = GoogleFonts.cinzel(
-        color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold);
 
     return UiPanel(
       width: 330,
@@ -221,7 +271,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('SOLDIER PROFILE', style: headerStyle),
+          _buildProfileHeader(soldier),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -234,8 +284,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Name: ${soldier.firstName} ${soldier.familyName}',
-                      style: textStyle),
                   Text('Age: ${soldier.age}', style: textStyle),
                   Text('Aravt: ${soldier.aravt}', style: textStyle),
                   Text('Years with horde: ${soldier.yearsWithHorde}',
@@ -251,6 +299,58 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               'Height:', '${soldier.height.toStringAsFixed(0)} cm'),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileHeader(Soldier soldier) {
+    final headerStyle = GoogleFonts.cinzel(
+        color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold);
+
+    if (_aravtMembers.isEmpty || _aravtMembers.length <= 1) {
+      return Text('SOLDIER PROFILE', style: headerStyle);
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          onPressed: () => _navigateToSoldier(_currentIndex - 1),
+          tooltip: 'Previous Member',
+        ),
+        Expanded(
+          child: Center(
+            child: DropdownButton<int>(
+              value: _currentIndex,
+              dropdownColor: Colors.grey[900],
+              style: headerStyle,
+              underline: Container(), // Remove underline
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+              isExpanded: false, // Don't expand to full width to keep centered
+              items: _aravtMembers.asMap().entries.map((entry) {
+                return DropdownMenuItem<int>(
+                  value: entry.key,
+                  child: Text(
+                    entry.value.name,
+                    style: headerStyle.copyWith(fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: (int? newIndex) {
+                if (newIndex != null) {
+                  _navigateToSoldier(newIndex);
+                }
+              },
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right, color: Colors.white),
+          onPressed: () => _navigateToSoldier(_currentIndex + 1),
+          tooltip: 'Next Member',
+        ),
+      ],
     );
   }
 
@@ -691,19 +791,9 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
   void _showGiftDialog(
       BuildContext context, GameState gameState, Soldier target) {
-    // TODO: Build a full UI showing player inventory
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Gift to ${target.name}'),
-        content: const Text('TODO: Show player inventory list here.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          )
-        ],
-      ),
+      builder: (_) => GiftingDialog(gameState: gameState, target: target),
     );
   }
 

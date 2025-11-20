@@ -3,21 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-
 import 'package:aravt/models/soldier_data.dart'; // For SoldierRole
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/widgets/narrative_screen.dart';
 import 'package:aravt/screens/camp_screen.dart';
 
-
 class NewGameScreen extends StatefulWidget {
   const NewGameScreen({super.key});
-
 
   @override
   State<NewGameScreen> createState() => _NewGameScreenState();
 }
-
 
 class _NewGameScreenState extends State<NewGameScreen> {
   // --- MODIFIED: Set default to MEDIUM and updated Omniscience logic ---
@@ -25,7 +21,6 @@ class _NewGameScreenState extends State<NewGameScreen> {
   bool _allowOmniscience = false; // Controls if the button is available in-game
   bool _isYoloMode = false;
   // --- END MODIFIED ---
-
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +105,6 @@ class _NewGameScreenState extends State<NewGameScreen> {
     );
   }
 
-
   Widget _buildGameOptions() {
     return Container(
       width: 600,
@@ -125,8 +119,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
           CheckboxListTile(
             title: Text('Allow Omniscient Mode',
                 style: GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
-            subtitle: Text(
-                'Allows toggling omniscience from the in-game menu.',
+            subtitle: Text('Allows toggling omniscience from the in-game menu.',
                 style: GoogleFonts.cinzel(color: Colors.white70)),
             value: _allowOmniscience,
             onChanged: (bool? value) {
@@ -158,12 +151,10 @@ class _NewGameScreenState extends State<NewGameScreen> {
     );
   }
 
-
   Widget _buildStartButton() {
     return GestureDetector(
       onTap: () {
         final gameState = context.read<GameState>();
-
 
         // --- MODIFIED: Pass the new `allowOmniscience` flag ---
         gameState.initializeNewGame(
@@ -171,7 +162,6 @@ class _NewGameScreenState extends State<NewGameScreen> {
             enableAutoSave: _isYoloMode,
             allowOmniscience: _allowOmniscience);
         // --- END MODIFIED ---
-
 
         Navigator.push(
           context,
@@ -185,21 +175,33 @@ class _NewGameScreenState extends State<NewGameScreen> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => NarrativeScreen(
-                      title: "Summoned by the Chief",
-                      bodyText:
-                          "You are summoned by the Horde Leader, ${gameState.horde.firstWhere((s) => s.role == SoldierRole.hordeLeader).name}. 'I'm sick and tired of you guys dropping bow strings. Seriously, I've had enough. Discipline around here is no good. You're all gonna be tested in one week's time... If your aravt fails, we're taking your horses and leaving you here. I mean it this time.'",
-                      imagePath: 'assets/images/opening_2.png',
-                      onContinue: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CampScreen(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                    ),
+                    builder: (context) {
+                      String leaderName = "The Chief";
+                      try {
+                        final leader = gameState.horde.firstWhere(
+                            (s) => s.role == SoldierRole.hordeLeader,
+                            orElse: () => gameState.horde.first);
+                        leaderName = leader.name;
+                      } catch (e) {
+                        print("Error finding leader for intro: $e");
+                      }
+
+                      return NarrativeScreen(
+                        title: "Summoned by the Chief",
+                        bodyText:
+                            "You are summoned by the Horde Leader, $leaderName. 'I'm sick and tired of you guys dropping bow strings. Seriously, I've had enough. Discipline around here is no good. You're all gonna be tested in one week's time... If your aravt fails, we're taking your horses and leaving you here. I mean it this time.'",
+                        imagePath: 'assets/images/opening_2.png',
+                        onContinue: () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CampScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                      );
+                    },
                   ),
                 );
               },
@@ -232,13 +234,11 @@ class _NewGameScreenState extends State<NewGameScreen> {
   }
 }
 
-
 class _DifficultyBanner extends StatefulWidget {
   final String title;
   final String imagePath;
   final bool isSelected;
   final VoidCallback onPressed;
-
 
   const _DifficultyBanner({
     required this.title,
@@ -247,15 +247,12 @@ class _DifficultyBanner extends StatefulWidget {
     required this.onPressed,
   });
 
-
   @override
   State<_DifficultyBanner> createState() => _DifficultyBannerState();
 }
 
-
 class _DifficultyBannerState extends State<_DifficultyBanner> {
   bool _isHovering = false;
-
 
   @override
   Widget build(BuildContext context) {
@@ -291,8 +288,8 @@ class _DifficultyBannerState extends State<_DifficultyBanner> {
                   child: Image.asset(
                     widget.imagePath,
                     fit: BoxFit.cover,
-                    color: Colors.black
-                        .withOpacity(widget.isSelected ? 0.0 : 0.4),
+                    color:
+                        Colors.black.withOpacity(widget.isSelected ? 0.0 : 0.4),
                     colorBlendMode: BlendMode.darken,
                   ),
                 ),
@@ -324,6 +321,3 @@ class _DifficultyBannerState extends State<_DifficultyBanner> {
     );
   }
 }
-
-
-

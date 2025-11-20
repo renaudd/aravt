@@ -603,6 +603,19 @@ class ItemDatabase {
         baseWeight: 0.2,
         iconAssetPath: 'assets/images/items/consumables_items.png',
         effect: 'Restores a small amount of stamina.');
+
+    // [GEMINI-NEW] Added missing templates
+    _templates['relic_jade_figurine'] = RelicTemplate(
+        templateId: 'relic_jade_figurine',
+        name: 'Jade Figurine',
+        description: 'A delicately carved jade figure.',
+        itemType: ItemType.relic,
+        valueType: ValueType.Treasure,
+        baseValue: 200.0,
+        baseWeight: 0.5,
+        iconAssetPath: 'assets/images/items/relics_items.png',
+        equippableSlot: EquipmentSlot.trophy,
+        bonusDescription: '+2 Culture');
   }
 
   // --- The new Universal Item Creator ---
