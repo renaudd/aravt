@@ -27,8 +27,32 @@ import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/widgets/tutorial_overlay_widget.dart';
 import 'package:aravt/widgets/narrative_overlay_widget.dart';
 
-void main() {
+import 'package:window_manager/window_manager.dart'; // [GEMINI-NEW]
+
+void main() async {
+  WidgetsFlutterBinding
+      .ensureInitialized(); // [GEMINI-NEW] Required for window_manager
   ItemDatabase.initialize();
+
+  // [GEMINI-NEW] Window Manager setup for Desktop
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(1280, 720),
+      minimumSize: Size(1024, 768), // Increased minimum size
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   runApp(
     MultiProvider(
       providers: [

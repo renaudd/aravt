@@ -13,7 +13,7 @@ enum EventCategory {
   food,
   hunting,
   games,
-  system, 
+  system,
   travel,
   diplomacy,
 }
@@ -50,10 +50,12 @@ class GameEvent {
   final bool isPlayerKnown; // Key for omniscient mode
   final EventCategory category;
   final EventSeverity severity;
-  
+
   // Optional: links to related data
   final int? relatedSoldierId;
   final String? relatedAravtId;
+  // [GEMINI-NEW] Turn number for precise highlighting
+  final int turn;
 
   GameEvent({
     required this.message,
@@ -63,18 +65,20 @@ class GameEvent {
     this.severity = EventSeverity.normal,
     this.relatedSoldierId,
     this.relatedAravtId,
+    this.turn = 0, // Default for migration
   });
 
   // --- NEW: JSON Serialization ---
   Map<String, dynamic> toJson() => {
-    'message': message,
-    'date': date.toJson(),
-    'isPlayerKnown': isPlayerKnown,
-    'category': category.name,
-    'severity': severity.name,
-    'relatedSoldierId': relatedSoldierId,
-    'relatedAravtId': relatedAravtId,
-  };
+        'message': message,
+        'date': date.toJson(),
+        'isPlayerKnown': isPlayerKnown,
+        'category': category.name,
+        'severity': severity.name,
+        'relatedSoldierId': relatedSoldierId,
+        'relatedAravtId': relatedAravtId,
+        'turn': turn,
+      };
 
   factory GameEvent.fromJson(Map<String, dynamic> json) {
     return GameEvent(
@@ -85,8 +89,8 @@ class GameEvent {
       severity: _eventSeverityFromName(json['severity']),
       relatedSoldierId: json['relatedSoldierId'],
       relatedAravtId: json['relatedAravtId'],
+      turn: json['turn'] ?? 0,
     );
   }
   // --- END NEW ---
 }
-

@@ -71,12 +71,16 @@ class HuntingService {
       }
     }
 
+    // Filter out soldiers who caught nothing
+    final filteredResults =
+        individualResults.where((result) => result.totalMeat > 0).toList();
+
     return HuntingTripReport(
       date: date.copy(),
       aravtId: aravt.id,
       aravtName: aravt.id,
       locationName: locationName,
-      individualResults: individualResults,
+      individualResults: filteredResults,
     );
   }
 

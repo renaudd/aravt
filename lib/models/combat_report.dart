@@ -42,6 +42,8 @@ class CombatReport {
   final LootReport lootLost;
 
   final List<Soldier> captives;
+  // [GEMINI-NEW] Turn number for highlighting
+  final int turn;
 
   CombatReport({
     required this.id,
@@ -52,6 +54,7 @@ class CombatReport {
     this.lootObtained = const LootReport(),
     this.lootLost = const LootReport(),
     this.captives = const [],
+    this.turn = 0, // Default for migration
   });
 
   Map<String, dynamic> toJson() => {
@@ -63,6 +66,7 @@ class CombatReport {
         'lootObtained': lootObtained.toJson(),
         'lootLost': lootLost.toJson(),
         'captiveIds': captives.map((s) => s.id).toList(),
+        'turn': turn,
       };
 
   factory CombatReport.fromJson(
@@ -83,6 +87,7 @@ class CombatReport {
           .map((id) => soldierMap[id])
           .whereType<Soldier>()
           .toList(),
+      turn: json['turn'] ?? 0,
     );
   }
 
@@ -158,4 +163,3 @@ class CombatReportSoldierSummary {
     );
   }
 }
-

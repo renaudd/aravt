@@ -46,15 +46,20 @@ class GlobalInventoryScreen extends StatelessWidget {
               opacity: 0.5,
             ),
           ),
-          child: TabBarView(
+          child: Stack(
             children: [
-              const PersonalInventoryTab(),
-              const CommunalInventoryTab(),
-              GlobalInventoryTab(isOmniscient: gameState.isOmniscientMode),
+              TabBarView(
+                children: [
+                  const PersonalInventoryTab(),
+                  const CommunalInventoryTab(),
+                  GlobalInventoryTab(isOmniscient: gameState.isOmniscientMode),
+                ],
+              ),
+              const PersistentMenuWidget(),
             ],
           ),
         ),
-        bottomNavigationBar: const PersistentMenuWidget(),
+        // bottomNavigationBar removed
       ),
     );
   }

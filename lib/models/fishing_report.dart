@@ -67,6 +67,8 @@ class FishingTripReport {
   final List<IndividualFishingResult> individualResults;
   final double totalMeat;
   final int totalFishCaught; // Helper getter for summary
+  // [GEMINI-NEW] Turn number for highlighting
+  final int turn;
 
   FishingTripReport({
     required this.date,
@@ -74,6 +76,7 @@ class FishingTripReport {
     required this.aravtName,
     required this.locationName,
     required this.individualResults,
+    this.turn = 0, // Default for migration
   })  : totalMeat =
             individualResults.fold(0.0, (sum, res) => sum + res.totalMeat),
         totalFishCaught =
@@ -86,6 +89,7 @@ class FishingTripReport {
         'locationName': locationName,
         'individualResults': individualResults.map((r) => r.toJson()).toList(),
         'totalMeat': totalMeat,
+        'turn': turn,
       };
 
   factory FishingTripReport.fromJson(Map<String, dynamic> json) {
@@ -97,6 +101,7 @@ class FishingTripReport {
       individualResults: (json['individualResults'] as List)
           .map((r) => IndividualFishingResult.fromJson(r))
           .toList(),
+      turn: json['turn'] ?? 0,
     );
   }
 }

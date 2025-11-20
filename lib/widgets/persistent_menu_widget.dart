@@ -1,9 +1,9 @@
-// lib/widgets/persistent_menu_widget.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
 import 'horde_panel.dart'; // [GEMINI-FIX] Import the new panel
+import 'notification_badge.dart'; // [GEMINI-NEW] Import notification badge
 // Removed unused screen imports
 
 class PersistentMenuWidget extends StatefulWidget {
@@ -20,27 +20,38 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
       {required IconData icon,
       required String tooltip,
       required VoidCallback onPressed,
-      bool enabled = true}) {
+      bool enabled = true,
+      int badgeCount = 0}) {
+    // [GEMINI-NEW] Added badge count parameter
     return Padding(
       padding: const EdgeInsets.all(4.0),
       child: Tooltip(
         message: enabled ? tooltip : "$tooltip (Current Screen)",
-        child: InkWell(
-          onTap: enabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: enabled
-                  ? Colors.black.withOpacity(0.6)
-                  : Colors.black.withOpacity(0.3),
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: enabled ? Colors.white54 : Colors.white24, width: 1),
+        child: Stack(
+          // [GEMINI-NEW] Wrap in Stack for badge
+          clipBehavior: Clip.none,
+          children: [
+            InkWell(
+              onTap: enabled ? onPressed : null,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: enabled
+                      ? Colors.black.withOpacity(0.6)
+                      : Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: enabled ? Colors.white54 : Colors.white24,
+                      width: 1),
+                ),
+                child: Icon(icon,
+                    color: enabled ? Colors.white : Colors.white54, size: 24),
+              ),
             ),
-            child: Icon(icon,
-                color: enabled ? Colors.white : Colors.white54, size: 24),
-          ),
+            // [GEMINI-NEW] Add badge if count > 0
+            NotificationBadge(count: badgeCount),
+          ],
         ),
       ),
     );
@@ -151,7 +162,6 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                 ],
               ),
             ),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -178,57 +188,64 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                
+
 // [GEMINI-FIX] Horde Button -> Bottom Sheet with Padding
                 _buildMenuButton(
                     icon: Icons.group,
                     tooltip: "Horde",
                     onPressed: () {
-                        showModalBottomSheet(
-                           context: context,
-                           backgroundColor: Colors.transparent,
-                           isScrollControlled: true,
-                           builder: (context) => Padding(
-                               // Add 80px padding to the bottom so it sits above the menu
-                               padding: const EdgeInsets.only(bottom: 80.0),
-                               child: const HordePanel(),
-                           ),
-                       );
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => Padding(
+                          // Add 80px padding to the bottom so it sits above the menu
+                          padding: const EdgeInsets.only(bottom: 80.0),
+                          child: const HordePanel(),
+                        ),
+                      );
                     }),
-
 
                 _buildMenuButton(
                     icon: Icons.inventory_2_outlined,
                     tooltip: "Inventory",
-                    onPressed: () => Navigator.pushNamed(context, '/inventory')),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/inventory')),
                 _buildMenuButton(
                     icon: Icons.assessment_outlined,
                     tooltip: "Reports",
+                    badgeCount:
+                        gameState.getReportsBadgeCount(), // [GEMINI-NEW]
                     onPressed: () => Navigator.pushNamed(context, '/reports')),
                 // Advisor button placeholder if needed
                 // _buildMenuButton(icon: Icons.people_outline, tooltip: "Advisors", onPressed: () => Navigator.pushNamed(context, '/advisors')),
-                
+
                 // [GEMINI-FIX] Use pushReplacement for main tabs to keep stack clean
                 _buildMenuButton(
                     icon: Icons.flag_outlined,
                     tooltip: "Camp",
                     enabled: canNavigateToCamp,
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/camp')),
+                    badgeCount: gameState.getCampBadgeCount(), // [GEMINI-NEW]
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/camp')),
                 _buildMenuButton(
                     icon: Icons.map_outlined,
                     tooltip: "Area Map",
                     enabled: canNavigateToArea,
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/area')),
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/area')),
                 _buildMenuButton(
                     icon: Icons.travel_explore,
                     tooltip: "Region Map",
                     enabled: canNavigateToRegion,
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/region')),
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/region')),
                 _buildMenuButton(
                     icon: Icons.public,
                     tooltip: "World Map",
                     enabled: canNavigateToWorldMap,
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/world')),
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/world')),
 
                 if (gameState.isOmniscienceAllowed)
                   _buildMenuButton(
@@ -237,7 +254,7 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                           ? "Omniscience ON"
                           : "Omniscience OFF",
                       onPressed: gameNotifier.toggleOmniscientMode),
-                
+
                 _buildMenuButton(
                     icon: _isMenuOpen ? Icons.close : Icons.menu,
                     tooltip: _isMenuOpen ? "Close Menu" : "Menu",
@@ -283,4 +300,3 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
     );
   }
 }
-

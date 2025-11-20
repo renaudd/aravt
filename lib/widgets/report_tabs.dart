@@ -11,6 +11,7 @@ import 'package:aravt/models/hunting_report.dart';
 import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/models/herd_data.dart';
 import 'package:aravt/models/resource_report.dart';
+import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'dart:math' as math;
 
 // --- COMMON HELPER WIDGETS ---
@@ -634,14 +635,25 @@ class _IndustryView extends StatelessWidget {
                 else if (res.amountGathered < 8)
                   performanceColor = Colors.red[300]!; // Scold threshold
 
-                return ListTile(
-                  dense: true,
-                  title: Text(res.soldierName,
-                      style: const TextStyle(color: Colors.white)),
-                  trailing: Text(
-                    "${res.amountGathered.toStringAsFixed(1)} ${_getUnitForResourceType(report.type)}",
-                    style: TextStyle(
-                        color: performanceColor, fontWeight: FontWeight.bold),
+                return InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SoldierProfileScreen(soldierId: res.soldierId),
+                      ),
+                    );
+                  },
+                  child: ListTile(
+                    dense: true,
+                    title: Text(res.soldierName,
+                        style: const TextStyle(
+                            color: Colors.amber, fontWeight: FontWeight.bold)),
+                    trailing: Text(
+                      "${res.amountGathered.toStringAsFixed(1)} ${_getUnitForResourceType(report.type)}",
+                      style: TextStyle(
+                          color: performanceColor, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 );
               }).toList(),
@@ -892,19 +904,31 @@ class HuntingReportTab extends StatelessWidget {
               children: report.individualResults.map((res) {
                 if (soldierId != null && res.soldierId != soldierId)
                   return const SizedBox.shrink();
-                return ListTile(
-                  title: Text(res.soldierName,
-                      style: const TextStyle(color: Colors.white)),
-                  subtitle: Text(
-                      res.kills.isEmpty
-                          ? "Caught nothing."
-                          : res.kills
-                              .map((k) => "${k.animalName} (${k.meatYield}kg)")
-                              .join(", "),
-                      style: const TextStyle(color: Colors.white70)),
-                  trailing: res.wasInjured
-                      ? const Icon(Icons.local_hospital, color: Colors.red)
-                      : null,
+                return InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SoldierProfileScreen(soldierId: res.soldierId),
+                      ),
+                    );
+                  },
+                  child: ListTile(
+                    title: Text(res.soldierName,
+                        style: const TextStyle(
+                            color: Colors.amber, fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                        res.kills.isEmpty
+                            ? "Caught nothing."
+                            : res.kills
+                                .map(
+                                    (k) => "${k.animalName} (${k.meatYield}kg)")
+                                .join(", "),
+                        style: const TextStyle(color: Colors.white70)),
+                    trailing: res.wasInjured
+                        ? const Icon(Icons.local_hospital, color: Colors.red)
+                        : null,
+                  ),
                 );
               }).toList(),
             ),
@@ -965,14 +989,25 @@ class FishingReportTab extends StatelessWidget {
               children: report.individualResults.map((res) {
                 if (soldierId != null && res.soldierId != soldierId)
                   return const SizedBox.shrink();
-                return ListTile(
-                  title: Text(res.soldierName,
-                      style: const TextStyle(color: Colors.white)),
-                  subtitle: Text(
-                      res.catches.isEmpty
-                          ? "Caught nothing."
-                          : "${res.catches.length} fish caught using ${res.catches.first.techniqueUsed} and others.",
-                      style: const TextStyle(color: Colors.white70)),
+                return InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SoldierProfileScreen(soldierId: res.soldierId),
+                      ),
+                    );
+                  },
+                  child: ListTile(
+                    title: Text(res.soldierName,
+                        style: const TextStyle(
+                            color: Colors.amber, fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                        res.catches.isEmpty
+                            ? "Caught nothing."
+                            : "${res.catches.length} fish caught using ${res.catches.first.techniqueUsed} and others.",
+                        style: const TextStyle(color: Colors.white70)),
+                  ),
                 );
               }).toList(),
             ),

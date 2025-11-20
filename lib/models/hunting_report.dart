@@ -84,6 +84,8 @@ class HuntingTripReport {
   final List<IndividualHuntResult> individualResults;
   final double totalMeat;
   final int totalPelts;
+  // [GEMINI-NEW] Turn number for highlighting
+  final int turn;
 
   HuntingTripReport({
     required this.date,
@@ -91,6 +93,7 @@ class HuntingTripReport {
     required this.aravtName,
     required this.locationName,
     required this.individualResults,
+    this.turn = 0, // Default for migration
   })  : totalMeat =
             individualResults.fold(0.0, (sum, res) => sum + res.totalMeat),
         totalPelts =
@@ -104,6 +107,7 @@ class HuntingTripReport {
         'individualResults': individualResults.map((r) => r.toJson()).toList(),
         'totalMeat': totalMeat,
         'totalPelts': totalPelts,
+        'turn': turn,
       };
 
   factory HuntingTripReport.fromJson(Map<String, dynamic> json) {
@@ -115,6 +119,7 @@ class HuntingTripReport {
       individualResults: (json['individualResults'] as List)
           .map((r) => IndividualHuntResult.fromJson(r))
           .toList(),
+      turn: json['turn'] ?? 0,
     );
   }
 }

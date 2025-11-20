@@ -79,8 +79,8 @@ class AravtAssignmentService {
       // Process Active Tasks
       if (currentTask.isCompleted(currentTime)) {
         if (currentTask is AssignedTask) {
-          await _processAssignedTask(aravt, soldiers, currentTask, gameState,
-              currentTime, playerCamp);
+          await _processAssignedTask(
+              aravt, soldiers, currentTask, gameState, currentTime, playerCamp);
         } else if (currentTask is MovingTask) {
           await _processMovingTask(aravt, currentTask, gameState, currentTime);
         }
@@ -379,8 +379,7 @@ class AravtAssignmentService {
       defenders.addAll(isNpc1 ? gameState.npcAravts1 : gameState.npcAravts2);
       defenderPool = isNpc1 ? gameState.npcHorde1 : gameState.npcHorde2;
       // Only defenders CURRENTLY AT THE CAMP can fight
-      defenders =
-          defenders.where((a) => a.hexCoords == poi.position).toList();
+      defenders = defenders.where((a) => a.hexCoords == poi.position).toList();
     }
 
     // 4. Execute Battle or Loot
@@ -388,8 +387,8 @@ class AravtAssignmentService {
       _handleUncontestedVictory(readyAttackers, poi, gameState);
     } else {
       // If PLAYER is involved (either attacking or defending), use full combat
-      bool playerInvolved = isPlayer ||
-          defenders.any((d) => gameState.aravts.contains(d));
+      bool playerInvolved =
+          isPlayer || defenders.any((d) => gameState.aravts.contains(d));
 
       if (playerInvolved) {
         gameState.initiateCombat(
@@ -414,7 +413,7 @@ class AravtAssignmentService {
       List<Aravt> attackers, PointOfInterest poi, GameState gameState) {
     gameState.logEvent(
         "${poi.name} was undefended! ${attackers.length} aravts pillage the location.",
-        category: EventCategory.combat,
+        category: EventCategory.general,
         severity: EventSeverity.high);
 
     // Loot logic: Drain resources as generic "Scrap"
@@ -436,8 +435,6 @@ class AravtAssignmentService {
       a.task = null;
     }
   }
-
-  // --- Economic Activities (UPDATED for Reports & Performance) ---
 
   Future<void> _resolveHunting(Aravt aravt, List<Soldier> soldiers,
       PointOfInterest? poi, GameState gameState) async {
@@ -465,17 +462,19 @@ class AravtAssignmentService {
     gameState.addHuntingReport(report);
 
     // Log global event
+    bool isPlayerAravt = aravt.soldierIds.contains(gameState.player?.id);
     if (report.totalMeat > 0) {
       gameState.logEvent(
         "${aravt.id} returned from hunting with ${report.totalMeat.toStringAsFixed(1)} kg of meat.",
         category: EventCategory.food,
+        severity: isPlayerAravt ? EventSeverity.high : EventSeverity.normal,
         aravtId: aravt.id,
       );
     } else {
       gameState.logEvent(
         "${aravt.id} returned from hunting empty-handed.",
         category: EventCategory.food,
-        severity: EventSeverity.low,
+        severity: isPlayerAravt ? EventSeverity.high : EventSeverity.low,
         aravtId: aravt.id,
       );
     }
@@ -516,17 +515,19 @@ class AravtAssignmentService {
 
     gameState.addFishingReport(report);
 
+    bool isPlayerAravt = aravt.soldierIds.contains(gameState.player?.id);
     if (report.totalMeat > 0) {
       gameState.logEvent(
         "${aravt.id} caught ${report.totalFishCaught} fish (${report.totalMeat.toStringAsFixed(1)} kg).",
         category: EventCategory.food,
+        severity: isPlayerAravt ? EventSeverity.high : EventSeverity.normal,
         aravtId: aravt.id,
       );
     } else {
       gameState.logEvent(
         "${aravt.id} caught nothing while fishing.",
         category: EventCategory.food,
-        severity: EventSeverity.low,
+        severity: isPlayerAravt ? EventSeverity.high : EventSeverity.low,
         aravtId: aravt.id,
       );
     }
@@ -562,9 +563,11 @@ class AravtAssignmentService {
     gameState.addCommunalWood(report.totalGathered);
 
     if (report.totalGathered > 0) {
+      bool isPlayerAravt = aravt.soldierIds.contains(gameState.player?.id);
       gameState.logEvent(
         "${aravt.id} chopped ${report.totalGathered.toStringAsFixed(1)} kg of wood at ${poi.name}.",
-        category: EventCategory.general,
+        category: EventCategory.finance,
+        severity: isPlayerAravt ? EventSeverity.high : EventSeverity.normal,
         aravtId: aravt.id,
       );
     }
@@ -608,9 +611,11 @@ class AravtAssignmentService {
     gameState.addCommunalIronOre(report.totalGathered);
 
     if (report.totalGathered > 0) {
+      bool isPlayerAravt = aravt.soldierIds.contains(gameState.player?.id);
       gameState.logEvent(
         "${aravt.id} mined ${report.totalGathered.toStringAsFixed(1)} kg of iron ore at ${poi.name}.",
-        category: EventCategory.general,
+        category: EventCategory.finance,
+        severity: isPlayerAravt ? EventSeverity.high : EventSeverity.normal,
         aravtId: aravt.id,
       );
     }
@@ -781,8 +786,7 @@ class AravtAssignmentService {
           area.type = AreaType.NpcCamp;
           area.icon = Icons.fort;
           area.backgroundImagePath = 'assets/backgrounds/npc_camp_bg.jpg';
-          gameState.logEvent(
-              "Your aravt has discovered the ${areaPoi.name}!",
+          gameState.logEvent("Your aravt has discovered the ${areaPoi.name}!",
               category: EventCategory.general,
               severity: EventSeverity.high,
               aravtId: playerAravt.id);
@@ -794,8 +798,7 @@ class AravtAssignmentService {
           List<Soldier> pool = (areaPoi.id == 'camp-npc1')
               ? gameState.npcHorde1
               : gameState.npcHorde2;
-          defenders =
-              defenders.where((a) => a.soldierIds.isNotEmpty).toList();
+          defenders = defenders.where((a) => a.soldierIds.isNotEmpty).toList();
 
           if (defenders.isNotEmpty) {
             List<Aravt> playerForces = [playerAravt];
@@ -809,7 +812,7 @@ class AravtAssignmentService {
 
             gameState.logEvent(
                 "Hostiles encountered near ${areaPoi.name}! ${playerForces.length} player aravt(s) engage.",
-                category: EventCategory.combat,
+                category: EventCategory.general,
                 severity: EventSeverity.high,
                 aravtId: playerAravt.id);
             gameState.initiateCombat(
@@ -843,4 +846,3 @@ class AravtAssignmentService {
     return [];
   }
 }
-

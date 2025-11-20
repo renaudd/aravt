@@ -66,6 +66,16 @@ class GameState with ChangeNotifier {
   NarrativeEvent? activeNarrativeEvent;
   bool hasDay5TradeOccurred = false;
 
+  // [GEMINI-NEW] Notification Badge Tracking
+  Set<String> viewedReportTabs = {};
+  bool hasPendingTradeOffer = false;
+
+  // [GEMINI-NEW] Tutorial Persistence
+  bool tutorialCompleted = false;
+  bool tutorialPermanentlyDismissed = false;
+  int tutorialDismissalCount = 0;
+  int tutorialStepIndex = 0;
+
   String difficulty = 'medium';
 
   // Game Over State
@@ -268,6 +278,97 @@ class GameState with ChangeNotifier {
     }
   }
 
+  void clearPendingTradeOffer() {
+    hasPendingTradeOffer = false;
+    notifyListeners();
+  }
+
+  int getBadgeCountForTab(String tabName) {
+    if (viewedReportTabs.contains(tabName)) return 0;
+
+    int count = 0;
+    for (var event in eventLog) {
+      if (_getTabNameForCategory(event.category) == tabName &&
+          (event.severity == EventSeverity.high ||
+              event.severity == EventSeverity.critical)) {
+        count++;
+      }
+    }
+    // Special case for Games tab
+    if (tabName == "Games" &&
+        tournamentHistory.isNotEmpty &&
+        !viewedReportTabs.contains("Games")) {
+      count++;
+    }
+    return count;
+  }
+
+  int getBadgeCountForCommerceSubTab(String subTab) {
+    if (viewedReportTabs.contains('Commerce')) return 0;
+
+    int count = 0;
+    for (var event in eventLog) {
+      if (event.category == EventCategory.finance &&
+          (event.severity == EventSeverity.high ||
+              event.severity == EventSeverity.critical)) {
+        bool isIndustry = event.message.contains("chopped") ||
+            event.message.contains("mined") ||
+            event.message.contains("scavenged") ||
+            event.message.contains("fletched");
+
+        if (subTab == 'Industry' && isIndustry) count++;
+        if (subTab == 'Finance' && !isIndustry) count++;
+      }
+    }
+    return count;
+  }
+
+  int getReportsBadgeCount() {
+    int count = 0;
+    for (var event in eventLog) {
+      if ((event.severity == EventSeverity.high ||
+              event.severity == EventSeverity.critical) &&
+          !viewedReportTabs.contains(_getTabNameForCategory(event.category))) {
+        count++;
+      }
+    }
+    if (tournamentHistory.isNotEmpty && !viewedReportTabs.contains("Games")) {
+      count++;
+    }
+    return count;
+  }
+
+  int getCampBadgeCount() {
+    return hasPendingTradeOffer ? 1 : 0;
+  }
+
+  void markReportTabViewed(String tabName) {
+    viewedReportTabs.add(tabName);
+    notifyListeners();
+  }
+
+  String _getTabNameForCategory(EventCategory category) {
+    switch (category) {
+      case EventCategory.combat:
+        return 'Combat';
+      case EventCategory.games:
+        return 'Games';
+      case EventCategory.hunting:
+        return 'Hunting';
+      case EventCategory.food:
+        return 'Food';
+      case EventCategory.finance:
+        return 'Commerce';
+      case EventCategory.health:
+        return 'Health';
+      case EventCategory.herds:
+      case EventCategory.horses:
+        return 'Herds';
+      default:
+        return 'Event Log';
+    }
+  }
+
   void addCombatReport(CombatReport report) {
     combatReports.add(report);
     notifyListeners();
@@ -372,6 +473,9 @@ class GameState with ChangeNotifier {
   }
 
   void dismissNarrativeEvent() {
+    if (activeNarrativeEvent?.type == NarrativeEventType.day5Trade) {
+      hasPendingTradeOffer = false;
+    }
     activeNarrativeEvent = null;
     notifyListeners();
   }
@@ -1357,6 +1461,12 @@ class GameState with ChangeNotifier {
       'fishingReports': fishingReports.map((r) => r.toJson()).toList(),
       // [GEMINI-NEW] Save resource reports
       'resourceReports': resourceReports.map((r) => r.toJson()).toList(),
+      'viewedReportTabs': viewedReportTabs.toList(),
+      'hasPendingTradeOffer': hasPendingTradeOffer,
+      'tutorialCompleted': tutorialCompleted,
+      'tutorialPermanentlyDismissed': tutorialPermanentlyDismissed,
+      'tutorialDismissalCount': tutorialDismissalCount,
+      'tutorialStepIndex': tutorialStepIndex,
     };
   }
 
@@ -1491,6 +1601,16 @@ class GameState with ChangeNotifier {
           .map((r) => ResourceReport.fromJson(r))
           .toList();
     }
+
+    if (json['viewedReportTabs'] != null) {
+      viewedReportTabs = Set<String>.from(json['viewedReportTabs']);
+    }
+    hasPendingTradeOffer = json['hasPendingTradeOffer'] ?? false;
+    tutorialCompleted = json['tutorialCompleted'] ?? false;
+    tutorialPermanentlyDismissed =
+        json['tutorialPermanentlyDismissed'] ?? false;
+    tutorialDismissalCount = json['tutorialDismissalCount'] ?? 0;
+    tutorialStepIndex = json['tutorialStepIndex'] ?? 0;
 
     _isLoading = false;
     _combatFlowState = CombatFlowState.none;

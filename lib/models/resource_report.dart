@@ -43,6 +43,8 @@ class ResourceReport {
   final ResourceType type;
   final double totalGathered;
   final List<IndividualResourceResult> individualResults;
+  // [GEMINI-NEW] Turn number for highlighting
+  final int turn;
 
   ResourceReport({
     required this.date,
@@ -52,6 +54,7 @@ class ResourceReport {
     required this.type,
     required this.totalGathered,
     required this.individualResults,
+    this.turn = 0, // Default for migration
   });
 
   // JSON Serialization
@@ -64,6 +67,7 @@ class ResourceReport {
       'type': type.index, // Storing enum as index
       'totalGathered': totalGathered,
       'individualResults': individualResults.map((e) => e.toJson()).toList(),
+      'turn': turn,
     };
   }
 
@@ -78,6 +82,7 @@ class ResourceReport {
       individualResults: (json['individualResults'] as List)
           .map((e) => IndividualResourceResult.fromJson(e))
           .toList(),
+      turn: json['turn'] ?? 0,
     );
   }
 }

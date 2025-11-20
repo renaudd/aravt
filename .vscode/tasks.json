@@ -12,6 +12,21 @@
 			"problemMatcher": [],
 			"label": "flutter: flutter build aar",
 			"detail": ""
+		},
+		{
+			"type": "flutter",
+			"command": "flutter",
+			"args": [
+				"build",
+				"windows"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"label": "flutter: flutter build windows",
+			"detail": ""
 		}
 	]
 }

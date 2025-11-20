@@ -1095,6 +1095,11 @@ class SoldierGenerator {
     return null;
   }
 
+  static String _generateItemOrigin() {
+    if (_sedentaryNames.isEmpty) return 'Unknown';
+    return _sedentaryNames[_random.nextInt(_sedentaryNames.length)];
+  }
+
   static double _generateExhaustion() =>
       _getStandardDistributionValue(0, 5, 1).toDouble();
   static double _generateStress() =>
@@ -1452,7 +1457,13 @@ class SoldierGenerator {
     final int statMean = isPlayerCharacter ? 5 : 4;
 
     // [GEMINI-FIX] Use override if present, otherwise generate
-    final age = overrideAge ?? _generateAge();
+    int age = overrideAge ?? _generateAge();
+
+    // Cap player age at 50
+    if (isPlayerCharacter && age > 50) {
+      age = _random.nextInt(26) + 25; // 25-50
+    }
+
     final dateOfBirth = _generateDateOfBirth(age);
     final zodiac = _getZodiac(dateOfBirth.year);
     final yearsWithHorde = _generateYearsWithHorde(age);
@@ -1638,15 +1649,43 @@ class SoldierGenerator {
       animalHandling: animalHandling,
     );
 
+    // Generate a culturally appropriate origin for items
+    final String itemOrigin = _generateItemOrigin();
+
     final List<InventoryItem> personalInventory = [];
-    if (_random.nextDouble() < 0.3) {
+
+    // Short bow (60% chance)
+    if (_random.nextDouble() < 0.6) {
       final item = ItemDatabase.createItemInstance('wep_short_bow',
-          forcedQuality: 'Worn', origin: placeOrTribe.name);
+          forcedQuality: 'Worn', origin: itemOrigin);
       if (item != null) personalInventory.add(item);
     }
-    if (_random.nextDouble() < 0.5) {
-      final item = ItemDatabase.createItemInstance('con_dried_meat',
-          origin: placeOrTribe.name);
+
+    // Dried meat (80% chance)
+    if (_random.nextDouble() < 0.8) {
+      final item =
+          ItemDatabase.createItemInstance('con_dried_meat', origin: itemOrigin);
+      if (item != null) personalInventory.add(item);
+    }
+
+    // Arrows (70% chance)
+    if (_random.nextDouble() < 0.7) {
+      final item =
+          ItemDatabase.createItemInstance('con_arrows', origin: itemOrigin);
+      if (item != null) personalInventory.add(item);
+    }
+
+    // Water skin (60% chance)
+    if (_random.nextDouble() < 0.6) {
+      final item =
+          ItemDatabase.createItemInstance('con_water', origin: itemOrigin);
+      if (item != null) personalInventory.add(item);
+    }
+
+    // Basic supplies (40% chance)
+    if (_random.nextDouble() < 0.4) {
+      final item =
+          ItemDatabase.createItemInstance('con_rope', origin: itemOrigin);
       if (item != null) personalInventory.add(item);
     }
 
@@ -1654,7 +1693,7 @@ class SoldierGenerator {
     try {
       void equip(String templateId, {String? forcedQuality}) {
         final item = ItemDatabase.createItemInstance(templateId,
-            forcedQuality: forcedQuality, origin: placeOrTribe.name);
+            forcedQuality: forcedQuality, origin: itemOrigin);
         if (item != null && item.equippableSlot != null) {
           startingEquipment[item.equippableSlot!] = item;
         }
