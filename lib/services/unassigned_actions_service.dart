@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/soldier_action.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/social_interaction_data.dart';
@@ -204,6 +205,42 @@ class UnassignedActionsService {
           double murderProb =
               hostilityProb * (entry.value.admiration < 0.5 ? 2.0 : 1.0);
 
+          actions.add(SoldierActionProposal(
+            actionType: UnassignedActionType.murderAttempt,
+            soldier: soldier,
+            probability: murderProb,
+            targetSoldierId: target.id,
+          ));
+        }
+      }
+    }
+
+    // [GEMINI-FIX] Murderer Attribute Logic
+    // Murderers have a compulsion to kill, regardless of relationships.
+    if (soldier.attributes.contains(SoldierAttribute.murderer)) {
+      // Pick a random target from the horde
+      final potentialVictims = gameState.horde
+          .where((s) => s.id != soldier.id && s.status == SoldierStatus.alive)
+          .toList();
+
+      if (potentialVictims.isNotEmpty) {
+        final target =
+            potentialVictims[_random.nextInt(potentialVictims.length)];
+
+        // Base probability for a "thrill kill"
+        double murderProb = 0.15;
+
+        // If target is player, check if allowed
+        if (target.isPlayer) {
+          if (_canAttemptMurderOnPlayer(target, gameState)) {
+            actions.add(SoldierActionProposal(
+              actionType: UnassignedActionType.murderAttempt,
+              soldier: soldier,
+              probability: murderProb,
+              targetSoldierId: target.id,
+            ));
+          }
+        } else {
           actions.add(SoldierActionProposal(
             actionType: UnassignedActionType.murderAttempt,
             soldier: soldier,

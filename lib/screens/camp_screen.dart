@@ -82,21 +82,6 @@ class _CampScreenState extends State<CampScreen>
       if (!tutorial.isActive) {
         tutorial.startTutorial(context, gameState);
       }
-
-      // [GEMINI-FIX] Trigger trade offer narrative when entering Camp with pending offer
-      if (gameState.hasPendingTradeOffer &&
-          gameState.pendingTradeCaptainId != null &&
-          gameState.pendingTradeSoldierId != null) {
-        gameState.startNarrativeEvent(NarrativeEvent(
-          type: NarrativeEventType.day5Trade,
-          instigatorId: gameState.pendingTradeCaptainId!,
-          targetId: gameState.pendingTradeSoldierId!,
-        ));
-        // Clear the pending flag and IDs since narrative is now active
-        gameState.hasPendingTradeOffer = false;
-        gameState.pendingTradeCaptainId = null;
-        gameState.pendingTradeSoldierId = null;
-      }
     });
   }
 

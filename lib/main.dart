@@ -99,9 +99,7 @@ class _AravtGameState extends State<AravtGame> {
     final currentCombatState = gameState.combatFlowState;
     final isGameOver = gameState.isGameOver;
 
-    // Use postFrameCallback to ensure we don't try to navigate while building
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
       final navigator = _navigatorKey.currentState;
       if (navigator == null) return;
 
