@@ -11,6 +11,9 @@ import 'package:aravt/models/hunting_report.dart';
 import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/models/herd_data.dart';
 import 'package:aravt/models/resource_report.dart';
+import 'package:aravt/models/trade_report.dart';
+import 'package:aravt/models/wealth_event.dart';
+import 'package:aravt/models/culinary_news.dart';
 import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'dart:math' as math;
 
@@ -468,50 +471,29 @@ class _CommerceReportTabState extends State<CommerceReportTab> {
 
 // --- SUB-VIEW 1: FINANCE ---
 
-class _FinanceView extends StatelessWidget {
+class _FinanceView extends StatefulWidget {
   const _FinanceView();
+
+  @override
+  State<_FinanceView> createState() => _FinanceViewState();
+}
+
+class _FinanceViewState extends State<_FinanceView> {
+  String _selectedWealthView = 'total'; // total, personal, communal, aravt, npc
 
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
-    final financeEvents = gameState.eventLog
-        .where((e) => e.category == EventCategory.finance)
-        .toList()
-        .reversed
-        .toList();
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       children: [
         _buildWealthChart(gameState),
         const SizedBox(height: 20),
-        _buildSectionHeader("Financial Ledger"),
-        if (financeEvents.isEmpty)
-          const Center(
-              child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text("No financial records yet.",
-                style: TextStyle(color: Colors.white54)),
-          ))
-        else
-          ...financeEvents.map((e) => Card(
-                color: Colors.black.withOpacity(0.5),
-                margin: const EdgeInsets.only(bottom: 8.0),
-                child: ListTile(
-                  leading: Icon(
-                      e.severity == EventSeverity.normal
-                          ? Icons.arrow_upward
-                          : Icons.arrow_downward,
-                      color: e.severity == EventSeverity.normal
-                          ? Colors.green
-                          : Colors.red),
-                  title: Text(e.message,
-                      style: const TextStyle(color: Colors.white)),
-                  subtitle: Text(e.date.toShortString(),
-                      style: const TextStyle(color: Colors.white54)),
-                ),
-              )),
-        const SizedBox(height: 80), // Bottom padding for FAB
+        _buildWealthEvents(gameState),
+        const SizedBox(height: 20),
+        _buildTradeReports(gameState),
+        const SizedBox(height: 80), // Bottom padding
       ],
     );
   }
@@ -525,10 +507,6 @@ class _FinanceView extends StatelessWidget {
                   style: TextStyle(color: Colors.white54))));
     }
 
-    // Simple custom bar chart since we can't use external chart packages easily here
-    double maxWealth = gameState.wealthHistory.reduce(math.max);
-    if (maxWealth == 0) maxWealth = 1;
-
     return Card(
       color: Colors.black.withOpacity(0.6),
       child: Padding(
@@ -536,17 +514,27 @@ class _FinanceView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Wealth History (Last 30 Turns)",
-                style: GoogleFonts.cinzel(color: Colors.amber)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Wealth History (Last 30 Turns)",
+                    style: GoogleFonts.cinzel(color: Colors.amber)),
+                _buildWealthViewToggle(),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildCurrentWealthSummary(gameState),
             const SizedBox(height: 16),
             SizedBox(
               height: 150,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: gameState.wealthHistory.asMap().entries.map((entry) {
-                  // Color red if wealth dropped compared to previous turn
                   bool isLoss = entry.key > 0 &&
                       entry.value < gameState.wealthHistory[entry.key - 1];
+                  double maxWealth = gameState.wealthHistory.reduce(math.max);
+                  if (maxWealth == 0) maxWealth = 1;
+
                   return Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2.0),
@@ -572,6 +560,224 @@ class _FinanceView extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildWealthViewToggle() {
+    return DropdownButton<String>(
+      value: _selectedWealthView,
+      dropdownColor: Colors.black87,
+      style: const TextStyle(color: Colors.white70, fontSize: 12),
+      underline: Container(height: 1, color: Colors.amber.withOpacity(0.3)),
+      items: const [
+        DropdownMenuItem(value: 'total', child: Text('Total Horde')),
+        DropdownMenuItem(value: 'personal', child: Text('Personal')),
+        DropdownMenuItem(value: 'communal', child: Text('Communal')),
+        DropdownMenuItem(value: 'aravt', child: Text('Per Aravt')),
+        DropdownMenuItem(value: 'npc', child: Text('NPC Soldiers')),
+      ],
+      onChanged: (value) {
+        if (value != null) setState(() => _selectedWealthView = value);
+      },
+    );
+  }
+
+  Widget _buildCurrentWealthSummary(GameState gameState) {
+    double personalWealth = (gameState.player?.treasureWealth ?? 0) +
+        (gameState.player?.suppliesWealth ?? 0);
+    double communalWealth = gameState.communalScrap; // Simplified
+    double npcWealth = gameState.horde
+        .where((s) => s.id != gameState.player?.id)
+        .fold(0.0, (sum, s) => sum + s.treasureWealth + s.suppliesWealth);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildWealthStat('Personal', personalWealth),
+        _buildWealthStat('Communal', communalWealth),
+        _buildWealthStat('NPC Total', npcWealth),
+      ],
+    );
+  }
+
+  Widget _buildWealthStat(String label, double value) {
+    return Column(
+      children: [
+        Text(value.toStringAsFixed(0),
+            style: GoogleFonts.cinzel(
+                color: Colors.amber,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _buildWealthEvents(GameState gameState) {
+    final events = gameState.wealthEvents.reversed.take(10).toList();
+
+    if (events.isEmpty) {
+      return Card(
+        color: Colors.black.withOpacity(0.5),
+        child: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text("No wealth events recorded.",
+              style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader("Recent Wealth Events"),
+        ...events.map((event) => Card(
+              color: Colors.black.withOpacity(0.5),
+              margin: const EdgeInsets.only(bottom: 8.0),
+              child: ListTile(
+                leading: Icon(
+                  event.isGain ? Icons.arrow_upward : Icons.arrow_downward,
+                  color: event.isGain ? Colors.green : Colors.red,
+                ),
+                title: Text(event.description,
+                    style: const TextStyle(color: Colors.white)),
+                subtitle: Text(
+                    "${event.date.toShortString()} - ${event.type.name}",
+                    style: const TextStyle(color: Colors.white54)),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (event.rupeesChange != 0)
+                      Text(
+                          "${event.rupeesChange > 0 ? '+' : ''}${event.rupeesChange.toStringAsFixed(0)} ₹",
+                          style: TextStyle(
+                              color: event.rupeesChange > 0
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontWeight: FontWeight.bold)),
+                    if (event.scrapChange != 0)
+                      Text(
+                          "${event.scrapChange > 0 ? '+' : ''}${event.scrapChange.toStringAsFixed(0)} scrap",
+                          style: TextStyle(
+                              color: event.scrapChange > 0
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontSize: 11)),
+                  ],
+                ),
+              ),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildTradeReports(GameState gameState) {
+    final reports = gameState.tradeReports.reversed.take(10).toList();
+
+    if (reports.isEmpty) {
+      return Card(
+        color: Colors.black.withOpacity(0.5),
+        child: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text("No trade reports filed.",
+              style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader("Recent Trade Reports"),
+        ...reports.map((report) => Card(
+              color: Colors.black.withOpacity(0.5),
+              margin: const EdgeInsets.only(bottom: 8.0),
+              child: ExpansionTile(
+                leading: Icon(
+                  _getTradeOutcomeIcon(report.outcome),
+                  color: _getTradeOutcomeColor(report.outcome),
+                ),
+                title: Text("Trade with ${report.partnerName}",
+                    style: const TextStyle(color: Colors.white)),
+                subtitle: Text(
+                    "${report.date.toShortString()} - ${report.outcome.name}",
+                    style: const TextStyle(color: Colors.white54)),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (report.itemsGiven.isNotEmpty) ...[
+                          Text("Items Given:",
+                              style: GoogleFonts.cinzel(
+                                  color: Colors.red[300],
+                                  fontWeight: FontWeight.bold)),
+                          ...report.itemsGiven.map((item) => Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 16.0, top: 4.0),
+                                child: Text(
+                                    "• ${item.itemName} x${item.quantity}",
+                                    style:
+                                        const TextStyle(color: Colors.white70)),
+                              )),
+                          const SizedBox(height: 8),
+                        ],
+                        if (report.itemsReceived.isNotEmpty) ...[
+                          Text("Items Received:",
+                              style: GoogleFonts.cinzel(
+                                  color: Colors.green[300],
+                                  fontWeight: FontWeight.bold)),
+                          ...report.itemsReceived.map((item) => Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 16.0, top: 4.0),
+                                child: Text(
+                                    "• ${item.itemName} x${item.quantity}",
+                                    style:
+                                        const TextStyle(color: Colors.white70)),
+                              )),
+                        ],
+                        if (report.notes.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(report.notes,
+                              style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontStyle: FontStyle.italic)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+
+  IconData _getTradeOutcomeIcon(TradeOutcome outcome) {
+    switch (outcome) {
+      case TradeOutcome.success:
+        return Icons.check_circle;
+      case TradeOutcome.partialSuccess:
+        return Icons.check_circle_outline;
+      case TradeOutcome.rejected:
+        return Icons.cancel;
+      case TradeOutcome.cancelled:
+        return Icons.block;
+    }
+  }
+
+  Color _getTradeOutcomeColor(TradeOutcome outcome) {
+    switch (outcome) {
+      case TradeOutcome.success:
+        return Colors.green;
+      case TradeOutcome.partialSuccess:
+        return Colors.yellow;
+      case TradeOutcome.rejected:
+      case TradeOutcome.cancelled:
+        return Colors.red;
+    }
+  }
 }
 
 // --- SUB-VIEW 2: INDUSTRY ---
@@ -582,12 +788,15 @@ class _IndustryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
-    final reports = gameState.resourceReports.reversed.toList();
+    final reports = gameState.resourceReports.reversed.take(20).toList();
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       children: [
         _buildStockpiles(gameState),
+        const Divider(color: Colors.white24, height: 40),
+        _buildSectionHeader("Material Flow Summary"),
+        _buildMaterialFlowSummary(gameState),
         const Divider(color: Colors.white24, height: 40),
         _buildSectionHeader("Production Log"),
         if (reports.isEmpty)
@@ -605,24 +814,64 @@ class _IndustryView extends StatelessWidget {
   }
 
   Widget _buildStockpiles(GameState gameState) {
-    // Dynamic list: only show what we have > 0 of
-    final Map<String, String> stockpiles = {};
+    final List<Map<String, dynamic>> stockpiles = [];
 
     if (gameState.communalWood > 0) {
-      stockpiles['Wood'] = "${gameState.communalWood.toStringAsFixed(0)} kg";
+      stockpiles.add({
+        'icon': Icons.forest,
+        'name': 'Wood',
+        'quantity': gameState.communalWood.toStringAsFixed(0),
+        'unit': 'kg'
+      });
     }
     if (gameState.communalIronOre > 0) {
-      stockpiles['Iron Ore'] =
-          "${gameState.communalIronOre.toStringAsFixed(0)} kg";
+      stockpiles.add({
+        'icon': Icons.landscape,
+        'name': 'Iron Ore',
+        'quantity': gameState.communalIronOre.toStringAsFixed(0),
+        'unit': 'kg'
+      });
     }
     if (gameState.communalScrap > 0) {
-      stockpiles['Scrap'] =
-          "${gameState.communalScrap.toStringAsFixed(0)} units";
+      stockpiles.add({
+        'icon': Icons.build,
+        'name': 'Scrap',
+        'quantity': gameState.communalScrap.toStringAsFixed(0),
+        'unit': 'units'
+      });
     }
     if (gameState.communalArrows > 0) {
-      stockpiles['Arrows'] = "${gameState.communalArrows} units";
+      stockpiles.add({
+        'icon': Icons.arrow_upward,
+        'name': 'Arrows',
+        'quantity': gameState.communalArrows.toString(),
+        'unit': 'units'
+      });
     }
-    // Add other potential goods here as they are developed (e.g., Hides, Tools)
+    if (gameState.communalMilk > 0) {
+      stockpiles.add({
+        'icon': Icons.water_drop,
+        'name': 'Milk',
+        'quantity': gameState.communalMilk.toStringAsFixed(1),
+        'unit': 'L'
+      });
+    }
+    if (gameState.communalCheese > 0) {
+      stockpiles.add({
+        'icon': Icons.food_bank,
+        'name': 'Cheese',
+        'quantity': gameState.communalCheese.toStringAsFixed(1),
+        'unit': 'kg'
+      });
+    }
+    if (gameState.communalGrain > 0) {
+      stockpiles.add({
+        'icon': Icons.grass,
+        'name': 'Grain',
+        'quantity': gameState.communalGrain.toStringAsFixed(0),
+        'unit': 'kg'
+      });
+    }
 
     if (stockpiles.isEmpty) {
       return const Card(
@@ -635,20 +884,186 @@ class _IndustryView extends StatelessWidget {
       );
     }
 
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children: stockpiles.entries.map((e) {
-        return Chip(
-          avatar:
-              Icon(_getIconForResource(e.key), size: 18, color: Colors.black87),
-          label: Text("${e.key}: ${e.value}"),
-          backgroundColor: Colors.amber,
-          labelStyle: const TextStyle(
-              color: Colors.black87, fontWeight: FontWeight.bold),
-        );
-      }).toList(),
+    return Card(
+      color: Colors.black.withOpacity(0.6),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Current Inventory",
+                style: GoogleFonts.cinzel(
+                    color: Colors.amber, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Table(
+              columnWidths: const {
+                0: FixedColumnWidth(40),
+                1: FlexColumnWidth(2),
+                2: FlexColumnWidth(1),
+                3: FlexColumnWidth(1),
+              },
+              children: [
+                // Header row
+                TableRow(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.amber.withOpacity(0.3)),
+                    ),
+                  ),
+                  children: [
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text('Resource',
+                          style: GoogleFonts.cinzel(
+                              color: Colors.amber[200],
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text('Quantity',
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.cinzel(
+                              color: Colors.amber[200],
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+                      child: Text('Unit',
+                          style: GoogleFonts.cinzel(
+                              color: Colors.amber[200],
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                    ),
+                  ],
+                ),
+                // Data rows
+                ...stockpiles.map((item) => TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Icon(item['icon'] as IconData,
+                              size: 20, color: Colors.white70),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(item['name'] as String,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 14)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(item['quantity'] as String,
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 8.0),
+                          child: Text(item['unit'] as String,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
+                        ),
+                      ],
+                    )),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildMaterialFlowSummary(GameState gameState) {
+    if (gameState.materialFlowHistory.isEmpty) {
+      return Card(
+        color: Colors.black.withOpacity(0.5),
+        child: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text("No material flow data yet.",
+              style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
+    // Group by material type and end state
+    final Map<String, Map<String, double>> flowSummary = {};
+    for (var entry in gameState.materialFlowHistory.take(100)) {
+      final materialName = entry.material.name;
+      final endState = entry.endState.name;
+
+      flowSummary.putIfAbsent(materialName, () => {});
+      flowSummary[materialName]!.update(
+        endState,
+        (value) => value + entry.quantity,
+        ifAbsent: () => entry.quantity,
+      );
+    }
+
+    return Card(
+      color: Colors.black.withOpacity(0.6),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Material Refinement & End States (Last 100 Entries)",
+                style: GoogleFonts.cinzel(
+                    color: Colors.amber[200], fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ...flowSummary.entries.map((materialEntry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(materialEntry.key,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      children: materialEntry.value.entries.map((endState) {
+                        return Chip(
+                          label: Text(
+                              "${endState.key}: ${endState.value.toStringAsFixed(0)}"),
+                          backgroundColor: _getColorForEndState(endState.key),
+                          labelStyle: const TextStyle(
+                              color: Colors.white, fontSize: 11),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getColorForEndState(String endState) {
+    switch (endState) {
+      case 'consumed':
+        return Colors.blue[700]!;
+      case 'traded':
+        return Colors.green[700]!;
+      case 'equipped':
+        return Colors.purple[700]!;
+      case 'lost':
+      case 'spoiled':
+        return Colors.red[700]!;
+      case 'stockpiled':
+      default:
+        return Colors.grey[700]!;
+    }
   }
 
   Widget _buildResourceReportCard(ResourceReport report, BuildContext context) {
@@ -669,12 +1084,11 @@ class _IndustryView extends StatelessWidget {
             child: ListView(
               shrinkWrap: true,
               children: report.individualResults.map((res) {
-                // Color code based on performance threshold
                 Color performanceColor = Colors.white70;
                 if (res.amountGathered >= 25)
-                  performanceColor = Colors.green; // Praise threshold
+                  performanceColor = Colors.green;
                 else if (res.amountGathered < 8)
-                  performanceColor = Colors.red[300]!; // Scold threshold
+                  performanceColor = Colors.red[300]!;
 
                 return InkWell(
                   onTap: () {
@@ -745,6 +1159,9 @@ class _IndustryView extends StatelessWidget {
     if (name.contains("Wood")) return Icons.forest;
     if (name.contains("Ore")) return Icons.landscape;
     if (name.contains("Arrow")) return Icons.arrow_upward;
+    if (name.contains("Milk")) return Icons.water_drop;
+    if (name.contains("Cheese")) return Icons.food_bank;
+    if (name.contains("Grain")) return Icons.grass;
     return Icons.build;
   }
 }
@@ -884,14 +1301,307 @@ class HerdsReportTab extends StatelessWidget {
   }
 }
 
-class FoodReportTab extends StatelessWidget {
+class FoodReportTab extends StatefulWidget {
   final int? soldierId;
   const FoodReportTab({super.key, this.soldierId});
 
   @override
+  State<FoodReportTab> createState() => _FoodReportTabState();
+}
+
+class _FoodReportTabState extends State<FoodReportTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Re-using Commerce tab data for now as it overlaps heavily
-    return const CommerceReportTab(isOmniscient: false);
+    return Column(
+      children: [
+        Container(
+          color: Colors.black.withOpacity(0.7),
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.amber,
+            labelColor: Colors.amber,
+            unselectedLabelColor: Colors.white54,
+            tabs: const [
+              Tab(text: 'Overview'),
+              Tab(text: 'Fishing'),
+              Tab(text: 'Hunting'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _FoodOverviewTab(soldierId: widget.soldierId),
+              FishingReportTab(soldierId: widget.soldierId),
+              HuntingReportTab(soldierId: widget.soldierId),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FoodOverviewTab extends StatelessWidget {
+  final int? soldierId;
+  const _FoodOverviewTab({this.soldierId});
+
+  @override
+  Widget build(BuildContext context) {
+    final gameState = context.watch<GameState>();
+
+    return Container(
+      decoration: _tabBackground(),
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildFoodStockpiles(gameState),
+          const SizedBox(height: 20),
+          _buildCulinaryNews(gameState),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoodStockpiles(GameState gameState) {
+    final List<Map<String, dynamic>> food = [];
+
+    if (gameState.communalMeat > 0) {
+      food.add({
+        'icon': Icons.restaurant,
+        'name': 'Meat',
+        'quantity': gameState.communalMeat.toStringAsFixed(1),
+        'unit': 'kg'
+      });
+    }
+    if (gameState.communalMilk > 0) {
+      food.add({
+        'icon': Icons.water_drop,
+        'name': 'Milk',
+        'quantity': gameState.communalMilk.toStringAsFixed(1),
+        'unit': 'L'
+      });
+    }
+    if (gameState.communalCheese > 0) {
+      food.add({
+        'icon': Icons.food_bank,
+        'name': 'Cheese',
+        'quantity': gameState.communalCheese.toStringAsFixed(1),
+        'unit': 'kg'
+      });
+    }
+    if (gameState.communalGrain > 0) {
+      food.add({
+        'icon': Icons.grass,
+        'name': 'Grain',
+        'quantity': gameState.communalGrain.toStringAsFixed(0),
+        'unit': 'kg'
+      });
+    }
+    if (gameState.communalRice > 0) {
+      food.add({
+        'icon': Icons.grass,
+        'name': 'Rice',
+        'quantity': gameState.communalRice.toStringAsFixed(0),
+        'unit': 'kg'
+      });
+    }
+
+    return Card(
+      color: Colors.black.withOpacity(0.6),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Food Stockpiles",
+                style: GoogleFonts.cinzel(
+                    color: Colors.amber, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (food.isEmpty)
+              const Text("No food stockpiles.",
+                  style: TextStyle(color: Colors.white54))
+            else
+              Table(
+                columnWidths: const {
+                  0: FixedColumnWidth(40),
+                  1: FlexColumnWidth(2),
+                  2: FlexColumnWidth(1),
+                  3: FlexColumnWidth(1),
+                },
+                children: [
+                  // Header row
+                  TableRow(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom:
+                            BorderSide(color: Colors.amber.withOpacity(0.3)),
+                      ),
+                    ),
+                    children: [
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text('Food Type',
+                            style: GoogleFonts.cinzel(
+                                color: Colors.amber[200],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text('Quantity',
+                            textAlign: TextAlign.right,
+                            style: GoogleFonts.cinzel(
+                                color: Colors.amber[200],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+                        child: Text('Unit',
+                            style: GoogleFonts.cinzel(
+                                color: Colors.amber[200],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                  // Data rows
+                  ...food.map((item) => TableRow(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Icon(item['icon'] as IconData,
+                                size: 20, color: Colors.green[300]),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(item['name'] as String,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 14)),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(item['quantity'] as String,
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8.0, horizontal: 8.0),
+                            child: Text(item['unit'] as String,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12)),
+                          ),
+                        ],
+                      )),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCulinaryNews(GameState gameState) {
+    final news = gameState.culinaryNews.reversed.take(10).toList();
+
+    if (news.isEmpty) {
+      return Card(
+        color: Colors.black.withOpacity(0.5),
+        child: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text("No culinary news yet.",
+              style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader("Culinary News"),
+        ...news.map((item) => Card(
+              color: Colors.black.withOpacity(0.5),
+              margin: const EdgeInsets.only(bottom: 8.0),
+              child: ListTile(
+                leading: Icon(_getCulinaryIcon(item.type),
+                    color: _getCulinaryColor(item.type)),
+                title: Text(item.description,
+                    style: const TextStyle(color: Colors.white)),
+                subtitle: Text(item.date.toShortString(),
+                    style: const TextStyle(color: Colors.white54)),
+                trailing: item.qualityRating != null
+                    ? Text("${item.qualityRating}/10",
+                        style: GoogleFonts.cinzel(
+                            color: Colors.amber, fontWeight: FontWeight.bold))
+                    : null,
+              ),
+            )),
+      ],
+    );
+  }
+
+  IconData _getFoodIcon(String name) {
+    if (name.contains("Meat")) return Icons.restaurant;
+    if (name.contains("Milk")) return Icons.water_drop;
+    if (name.contains("Cheese")) return Icons.food_bank;
+    if (name.contains("Grain") || name.contains("Rice")) return Icons.grass;
+    return Icons.fastfood;
+  }
+
+  IconData _getCulinaryIcon(CulinaryEventType type) {
+    switch (type) {
+      case CulinaryEventType.legendaryMeal:
+        return Icons.star;
+      case CulinaryEventType.newRecipe:
+        return Icons.menu_book;
+      case CulinaryEventType.newSpice:
+        return Icons.local_florist;
+      case CulinaryEventType.feastReport:
+        return Icons.celebration;
+      case CulinaryEventType.cookPromotion:
+        return Icons.trending_up;
+      case CulinaryEventType.disasterMeal:
+        return Icons.warning;
+    }
+  }
+
+  Color _getCulinaryColor(CulinaryEventType type) {
+    switch (type) {
+      case CulinaryEventType.legendaryMeal:
+        return Colors.amber;
+      case CulinaryEventType.newRecipe:
+      case CulinaryEventType.newSpice:
+        return Colors.green;
+      case CulinaryEventType.feastReport:
+        return Colors.purple;
+      case CulinaryEventType.cookPromotion:
+        return Colors.blue;
+      case CulinaryEventType.disasterMeal:
+        return Colors.red;
+    }
   }
 }
 

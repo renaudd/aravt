@@ -35,6 +35,17 @@ import 'package:aravt/models/wealth_event.dart';
 import 'package:aravt/models/culinary_news.dart';
 import 'package:aravt/models/material_flow.dart';
 
+// Wealth status for dynamic scrap-to-rupee conversion (7-level gradual spectrum)
+enum WealthStatus {
+  destitution, // < 5§ per soldier (3:1 conversion)
+  poverty, // 5-15§ per soldier (2:1 conversion)
+  subsistence, // 15-30§ per soldier (3:2 conversion)
+  sufficiency, // 30-60§ per soldier (1:1 conversion)
+  comfort, // 60-90§ per soldier (2:3 conversion)
+  abundance, // 90-120§ per soldier (1:2 conversion)
+  excess // > 120§ per soldier (1:3 conversion)
+}
+
 class ActiveCombatState {
   final List<Soldier> playerSoldiers;
   final List<Soldier> opponentSoldiers;
@@ -252,6 +263,73 @@ class GameState with ChangeNotifier {
   void setAutoSaveEnabled(bool value) {
     autoSaveEnabled = value;
     notifyListeners();
+  }
+
+  // --- DYNAMIC SCRAP-TO-RUPEE CONVERSION (7-LEVEL SPECTRUM) ---
+
+  /// Calculate current wealth status based on per-capita supply wealth
+  WealthStatus get currentWealthStatus {
+    double totalSupply = _calculateTotalSupplyWealth();
+    int hordeSize = horde.length;
+    double perCapita = hordeSize > 0 ? totalSupply / hordeSize : 0;
+
+    // Per-capita thresholds (§ per soldier) - 7 levels for gradual progression
+    if (perCapita < 5) return WealthStatus.destitution; // < 5§ per soldier
+    if (perCapita < 15) return WealthStatus.poverty; // 5-15§ per soldier
+    if (perCapita < 30) return WealthStatus.subsistence; // 15-30§ per soldier
+    if (perCapita < 60) return WealthStatus.sufficiency; // 30-60§ per soldier
+    if (perCapita < 90) return WealthStatus.comfort; // 60-90§ per soldier
+    if (perCapita < 120) return WealthStatus.abundance; // 90-120§ per soldier
+    return WealthStatus.excess; // > 120§ per soldier
+  }
+
+  /// Get dynamic scrap-to-rupee conversion rate based on wealth status
+  double get scrapToRupeeConversion {
+    switch (currentWealthStatus) {
+      case WealthStatus.destitution:
+        return 3.0; // 3:1 - Scrap highly valued
+      case WealthStatus.poverty:
+        return 2.0; // 2:1
+      case WealthStatus.subsistence:
+        return 1.5; // 3:2
+      case WealthStatus.sufficiency:
+        return 1.0; // 1:1 - Equal value
+      case WealthStatus.comfort:
+        return 0.67; // 2:3
+      case WealthStatus.abundance:
+        return 0.5; // 1:2
+      case WealthStatus.excess:
+        return 0.33; // 1:3 - Scrap devalued
+    }
+  }
+
+  /// Calculate total supply wealth (excluding equipped gear)
+  double _calculateTotalSupplyWealth() {
+    double total = 0.0;
+
+    // Raw resources (estimated scrap values)
+    total += _communalWood * 0.5;
+    total += _communalIronOre * 1.0;
+    total += _communalScrap * 1.0;
+    total += _communalArrows * 0.5;
+    total += _communalMeat * 2.0;
+    total += _communalRice * 1.0;
+    total += _communalMilk * 1.5;
+    total += _communalCheese * 2.0;
+    total += _communalGrain * 1.0;
+
+    // Communal stash (unequipped items with scrap value)
+    for (var item in communalStash) {
+      if (item.valueType == ValueType.Supply) {
+        total += item.baseValue;
+      }
+    }
+
+    // Livestock
+    total += communalCattle.totalPopulation * 200.0;
+    total += _communalHerd.length * 300.0;
+
+    return total;
   }
 
   Soldier? findSoldierById(int id) {

@@ -280,6 +280,29 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
                             numeric: true,
                             onSort: (i, asc) => _sort<num>(
                                 (e) => e.scrapValue, i, asc, ledgerEntries)),
+                        DataColumn(
+                            label: const Text('Quality'),
+                            onSort: (i, asc) => _sort<String>(
+                                (e) => e.quality ?? '', i, asc, ledgerEntries)),
+                        DataColumn(
+                            label: const Text('Origin'),
+                            onSort: (i, asc) => _sort<String>(
+                                (e) => e.origin ?? '', i, asc, ledgerEntries)),
+                        DataColumn(
+                            label: const Text('Type'),
+                            onSort: (i, asc) => _sort<String>(
+                                (e) => e.type ?? '', i, asc, ledgerEntries)),
+                        DataColumn(
+                            label: const Text('Total (₹)'),
+                            numeric: true,
+                            tooltip:
+                                'Total value in rupees (using dynamic conversion)',
+                            onSort: (i, asc) => _sort<num>(
+                                (e) => e.getTotalValue(
+                                    gameState.scrapToRupeeConversion),
+                                i,
+                                asc,
+                                ledgerEntries)),
                       ],
                       rows: ledgerEntries.map((entry) {
                         if (entry.isHeader) {
@@ -296,8 +319,14 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
                                 const DataCell(SizedBox()),
                                 const DataCell(SizedBox()),
                                 const DataCell(SizedBox()),
+                                const DataCell(SizedBox()),
+                                const DataCell(SizedBox()),
+                                const DataCell(SizedBox()),
+                                const DataCell(SizedBox()),
                               ]);
                         }
+                        final totalValue = entry
+                            .getTotalValue(gameState.scrapToRupeeConversion);
                         return DataRow(cells: [
                           DataCell(entry.icon ?? const SizedBox()),
                           DataCell(Text(entry.name)),
@@ -315,6 +344,15 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
                                   ? entry.scrapValue.toStringAsFixed(0)
                                   : "-",
                               style: TextStyle(color: Colors.blue[200]))),
+                          DataCell(Text(entry.quality ?? "-")),
+                          DataCell(Text(entry.origin ?? "-")),
+                          DataCell(Text(entry.type ?? "-")),
+                          DataCell(Text(
+                              totalValue > 0
+                                  ? totalValue.toStringAsFixed(0)
+                                  : "-",
+                              style:
+                                  const TextStyle(color: Colors.greenAccent))),
                         ]);
                       }).toList(),
                     ),
@@ -473,6 +511,9 @@ class _LedgerEntry {
   final double weightPerUnit;
   final double rupeeValue;
   final double scrapValue;
+  final String? quality;
+  final String? origin;
+  final String? type;
   final bool isHeader;
 
   _LedgerEntry({
@@ -482,8 +523,16 @@ class _LedgerEntry {
     this.weightPerUnit = 0.0,
     this.rupeeValue = 0.0,
     this.scrapValue = 0.0,
+    this.quality,
+    this.origin,
+    this.type,
     this.isHeader = false,
   });
+
+  /// Calculate total value in rupees using dynamic conversion
+  double getTotalValue(double conversionRate) {
+    return (rupeeValue * quantity) + (scrapValue * quantity * conversionRate);
+  }
 
   factory _LedgerEntry.header(String title) {
     return _LedgerEntry(name: title, quantity: 0, isHeader: true);
@@ -497,7 +546,21 @@ class _LedgerEntry {
         quantity: quantity.floor(),
         weightPerUnit: weight,
         rupeeValue: rupeeVal,
-        scrapValue: scrapVal);
+        scrapValue: scrapVal,
+        type: 'Resource');
+  }
+
+  factory _LedgerEntry.item(InventoryItem item, int qty) {
+    return _LedgerEntry(
+        icon: Icon(Icons.inventory_2, color: Colors.grey, size: 24),
+        name: item.name,
+        quantity: qty,
+        weightPerUnit: item.weight,
+        rupeeValue: item.valueType == ValueType.Treasure ? item.baseValue : 0,
+        scrapValue: item.valueType == ValueType.Supply ? item.baseValue : 0,
+        quality: item.quality,
+        origin: item.origin,
+        type: item.itemType.name);
   }
 }
 

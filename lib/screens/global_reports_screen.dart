@@ -15,10 +15,11 @@ class GlobalReportsScreen extends StatefulWidget {
 
 class _GlobalReportsScreenState extends State<GlobalReportsScreen>
     with SingleTickerProviderStateMixin {
-  final int _tabCount = 9;
+  final int _tabCount =
+      7; // Reduced from 9 (Fishing/Hunting now sub-tabs of Food)
   late TabController _tabController;
 
-  // [GEMINI-NEW] Tab names matching the helper method in GameState
+  // [GEMINI-UPDATED] Tab names - Fishing/Hunting removed (now sub-tabs of Food)
   final List<String> _tabNames = [
     'Event Log',
     'Combat',
@@ -26,8 +27,6 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
     'Commerce',
     'Herds',
     'Food',
-    'Fishing',
-    'Hunting',
     'Games',
   ];
 
@@ -108,10 +107,6 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
                 "Herds", Icons.savings, gameState.getBadgeCountForTab("Herds")),
             _buildTab("Food", Icons.local_dining_outlined,
                 gameState.getBadgeCountForTab("Food")),
-            _buildTab("Fishing", Icons.tsunami,
-                gameState.getBadgeCountForTab("Fishing")),
-            _buildTab("Hunting", Icons.explore_outlined,
-                gameState.getBadgeCountForTab("Hunting")),
             _buildTab("Games", Icons.emoji_events_outlined,
                 gameState.getBadgeCountForTab("Games")),
           ],
@@ -131,9 +126,8 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
                   isOmniscient: gameState.isOmniscientMode, soldierId: null),
               // [GEMINI-UPDATED] Combined Herds tab
               const HerdsReportTab(soldierId: null),
+              // [GEMINI-UPDATED] Food tab with Fishing/Hunting as sub-tabs
               const FoodReportTab(soldierId: null),
-              const FishingReportTab(soldierId: null),
-              const HuntingReportTab(soldierId: null),
               const GamesReportTab(soldierId: null),
             ],
           ),
