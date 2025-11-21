@@ -30,6 +30,10 @@ import 'package:aravt/models/herd_data.dart';
 import 'package:aravt/game_data/item_templates.dart'; // [GEMINI-FIX] Import for ItemDatabase
 // [GEMINI-NEW] Import for ResourceTripReport
 import 'package:aravt/models/resource_report.dart';
+import 'package:aravt/models/trade_report.dart';
+import 'package:aravt/models/wealth_event.dart';
+import 'package:aravt/models/culinary_news.dart';
+import 'package:aravt/models/material_flow.dart';
 
 class ActiveCombatState {
   final List<Soldier> playerSoldiers;
@@ -163,6 +167,34 @@ class GameState with ChangeNotifier {
 
   // Cattle Herd for shepherding
   late Herd communalCattle;
+
+  // --- FOOD MANAGEMENT ---
+  double _communalMilk = 0.0;
+  double get communalMilk => _communalMilk;
+
+  double _communalCheese = 0.0;
+  double get communalCheese => _communalCheese;
+
+  double _communalGrain = 0.0;
+  double get communalGrain => _communalGrain;
+
+  List<int> butcheringQueue = []; // Animal IDs in order
+
+  // Food parameters
+  double butcheringRate = 1.0; // Animals per week
+  bool allowAlcohol = true;
+  bool vegetarianDiet = false;
+
+  // --- FINANCE TRACKING ---
+  List<TradeReport> tradeReports = [];
+  List<WealthEvent> wealthEvents = [];
+
+  // --- INDUSTRY PARAMETERS ---
+  Map<String, FabricationTarget> fabricationTargets = {};
+  List<MaterialFlowEntry> materialFlowHistory = [];
+
+  // --- CULINARY NEWS ---
+  List<CulinaryNews> culinaryNews = [];
 
   @protected
   CombatSimulator? currentCombat;
@@ -1512,6 +1544,24 @@ class GameState with ChangeNotifier {
       'tutorialPermanentlyDismissed': tutorialPermanentlyDismissed,
       'tutorialDismissalCount': tutorialDismissalCount,
       'tutorialStepIndex': tutorialStepIndex,
+      // [GEMINI-NEW] Food management
+      'communalMilk': _communalMilk,
+      'communalCheese': _communalCheese,
+      'communalGrain': _communalGrain,
+      'butcheringQueue': butcheringQueue,
+      'butcheringRate': butcheringRate,
+      'allowAlcohol': allowAlcohol,
+      'vegetarianDiet': vegetarianDiet,
+      // [GEMINI-NEW] Finance tracking
+      'tradeReports': tradeReports.map((r) => r.toJson()).toList(),
+      'wealthEvents': wealthEvents.map((e) => e.toJson()).toList(),
+      // [GEMINI-NEW] Industry parameters
+      'fabricationTargets':
+          fabricationTargets.map((key, value) => MapEntry(key, value.toJson())),
+      'materialFlowHistory':
+          materialFlowHistory.map((e) => e.toJson()).toList(),
+      // [GEMINI-NEW] Culinary news
+      'culinaryNews': culinaryNews.map((n) => n.toJson()).toList(),
     };
   }
 
@@ -1658,6 +1708,36 @@ class GameState with ChangeNotifier {
         json['tutorialPermanentlyDismissed'] ?? false;
     tutorialDismissalCount = json['tutorialDismissalCount'] ?? 0;
     tutorialStepIndex = json['tutorialStepIndex'] ?? 0;
+
+    // [GEMINI-NEW] Food management
+    _communalMilk = json['communalMilk'] ?? 0.0;
+    _communalCheese = json['communalCheese'] ?? 0.0;
+    _communalGrain = json['communalGrain'] ?? 0.0;
+    butcheringQueue = (json['butcheringQueue'] as List? ?? []).cast<int>();
+    butcheringRate = json['butcheringRate'] ?? 1.0;
+    allowAlcohol = json['allowAlcohol'] ?? true;
+    vegetarianDiet = json['vegetarianDiet'] ?? false;
+
+    // [GEMINI-NEW] Finance tracking
+    tradeReports = (json['tradeReports'] as List? ?? [])
+        .map((r) => TradeReport.fromJson(r))
+        .toList();
+    wealthEvents = (json['wealthEvents'] as List? ?? [])
+        .map((e) => WealthEvent.fromJson(e))
+        .toList();
+
+    // [GEMINI-NEW] Industry parameters
+    fabricationTargets = (json['fabricationTargets'] as Map<String, dynamic>? ??
+            {})
+        .map((key, value) => MapEntry(key, FabricationTarget.fromJson(value)));
+    materialFlowHistory = (json['materialFlowHistory'] as List? ?? [])
+        .map((e) => MaterialFlowEntry.fromJson(e))
+        .toList();
+
+    // [GEMINI-NEW] Culinary news
+    culinaryNews = (json['culinaryNews'] as List? ?? [])
+        .map((n) => CulinaryNews.fromJson(n))
+        .toList();
 
     _isLoading = false;
     _combatFlowState = CombatFlowState.none;
