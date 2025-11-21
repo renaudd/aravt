@@ -62,10 +62,51 @@ class EventLogTab extends StatelessWidget {
     final gameState = context.watch<GameState>();
 
     final List<GameEvent> events = gameState.eventLog.where((event) {
-      if (soldierId == null) {
-        return isOmniscient || event.isPlayerKnown;
+      // Soldier-specific filtering
+      if (soldierId != null) {
+        return event.relatedSoldierId == soldierId;
       }
-      return event.relatedSoldierId == soldierId;
+
+      // Global reports filtering
+      if (!isOmniscient && !event.isPlayerKnown) {
+        return false; // Hide unknown events in non-omniscient mode
+      }
+
+      // [GEMINI-NEW] Filter out NPC-only activities from global reports
+      // Keep events that are:
+      // 1. Related to player's soldiers
+      // 2. Related to player's aravts
+      // 3. Critical events (always show)
+      // 4. System events (always show)
+      if (event.severity == EventSeverity.critical ||
+          event.category == EventCategory.system) {
+        return true; // Always show critical and system events
+      }
+
+      // Check if event is related to player's horde
+      if (event.relatedSoldierId != null) {
+        final soldier = gameState.findSoldierById(event.relatedSoldierId!);
+        if (soldier != null && gameState.horde.contains(soldier)) {
+          return true; // Event is about a player's soldier
+        }
+      }
+
+      if (event.relatedAravtId != null) {
+        final aravt = gameState.findAravtById(event.relatedAravtId!);
+        if (aravt != null && gameState.aravts.contains(aravt)) {
+          return true; // Event is about a player's aravt
+        }
+      }
+
+      // For events without specific relations, show general/travel/diplomacy categories
+      // as they might be world events relevant to the player
+      if (event.category == EventCategory.general ||
+          event.category == EventCategory.travel ||
+          event.category == EventCategory.diplomacy) {
+        return true;
+      }
+
+      return false; // Filter out NPC-only activities
     }).toList();
 
     if (events.isEmpty) {
@@ -863,8 +904,20 @@ class HuntingReportTab extends StatelessWidget {
     final gameState = context.watch<GameState>();
     final reports = gameState.huntingReports
         .where((r) {
-          if (soldierId == null) return true;
-          return r.individualResults.any((res) => res.soldierId == soldierId);
+          // Soldier-specific filtering
+          if (soldierId != null) {
+            return r.individualResults.any((res) => res.soldierId == soldierId);
+          }
+
+          // [GEMINI-NEW] Global reports: filter out NPC-only hunts
+          // Check if any participant is from player's horde
+          for (var res in r.individualResults) {
+            final soldier = gameState.findSoldierById(res.soldierId);
+            if (soldier != null && gameState.horde.contains(soldier)) {
+              return true; // At least one player soldier participated
+            }
+          }
+          return false; // No player soldiers, filter out
         })
         .toList()
         .reversed

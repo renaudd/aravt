@@ -141,8 +141,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
       );
     }
 
-    final bool isOmniscient = context.watch<GameState>().isOmniscientMode;
-
     return Scaffold(
       body: Stack(
         children: [
@@ -215,12 +213,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               ),
             ),
           ),
-          if (isOmniscient)
-            Positioned(
-              bottom: 80,
-              left: 20,
-              child: _buildHiddenStatsPanel(soldier),
-            ),
         ],
       ),
     );
@@ -241,12 +233,14 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
   Widget _buildProfileTabContent(
       BuildContext context, Soldier soldier, GameState gameState) {
+    final bool isOmniscient = gameState.isOmniscientMode;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left column: Profile and Interaction panels
+          // Left column: Profile, Interaction, and Hidden Stats panels
           Expanded(
             flex: 2,
             child: Column(
@@ -255,6 +249,10 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                 _buildProfilePanel(soldier),
                 const SizedBox(height: 16),
                 _buildInteractionPanel(context, soldier, gameState),
+                if (isOmniscient) ...[
+                  const SizedBox(height: 16),
+                  _buildHiddenStatsPanel(soldier),
+                ],
               ],
             ),
           ),
@@ -274,7 +272,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
     return UiPanel(
       width: 330,
-      height: 235,
+      height: 255,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -101,20 +101,12 @@ class _GiftingDialogState extends State<GiftingDialog> {
                               widget.target.personalInventory.add(item);
                             });
 
-                            final result = InteractionService.resolveGift(
+                            InteractionService.resolveGift(
                                 widget.gameState, player, widget.target, item);
 
                             widget.gameState.useInteractionToken();
                             Navigator.of(context).pop();
-
-                            // Show result dialog
-                            showDialog(
-                              context: context,
-                              builder: (_) => GiftResultDialog(
-                                gameState: widget.gameState,
-                                result: result,
-                              ),
-                            );
+                            // Gift result now goes directly to interaction log
                           },
                           child: Text('Give',
                               style: GoogleFonts.cinzel(fontSize: 16)),
