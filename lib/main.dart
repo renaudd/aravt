@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:aravt/game_data/item_templates.dart';
 import 'package:aravt/providers/game_state.dart';
-import 'package:aravt/services/tutorial_service.dart'; // [GEMINI-NEW]
+import 'package:aravt/services/tutorial_service.dart';
 import 'package:aravt/screens/area_screen.dart';
 import 'package:aravt/screens/region_screen.dart';
 import 'package:aravt/screens/combat_screen.dart';
@@ -19,22 +19,21 @@ import 'package:aravt/screens/camp_screen.dart';
 import 'package:aravt/screens/horde_screen.dart';
 import 'package:aravt/screens/global_reports_screen.dart';
 import 'package:aravt/screens/global_inventory_screen.dart';
-import 'package:aravt/screens/settings_screen.dart'; // [GEMINI-NEW]
-import 'package:aravt/screens/game_over_screen.dart'; // [GEMINI-NEW]
+import 'package:aravt/screens/settings_screen.dart';
+import 'package:aravt/screens/game_over_screen.dart';
 import 'package:aravt/screens/pre_combat_screen.dart';
 import 'package:aravt/screens/post_combat_report_screen.dart';
 import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/widgets/tutorial_overlay_widget.dart';
 import 'package:aravt/widgets/narrative_overlay_widget.dart';
 
-import 'package:window_manager/window_manager.dart'; // [GEMINI-NEW]
+import 'package:window_manager/window_manager.dart';
 
 void main() async {
-  WidgetsFlutterBinding
-      .ensureInitialized(); // [GEMINI-NEW] Required for window_manager
+  WidgetsFlutterBinding.ensureInitialized(); // Required or window_manager
   ItemDatabase.initialize();
 
-  // [GEMINI-NEW] Window Manager setup for Desktop
+  // Window Manager setup for Desktop
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     await windowManager.ensureInitialized();
 

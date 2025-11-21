@@ -123,15 +123,19 @@ class TournamentService {
         (a) => a.id == sortedStandings[i].key,
         orElse: () => active.participatingAravts.first,
       );
-      final captain = gameState.findSoldierById(aravt.captainId);
-      final aravtName =
-          captain != null ? "${captain.name}'s Aravt" : "Aravt ${aravt.id}";
       final score = sortedStandings[i].value;
-      report.writeln("  ${i + 1}. $aravtName: $score points");
+      report.writeln("  ${i + 1}. ${aravt.id}: $score points");
     }
 
     // Store the formatted report
     active.dailyReports[active.currentDay] = report.toString();
+
+    // Log as Critical Event (for immediate visibility)
+    gameState.logEvent(
+      report.toString(),
+      category: EventCategory.games,
+      severity: EventSeverity.critical,
+    );
 
     // Advance Day or Finish
     active.currentDay++;
@@ -266,12 +270,7 @@ class TournamentService {
             if (soldier == null) continue;
 
             final aravt = gameState.findAravtById(soldier.aravt);
-            final captain = aravt != null
-                ? gameState.findSoldierById(aravt.captainId)
-                : null;
-            final aravtName = captain != null
-                ? "${captain.name}'s Aravt"
-                : "Aravt ${soldier.aravt}";
+            final aravtName = aravt?.id ?? soldier.aravt;
             final score = result.scores[soldier.id] ?? 0;
             final points = _getIndividualPoints(i);
 
@@ -295,12 +294,7 @@ class TournamentService {
                 orElse: () => RaceResultEntry(
                     soldierId: -1, horseName: 'Unknown', time: 9999));
             final aravt = gameState.findAravtById(soldier.aravt);
-            final captain = aravt != null
-                ? gameState.findSoldierById(aravt.captainId)
-                : null;
-            final aravtName = captain != null
-                ? "${captain.name}'s Aravt"
-                : "Aravt ${soldier.aravt}";
+            final aravtName = aravt?.id ?? soldier.aravt;
             final points = _getIndividualPoints(i);
 
             int minutes = (entry.time / 60).floor();
@@ -340,12 +334,7 @@ class TournamentService {
             if (soldier == null) continue;
 
             final aravt = gameState.findAravtById(soldier.aravt);
-            final captain = aravt != null
-                ? gameState.findSoldierById(aravt.captainId)
-                : null;
-            final aravtName = captain != null
-                ? "${captain.name}'s Aravt"
-                : "Aravt ${soldier.aravt}";
+            final aravtName = aravt?.id ?? soldier.aravt;
             final points = _getIndividualPoints(i);
 
             report.writeln(
@@ -372,12 +361,7 @@ class TournamentService {
             }
 
             final aravt = gameState.findAravtById(soldier.aravt);
-            final captain = aravt != null
-                ? gameState.findSoldierById(aravt.captainId)
-                : null;
-            final aravtName = captain != null
-                ? "${captain.name}'s Aravt"
-                : "Aravt ${soldier.aravt}";
+            final aravtName = aravt?.id ?? soldier.aravt;
             final score = result.scores[soldier.id] ?? 0;
             final points = _getIndividualPoints(i);
 
@@ -429,11 +413,7 @@ class TournamentService {
           report.writeln("Final Rankings:");
           for (int i = 0; i < result.rankings.length; i++) {
             final aravt = gameState.findAravtById(result.rankings[i]);
-            final captain = aravt != null
-                ? gameState.findSoldierById(aravt.captainId)
-                : null;
-            final teamName =
-                captain != null ? "${captain.name}'s Team" : result.rankings[i];
+            final teamName = aravt?.id ?? result.rankings[i];
             final points = _getTeamPoints(i);
 
             report.writeln("${i + 1}. $teamName - $points points");
