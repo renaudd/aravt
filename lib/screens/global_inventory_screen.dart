@@ -248,10 +248,14 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
                           Colors.white.withOpacity(0.05)),
                       headingTextStyle: GoogleFonts.cinzel(
                           color: const Color(0xFFE0D5C1),
+                          fontSize: 12,
                           fontWeight: FontWeight.bold),
-                      dataTextStyle: const TextStyle(color: Colors.white),
-                      columnSpacing: 25,
-                      horizontalMargin: 20,
+                      dataTextStyle:
+                          const TextStyle(color: Colors.white, fontSize: 11),
+                      columnSpacing: 12,
+                      horizontalMargin: 12,
+                      dataRowMinHeight: 32,
+                      dataRowMaxHeight: 40,
                       sortColumnIndex: _sortColumnIndex,
                       sortAscending: _sortAscending,
                       columns: [

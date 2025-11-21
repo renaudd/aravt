@@ -128,8 +128,11 @@ class GameState {
   List<Settlement> settlements = [];
   List<Soldier> garrisonSoldiers = [];
   List<Aravt> garrisonAravts = [];
+  late Herd communalCattle;
 
-  GameState();
+  GameState() {
+    communalCattle = Herd(type: AnimalType.Cattle);
+  }
 }
 
 class GameSetupService {
@@ -404,6 +407,16 @@ class GameSetupService {
     newGameState.garrisonSoldiers = garrisonSoldiers;
     newGameState.garrisonAravts = garrisonAravts;
     newGameState.settlements = settlements;
+
+    // [GEMINI-NEW] Initialize starting cattle herd
+    newGameState.communalCattle = Herd.createDefault(
+      AnimalType.Cattle,
+      males: 2 + _random.nextInt(2), // 2-3 bulls
+      females: 15 + _random.nextInt(6), // 15-20 cows
+      young: 5 + _random.nextInt(6), // 5-10 calves
+    );
+    print(
+        "[GameSetup] Initialized herd with ${newGameState.communalCattle.totalPopulation} cattle.");
 
     print(
         "[GameSetup] Created Player Horde: ${playerHorde.length} soldiers, ${playerAravts.length} aravts.");
