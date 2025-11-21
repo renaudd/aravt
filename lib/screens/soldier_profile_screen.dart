@@ -676,11 +676,17 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                     itemCount: soldier.interactionLog.length,
                     itemBuilder: (context, index) {
                       final log = soldier.interactionLog[index];
+                      // Build the log text with all fields
+                      String logText =
+                          '[${log.dateString}] ${log.interactionSummary} ${log.outcomeSummary}';
+                      if (log.informationRevealed.isNotEmpty) {
+                        logText += '\n${log.informationRevealed}';
+                      }
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             vertical: 3.0, horizontal: 6.0),
                         child: Text(
-                          '[${log.dateString}] ${log.interactionSummary} ${log.outcomeSummary}',
+                          logText,
                           style: textStyle.copyWith(fontSize: 12),
                         ),
                       );
