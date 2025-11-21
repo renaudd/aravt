@@ -657,7 +657,7 @@ class InteractionService {
     Soldier? rando = _getRandomOutsider(speaker, gameState);
     if (rando == null) return "";
     return _useTopic(speaker, 'random_gossip_${rando.id}',
-        "'I've heard ${rando.name} is looking for trouble.'");
+        "'I've heard ${rando.name} just got a new haircut.'");
   }
 
   // --- Specific Topic Implementations (FULL NAMES USED) ---

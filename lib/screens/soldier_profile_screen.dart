@@ -241,24 +241,31 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
   Widget _buildProfileTabContent(
       BuildContext context, Soldier soldier, GameState gameState) {
-    return Stack(
-      children: [
-        Positioned(
-          top: 0,
-          left: 20,
-          child: _buildProfilePanel(soldier),
-        ),
-        Positioned(
-          top: 260, // Positioned below the profile panel
-          left: 20,
-          child: _buildInteractionPanel(context, soldier, gameState),
-        ),
-        Positioned(
-          top: 0,
-          right: 20,
-          child: _buildGearAndActionsPanel(soldier, gameState),
-        ),
-      ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left column: Profile and Interaction panels
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfilePanel(soldier),
+                const SizedBox(height: 16),
+                _buildInteractionPanel(context, soldier, gameState),
+              ],
+            ),
+          ),
+          const SizedBox(width: 20),
+          // Right column: Gear and Actions panel
+          Expanded(
+            flex: 1,
+            child: _buildGearAndActionsPanel(soldier, gameState),
+          ),
+        ],
+      ),
     );
   }
 
@@ -822,11 +829,12 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
   }
 
   Widget _buildHiddenStatsPanel(Soldier soldier) {
-    const double panelHeight = 350;
-    final textStyle = GoogleFonts.cinzel(color: Colors.white);
+    const double panelHeight = 280; // Reduced from 350
+    final textStyle =
+        GoogleFonts.cinzel(color: Colors.white, fontSize: 11); // Smaller font
 
     return UiPanel(
-      width: 250,
+      width: 220, // Reduced from 250
       height: panelHeight,
       child: Scrollbar(
         child: SingleChildScrollView(
@@ -834,68 +842,87 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Hidden Stats',
-                  style: GoogleFonts.cinzel(color: Colors.white, fontSize: 16)),
-              const SizedBox(height: 8),
-              Text('Experience Level: ${soldier.experience}', style: textStyle),
+                  style: GoogleFonts.cinzel(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('XP: ${soldier.experience.toStringAsFixed(1)}',
+                  style: textStyle),
               Text(
-                  'Date of Birth: ${soldier.dateOfBirth.toLocal().toString().split(' ')[0]}'),
-              const Divider(color: Colors.white54),
-              Text('Hidden Injuries: ${soldier.injuryDescription ?? 'None'}'),
-              Text('Hidden Ailments: ${soldier.ailments ?? 'None'}'),
-              Text('Scars: ${soldier.scars ?? 'None'}'),
-              Text('Health (Overall): ${soldier.healthMax}'),
-              Text('  Head Health: ${soldier.headHealthCurrent}'),
-              Text('  Body Health: ${soldier.bodyHealthCurrent}'),
-              Text('  Right Arm Health: ${soldier.rightArmHealthCurrent}'),
-              Text('  Left Arm Health: ${soldier.leftArmHealthCurrent}'),
-              Text('  Right Leg Health: ${soldier.rightLegHealthCurrent}'),
-              Text('  Left Leg Health: ${soldier.leftLegHealthCurrent}'),
-              Text('Exhaustion Level: ${soldier.exhaustion}'),
-              Text('Stress Level: ${soldier.stress}'),
-              Text('Hygiene Level: ${soldier.hygiene}'),
-              const Divider(color: Colors.white54),
-              Text('Ambition: ${soldier.ambition}'),
-              Text('Courage: ${soldier.courage}'),
-              Text('Honesty: ${soldier.honesty}'),
-              Text('Temperament: ${soldier.temperament}'),
-              Text('Patience: ${soldier.patience}'),
-              Text('Judgment: ${soldier.judgment}'),
-              Text('Perception: ${soldier.perception}'),
-              Text('Intelligence: ${soldier.intelligence}'),
-              Text('Knowledge: ${soldier.knowledge}'),
-              Text('Strength: ${soldier.strength}'),
-              Text('Stamina: ${soldier.stamina}'),
-              Text('Horsemanship: ${soldier.horsemanship}'),
-              Text('Animal Handling: ${soldier.animalHandling}'),
-              Text('Charisma: ${soldier.charisma}'),
-              Text('Leadership: ${soldier.leadership}'),
-              Text('Adaptability: ${soldier.adaptability}'),
-              const Divider(color: Colors.white54),
+                  'DOB: ${soldier.dateOfBirth.toLocal().toString().split(' ')[0]}',
+                  style: textStyle),
+              const Divider(color: Colors.white54, height: 8),
+              Text('Injuries: ${soldier.injuryDescription ?? 'None'}',
+                  style: textStyle),
+              Text('Ailments: ${soldier.ailments ?? 'None'}', style: textStyle),
+              Text('Scars: ${soldier.scars ?? 'None'}', style: textStyle),
+              Text('Health: ${soldier.healthMax}', style: textStyle),
+              Text('  Head: ${soldier.headHealthCurrent}', style: textStyle),
+              Text('  Body: ${soldier.bodyHealthCurrent}', style: textStyle),
+              Text('  R.Arm: ${soldier.rightArmHealthCurrent}',
+                  style: textStyle),
+              Text('  L.Arm: ${soldier.leftArmHealthCurrent}',
+                  style: textStyle),
+              Text('  R.Leg: ${soldier.rightLegHealthCurrent}',
+                  style: textStyle),
+              Text('  L.Leg: ${soldier.leftLegHealthCurrent}',
+                  style: textStyle),
+              Text('Exhaustion: ${soldier.exhaustion}', style: textStyle),
+              Text('Stress: ${soldier.stress}', style: textStyle),
+              Text('Hygiene: ${soldier.hygiene}', style: textStyle),
+              const Divider(color: Colors.white54, height: 8),
+              Text('Ambition: ${soldier.ambition}', style: textStyle),
+              Text('Courage: ${soldier.courage}', style: textStyle),
+              Text('Honesty: ${soldier.honesty}', style: textStyle),
+              Text('Temperament: ${soldier.temperament}', style: textStyle),
+              Text('Patience: ${soldier.patience}', style: textStyle),
+              Text('Judgment: ${soldier.judgment}', style: textStyle),
+              Text('Perception: ${soldier.perception}', style: textStyle),
+              Text('Intelligence: ${soldier.intelligence}', style: textStyle),
+              Text('Knowledge: ${soldier.knowledge}', style: textStyle),
+              Text('Strength: ${soldier.strength}', style: textStyle),
+              Text('Stamina: ${soldier.stamina}', style: textStyle),
+              Text('Horsemanship: ${soldier.horsemanship}', style: textStyle),
+              Text('Animal Handling: ${soldier.animalHandling}',
+                  style: textStyle),
+              Text('Charisma: ${soldier.charisma}', style: textStyle),
+              Text('Leadership: ${soldier.leadership}', style: textStyle),
+              Text('Adaptability: ${soldier.adaptability}', style: textStyle),
+              const Divider(color: Colors.white54, height: 8),
+              Text('Archery: ${soldier.longRangeArcherySkill}',
+                  style: textStyle),
+              Text('Mounted Archery: ${soldier.mountedArcherySkill}',
+                  style: textStyle),
+              Text('Spear: ${soldier.spearSkill}', style: textStyle),
+              Text('Sword: ${soldier.swordSkill}', style: textStyle),
+              Text('Shield: ${soldier.shieldSkill}', style: textStyle),
               Text(
-                  'Long range archery skill: ${soldier.longRangeArcherySkill}'),
-              Text('Mounted archery skill: ${soldier.mountedArcherySkill}'),
-              Text('Spear skill: ${soldier.spearSkill}'),
-              Text('Sword skill: ${soldier.swordSkill}'),
-              Text('Shield skill: ${soldier.shieldSkill}'),
+                  'Special: ${soldier.specialSkills.isEmpty ? 'None' : soldier.specialSkills.map((s) => s.name).join(', ')}',
+                  style: textStyle),
               Text(
-                  'Special skills: ${soldier.specialSkills.isEmpty ? 'None' : soldier.specialSkills.map((s) => s.name).join(', ')}'),
+                  'Attributes: ${soldier.attributes.isEmpty ? 'None' : soldier.attributes.map((a) => a.name).join(', ')}',
+                  style: textStyle),
+              const Divider(color: Colors.white54, height: 8),
+              Text('Origin: ${soldier.placeOrTribeOfOrigin}', style: textStyle),
+              Text('Languages: ${soldier.languages.join(', ')}',
+                  style: textStyle),
               Text(
-                  'Attributes: ${soldier.attributes.isEmpty ? 'None' : soldier.attributes.map((a) => a.name).join(', ')}'),
-              const Divider(color: Colors.white54),
-              Text('Place or Tribe of Origin: ${soldier.placeOrTribeOfOrigin}'),
-              Text('Language(s): ${soldier.languages.join(', ')}'),
-              Text(
-                  'Religion: ${soldier.religionIntensity.name} ${soldier.religionType.name}'),
-              Text(
-                  'Gift origin preference: ${soldier.giftOriginPreference.name}'),
-              Text('Gift type preference: ${soldier.giftTypePreference.name}'),
-              const Divider(color: Colors.white54),
-              Text(
-                  'Supplies Wealth: ${soldier.suppliesWealth.toStringAsFixed(2)}'),
-              Text(
-                  'Treasure Wealth: ${soldier.treasureWealth.toStringAsFixed(2)}'),
-              Text('Kilos of Meat: ${soldier.kilosOfMeat.toStringAsFixed(2)}'),
-              Text('Kilos of Rice: ${soldier.kilosOfRice.toStringAsFixed(2)}'),
+                  'Religion: ${soldier.religionIntensity.name} ${soldier.religionType.name}',
+                  style: textStyle),
+              Text('Gift Origin Pref: ${soldier.giftOriginPreference.name}',
+                  style: textStyle),
+              Text('Gift Type Pref: ${soldier.giftTypePreference.name}',
+                  style: textStyle),
+              const Divider(color: Colors.white54, height: 8),
+              Text('Supplies: ${soldier.suppliesWealth.toStringAsFixed(2)}',
+                  style: textStyle),
+              Text('Treasure: ${soldier.treasureWealth.toStringAsFixed(2)}',
+                  style: textStyle),
+              Text('Meat: ${soldier.kilosOfMeat.toStringAsFixed(2)}',
+                  style: textStyle),
+              Text('Rice: ${soldier.kilosOfRice.toStringAsFixed(2)}',
+                  style: textStyle),
             ],
           ),
         ),

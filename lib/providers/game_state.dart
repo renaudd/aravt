@@ -349,6 +349,31 @@ class GameState with ChangeNotifier {
     notifyListeners();
   }
 
+  // [GEMINI-NEW] Soldier-specific badge tracking
+  int getBadgeCountForTabAndSoldier(String tabName, int soldierId) {
+    // Check if this soldier's tab has been viewed
+    String soldierTabKey = '${tabName}_soldier_$soldierId';
+    if (viewedReportTabs.contains(soldierTabKey)) return 0;
+
+    int count = 0;
+    for (var event in eventLog) {
+      // Only count events related to this soldier
+      if (event.relatedSoldierId == soldierId &&
+          _getTabNameForCategory(event.category) == tabName &&
+          (event.severity == EventSeverity.high ||
+              event.severity == EventSeverity.critical)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  void markReportTabViewedForSoldier(String tabName, int soldierId) {
+    String soldierTabKey = '${tabName}_soldier_$soldierId';
+    viewedReportTabs.add(soldierTabKey);
+    notifyListeners();
+  }
+
   String _getTabNameForCategory(EventCategory category) {
     switch (category) {
       case EventCategory.combat:

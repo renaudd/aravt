@@ -177,7 +177,6 @@ class AravtAssignmentService {
     bool isContinuous = currentTask.assignment == AravtAssignment.Defend ||
         currentTask.assignment == AravtAssignment.GuardPrisoners ||
         currentTask.assignment == AravtAssignment.Ambush ||
-        currentTask.assignment == AravtAssignment.Mine ||
         currentTask.assignment == AravtAssignment.Patrol ||
         currentTask.assignment == AravtAssignment.Shepherd;
 
