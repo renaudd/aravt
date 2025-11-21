@@ -7,15 +7,120 @@ import 'package:aravt/models/combat_report.dart';
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/tournament_data.dart';
-import 'package:aravt/models/hunting_report.dart';
-import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/models/herd_data.dart';
 import 'package:aravt/models/resource_report.dart';
 import 'package:aravt/models/trade_report.dart';
-import 'package:aravt/models/wealth_event.dart';
 import 'package:aravt/models/culinary_news.dart';
 import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'dart:math' as math;
+
+// --- HELPER CLASSES & WIDGETS ---
+
+class _LedgerEntry {
+  final IconData icon;
+  final String name;
+  final String quantity;
+  final String weight;
+  final String rupeeValue;
+  final String scrapValue;
+  final String quality;
+  final String origin;
+  final String type;
+  final double totalValueRaw; // For sorting
+
+  _LedgerEntry({
+    required this.icon,
+    required this.name,
+    required this.quantity,
+    required this.weight,
+    required this.rupeeValue,
+    required this.scrapValue,
+    required this.quality,
+    required this.origin,
+    required this.type,
+    required this.totalValueRaw,
+  });
+
+  String get totalValue => totalValueRaw.toStringAsFixed(0);
+}
+
+Widget _buildLedgerTable(List<_LedgerEntry> entries, BuildContext context) {
+  if (entries.isEmpty) {
+    return const Center(
+        child: Padding(
+      padding: EdgeInsets.all(16.0),
+      child:
+          Text("No items in ledger.", style: TextStyle(color: Colors.white54)),
+    ));
+  }
+
+  // Sort by total value descending by default
+  entries.sort((a, b) => b.totalValueRaw.compareTo(a.totalValueRaw));
+
+  return LayoutBuilder(builder: (context, constraints) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingRowHeight: 40,
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 64,
+            columnSpacing: 24,
+            horizontalMargin: 12,
+            headingTextStyle:
+                GoogleFonts.cinzel(color: Colors.white70, fontSize: 12),
+            dataTextStyle: const TextStyle(color: Colors.white, fontSize: 12),
+            columns: const [
+              DataColumn(label: Text('Item')),
+              DataColumn(label: Text('Qty'), numeric: true),
+              DataColumn(label: Text('Wgt (Kg)'), numeric: true),
+              DataColumn(label: Text('Val (₹)'), numeric: true),
+              DataColumn(label: Text('Scrap (§)'), numeric: true),
+              DataColumn(
+                  label: Padding(
+                padding: EdgeInsets.only(left: 16.0),
+                child: Text('Qual'),
+              )),
+              DataColumn(label: Text('Origin')),
+              DataColumn(label: Text('Type')),
+              DataColumn(label: Text('Total (₹)'), numeric: true),
+            ],
+            rows: entries.map((entry) {
+              return DataRow(cells: [
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(entry.icon, size: 16, color: Colors.white70),
+                    const SizedBox(width: 8),
+                    Text(entry.name),
+                  ],
+                )),
+                DataCell(Text(entry.quantity)),
+                DataCell(Text(entry.weight)),
+                DataCell(Text(entry.rupeeValue,
+                    style: const TextStyle(color: Colors.amber))),
+                DataCell(Text(entry.scrapValue,
+                    style: TextStyle(color: Colors.blue[200]))),
+                DataCell(Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: Text(entry.quality),
+                )),
+                DataCell(Text(entry.origin)),
+                DataCell(Text(entry.type)),
+                DataCell(Text(entry.totalValue,
+                    style: const TextStyle(
+                        color: Colors.amber, fontWeight: FontWeight.bold))),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  });
+}
 
 // --- COMMON HELPER WIDGETS ---
 BoxDecoration _tabBackground() {
@@ -174,7 +279,6 @@ class EventLogTab extends StatelessWidget {
       case EventSeverity.normal:
         return Colors.white70;
       case EventSeverity.low:
-      default:
         return Colors.grey[400]!;
     }
   }
@@ -793,7 +897,7 @@ class _IndustryView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       children: [
-        _buildStockpiles(gameState),
+        _buildStockpiles(gameState, context),
         const Divider(color: Colors.white24, height: 40),
         _buildSectionHeader("Material Flow Summary"),
         _buildMaterialFlowSummary(gameState),
@@ -813,75 +917,72 @@ class _IndustryView extends StatelessWidget {
     );
   }
 
-  Widget _buildStockpiles(GameState gameState) {
-    final List<Map<String, dynamic>> stockpiles = [];
+  Widget _buildStockpiles(GameState gameState, BuildContext context) {
+    final List<_LedgerEntry> entries = [];
 
     if (gameState.communalWood > 0) {
-      stockpiles.add({
-        'icon': Icons.forest,
-        'name': 'Wood',
-        'quantity': gameState.communalWood.toStringAsFixed(0),
-        'unit': 'kg'
-      });
+      double val = 0.5; // Base value per kg
+      double total = gameState.communalWood * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.forest,
+        name: 'Wood',
+        quantity: gameState.communalWood.toStringAsFixed(0),
+        weight: gameState.communalWood.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Normal',
+        origin: 'Gathered',
+        type: 'Material',
+        totalValueRaw: total,
+      ));
     }
     if (gameState.communalIronOre > 0) {
-      stockpiles.add({
-        'icon': Icons.landscape,
-        'name': 'Iron Ore',
-        'quantity': gameState.communalIronOre.toStringAsFixed(0),
-        'unit': 'kg'
-      });
+      double val = 2.0;
+      double total = gameState.communalIronOre * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.landscape,
+        name: 'Iron Ore',
+        quantity: gameState.communalIronOre.toStringAsFixed(0),
+        weight: gameState.communalIronOre.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Raw',
+        origin: 'Mined',
+        type: 'Ore',
+        totalValueRaw: total,
+      ));
     }
     if (gameState.communalScrap > 0) {
-      stockpiles.add({
-        'icon': Icons.build,
-        'name': 'Scrap',
-        'quantity': gameState.communalScrap.toStringAsFixed(0),
-        'unit': 'units'
-      });
+      double val = 1.0; // Nominal value
+      double total = gameState.communalScrap * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.build,
+        name: 'Scrap',
+        quantity: gameState.communalScrap.toStringAsFixed(0),
+        weight: (gameState.communalScrap * 0.5).toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '1.0',
+        quality: 'Mixed',
+        origin: 'Scavenged',
+        type: 'Salvage',
+        totalValueRaw: total,
+      ));
     }
     if (gameState.communalArrows > 0) {
-      stockpiles.add({
-        'icon': Icons.arrow_upward,
-        'name': 'Arrows',
-        'quantity': gameState.communalArrows.toString(),
-        'unit': 'units'
-      });
-    }
-    if (gameState.communalMilk > 0) {
-      stockpiles.add({
-        'icon': Icons.water_drop,
-        'name': 'Milk',
-        'quantity': gameState.communalMilk.toStringAsFixed(1),
-        'unit': 'L'
-      });
-    }
-    if (gameState.communalCheese > 0) {
-      stockpiles.add({
-        'icon': Icons.food_bank,
-        'name': 'Cheese',
-        'quantity': gameState.communalCheese.toStringAsFixed(1),
-        'unit': 'kg'
-      });
-    }
-    if (gameState.communalGrain > 0) {
-      stockpiles.add({
-        'icon': Icons.grass,
-        'name': 'Grain',
-        'quantity': gameState.communalGrain.toStringAsFixed(0),
-        'unit': 'kg'
-      });
-    }
-
-    if (stockpiles.isEmpty) {
-      return const Card(
-        color: Colors.black54,
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text("No industrial stockpiles.",
-              style: TextStyle(color: Colors.white54)),
-        ),
-      );
+      double val = 0.2;
+      double total = gameState.communalArrows * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.arrow_upward,
+        name: 'Arrows',
+        quantity: '${gameState.communalArrows}',
+        weight: (gameState.communalArrows * 0.05).toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Standard',
+        origin: 'Crafted',
+        type: 'Ammo',
+        totalValueRaw: total,
+      ));
     }
 
     return Card(
@@ -891,88 +992,11 @@ class _IndustryView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Current Inventory",
+            Text("Industrial Ledger",
                 style: GoogleFonts.cinzel(
                     color: Colors.amber, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Table(
-              columnWidths: const {
-                0: FixedColumnWidth(40),
-                1: FlexColumnWidth(2),
-                2: FlexColumnWidth(1),
-                3: FlexColumnWidth(1),
-              },
-              children: [
-                // Header row
-                TableRow(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.amber.withOpacity(0.3)),
-                    ),
-                  ),
-                  children: [
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Text('Resource',
-                          style: GoogleFonts.cinzel(
-                              color: Colors.amber[200],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Text('Quantity',
-                          textAlign: TextAlign.right,
-                          style: GoogleFonts.cinzel(
-                              color: Colors.amber[200],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
-                      child: Text('Unit',
-                          style: GoogleFonts.cinzel(
-                              color: Colors.amber[200],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                    ),
-                  ],
-                ),
-                // Data rows
-                ...stockpiles.map((item) => TableRow(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Icon(item['icon'] as IconData,
-                              size: 20, color: Colors.white70),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(item['name'] as String,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 14)),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(item['quantity'] as String,
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8.0, horizontal: 8.0),
-                          child: Text(item['unit'] as String,
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 12)),
-                        ),
-                      ],
-                    )),
-              ],
-            ),
+            _buildLedgerTable(entries, context),
           ],
         ),
       ),
@@ -1154,16 +1178,6 @@ class _IndustryView extends StatelessWidget {
         return "units";
     }
   }
-
-  IconData _getIconForResource(String name) {
-    if (name.contains("Wood")) return Icons.forest;
-    if (name.contains("Ore")) return Icons.landscape;
-    if (name.contains("Arrow")) return Icons.arrow_upward;
-    if (name.contains("Milk")) return Icons.water_drop;
-    if (name.contains("Cheese")) return Icons.food_bank;
-    if (name.contains("Grain")) return Icons.grass;
-    return Icons.build;
-  }
 }
 
 // --- Helper re-definition just in case it's needed in this file scope ---
@@ -1283,9 +1297,68 @@ class HerdsReportTab extends StatelessWidget {
               ),
             ),
           ),
+
+          // [GEMINI-NEW] Herd Ledger
+          const SizedBox(height: 20),
+          _buildSectionHeader("Herd Ledger"),
+          Card(
+            color: Colors.black.withOpacity(0.6),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildHerdLedger(cattle.animals, context),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildHerdLedger(List<LivestockAnimal> animals, BuildContext context) {
+    final List<_LedgerEntry> entries = animals.map((animal) {
+      double val = 0;
+      String name = "Unknown";
+      String weight = "Unknown";
+
+      if (animal.type == AnimalType.Cattle) {
+        if (animal.age < 2) {
+          name = "Calf";
+          val = 20;
+          weight = "80";
+        } else if (animal.isMale) {
+          name = "Bull";
+          val = 80;
+          weight = "600";
+        } else {
+          name = "Cow";
+          val = 50;
+          weight = "400";
+        }
+      } else {
+        name = animal.type.name;
+        val = 30;
+        weight = "50";
+      }
+
+      // Adjust value by health
+      val *= animal.health;
+
+      return _LedgerEntry(
+        icon: Icons.cruelty_free,
+        name: name,
+        quantity: '1',
+        weight: weight,
+        rupeeValue: val.toStringAsFixed(0),
+        scrapValue: '0',
+        quality: animal.health > 0.9
+            ? 'Prime'
+            : (animal.health > 0.5 ? 'Good' : 'Poor'),
+        origin: 'Herd',
+        type: 'Livestock',
+        totalValueRaw: val,
+      );
+    }).toList();
+
+    return _buildLedgerTable(entries, context);
   }
 
   Widget _buildStat(String label, String value, {Color color = Colors.white}) {
@@ -1371,7 +1444,7 @@ class _FoodOverviewTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          _buildFoodStockpiles(gameState),
+          _buildFoodStockpiles(gameState, context),
           const SizedBox(height: 20),
           _buildCulinaryNews(gameState),
           const SizedBox(height: 80),
@@ -1380,148 +1453,92 @@ class _FoodOverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFoodStockpiles(GameState gameState) {
-    final List<Map<String, dynamic>> food = [];
+  Widget _buildFoodStockpiles(GameState gameState, BuildContext context) {
+    final List<_LedgerEntry> entries = [];
 
     if (gameState.communalMeat > 0) {
-      food.add({
-        'icon': Icons.restaurant,
-        'name': 'Meat',
-        'quantity': gameState.communalMeat.toStringAsFixed(1),
-        'unit': 'kg'
-      });
+      double val = 4.0; // Example value
+      double total = gameState.communalMeat * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.restaurant,
+        name: 'Meat',
+        quantity: gameState.communalMeat.toStringAsFixed(1),
+        weight: gameState.communalMeat.toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Fresh',
+        origin: 'Butchered',
+        type: 'Food',
+        totalValueRaw: total,
+      ));
     }
     if (gameState.communalMilk > 0) {
-      food.add({
-        'icon': Icons.water_drop,
-        'name': 'Milk',
-        'quantity': gameState.communalMilk.toStringAsFixed(1),
-        'unit': 'L'
-      });
+      double val = 2.0;
+      double total = gameState.communalMilk * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.water_drop,
+        name: 'Milk',
+        quantity: gameState.communalMilk.toStringAsFixed(1),
+        weight: gameState.communalMilk.toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Fresh',
+        origin: 'Milked',
+        type: 'Drink',
+        totalValueRaw: total,
+      ));
     }
     if (gameState.communalCheese > 0) {
-      food.add({
-        'icon': Icons.food_bank,
-        'name': 'Cheese',
-        'quantity': gameState.communalCheese.toStringAsFixed(1),
-        'unit': 'kg'
-      });
+      double val = 8.0;
+      double total = gameState.communalCheese * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.food_bank,
+        name: 'Cheese',
+        quantity: gameState.communalCheese.toStringAsFixed(1),
+        weight: gameState.communalCheese.toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Aged',
+        origin: 'Crafted',
+        type: 'Food',
+        totalValueRaw: total,
+      ));
     }
     if (gameState.communalGrain > 0) {
-      food.add({
-        'icon': Icons.grass,
-        'name': 'Grain',
-        'quantity': gameState.communalGrain.toStringAsFixed(0),
-        'unit': 'kg'
-      });
-    }
-    if (gameState.communalRice > 0) {
-      food.add({
-        'icon': Icons.grass,
-        'name': 'Rice',
-        'quantity': gameState.communalRice.toStringAsFixed(0),
-        'unit': 'kg'
-      });
+      double val = 1.5;
+      double total = gameState.communalGrain * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.grass,
+        name: 'Grain',
+        quantity: gameState.communalGrain.toStringAsFixed(0),
+        weight: gameState.communalGrain.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Raw',
+        origin: 'Gathered',
+        type: 'Ingredient',
+        totalValueRaw: total,
+      ));
     }
 
-    return Card(
-      color: Colors.black.withOpacity(0.6),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Food Stockpiles",
-                style: GoogleFonts.cinzel(
-                    color: Colors.amber, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            if (food.isEmpty)
-              const Text("No food stockpiles.",
-                  style: TextStyle(color: Colors.white54))
-            else
-              Table(
-                columnWidths: const {
-                  0: FixedColumnWidth(40),
-                  1: FlexColumnWidth(2),
-                  2: FlexColumnWidth(1),
-                  3: FlexColumnWidth(1),
-                },
-                children: [
-                  // Header row
-                  TableRow(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom:
-                            BorderSide(color: Colors.amber.withOpacity(0.3)),
-                      ),
-                    ),
-                    children: [
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text('Food Type',
-                            style: GoogleFonts.cinzel(
-                                color: Colors.amber[200],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text('Quantity',
-                            textAlign: TextAlign.right,
-                            style: GoogleFonts.cinzel(
-                                color: Colors.amber[200],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
-                        child: Text('Unit',
-                            style: GoogleFonts.cinzel(
-                                color: Colors.amber[200],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                      ),
-                    ],
-                  ),
-                  // Data rows
-                  ...food.map((item) => TableRow(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Icon(item['icon'] as IconData,
-                                size: 20, color: Colors.green[300]),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(item['name'] as String,
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 14)),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(item['quantity'] as String,
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 8.0, horizontal: 8.0),
-                            child: Text(item['unit'] as String,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 12)),
-                          ),
-                        ],
-                      )),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
+    if (gameState.communalRice > 0) {
+      double val = 2.0;
+      double total = gameState.communalRice * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.grass,
+        name: 'Rice',
+        quantity: gameState.communalRice.toStringAsFixed(0),
+        weight: gameState.communalRice.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'White',
+        origin: 'Traded',
+        type: 'Ingredient',
+        totalValueRaw: total,
+      ));
+    }
+
+    return _buildLedgerTable(entries, context);
   }
 
   Widget _buildCulinaryNews(GameState gameState) {

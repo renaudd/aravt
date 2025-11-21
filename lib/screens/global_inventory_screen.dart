@@ -6,7 +6,6 @@ import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/widgets/item_sprite_widget.dart';
 import 'package:aravt/widgets/persistent_menu_widget.dart';
 import 'package:aravt/widgets/equipped_gear_view.dart';
-import 'package:aravt/models/herd_data.dart';
 
 class GlobalInventoryScreen extends StatelessWidget {
   const GlobalInventoryScreen({super.key});
@@ -185,9 +184,6 @@ class CommunalInventoryTab extends StatefulWidget {
 }
 
 class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
-  int _sortColumnIndex = 1; // Default sort by Name
-  bool _sortAscending = true;
-
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
@@ -195,9 +191,15 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
 
     double totalTreasure = 0;
     double totalSupplies = 0;
+
+    // Calculate totals from entries (parsing strings)
     for (var entry in ledgerEntries) {
-      totalTreasure += entry.rupeeValue * entry.quantity;
-      totalSupplies += entry.scrapValue * entry.quantity;
+      double qty = double.tryParse(entry.quantity.split(' ').first) ?? 0;
+      double rVal = double.tryParse(entry.rupeeValue) ?? 0;
+      double sVal = double.tryParse(entry.scrapValue) ?? 0;
+
+      totalTreasure += rVal * qty;
+      totalSupplies += sVal * qty;
     }
     // Add liquid currency
     totalSupplies += gameState.communalScrap;
@@ -233,136 +235,9 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
                 ],
               ),
             ),
-
-            // --- The Ledger ---
+            // --- Ledger Table ---
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.white12),
-                    child: DataTable(
-                      headingRowColor: MaterialStateProperty.all(
-                          Colors.white.withOpacity(0.05)),
-                      headingTextStyle: GoogleFonts.cinzel(
-                          color: const Color(0xFFE0D5C1),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold),
-                      dataTextStyle:
-                          const TextStyle(color: Colors.white, fontSize: 11),
-                      columnSpacing: 12,
-                      horizontalMargin: 12,
-                      dataRowMinHeight: 32,
-                      dataRowMaxHeight: 40,
-                      sortColumnIndex: _sortColumnIndex,
-                      sortAscending: _sortAscending,
-                      columns: [
-                        const DataColumn(label: Text('')),
-                        DataColumn(
-                            label: const Text('Name'),
-                            onSort: (i, asc) => _sort<String>(
-                                (e) => e.name, i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Qty'),
-                            numeric: true,
-                            onSort: (i, asc) => _sort<num>(
-                                (e) => e.quantity, i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Wt (kg)'),
-                            numeric: true,
-                            onSort: (i, asc) => _sort<num>(
-                                (e) => e.weightPerUnit, i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Val (₹)'),
-                            numeric: true,
-                            onSort: (i, asc) => _sort<num>(
-                                (e) => e.rupeeValue, i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Val (§)'),
-                            numeric: true,
-                            onSort: (i, asc) => _sort<num>(
-                                (e) => e.scrapValue, i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Quality'),
-                            onSort: (i, asc) => _sort<String>(
-                                (e) => e.quality ?? '', i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Origin'),
-                            onSort: (i, asc) => _sort<String>(
-                                (e) => e.origin ?? '', i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Type'),
-                            onSort: (i, asc) => _sort<String>(
-                                (e) => e.type ?? '', i, asc, ledgerEntries)),
-                        DataColumn(
-                            label: const Text('Total (₹)'),
-                            numeric: true,
-                            tooltip:
-                                'Total value in rupees (using dynamic conversion)',
-                            onSort: (i, asc) => _sort<num>(
-                                (e) => e.getTotalValue(
-                                    gameState.scrapToRupeeConversion),
-                                i,
-                                asc,
-                                ledgerEntries)),
-                      ],
-                      rows: ledgerEntries.map((entry) {
-                        if (entry.isHeader) {
-                          return DataRow(
-                              color: MaterialStateProperty.all(
-                                  Colors.white.withOpacity(0.1)),
-                              cells: [
-                                const DataCell(SizedBox()),
-                                DataCell(Text(entry.name,
-                                    style: GoogleFonts.cinzel(
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFFE0D5C1)))),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                                const DataCell(SizedBox()),
-                              ]);
-                        }
-                        final totalValue = entry
-                            .getTotalValue(gameState.scrapToRupeeConversion);
-                        return DataRow(cells: [
-                          DataCell(entry.icon ?? const SizedBox()),
-                          DataCell(Text(entry.name)),
-                          DataCell(Text(entry.quantity.toString())),
-                          DataCell(Text(entry.weightPerUnit > 0
-                              ? entry.weightPerUnit.toStringAsFixed(1)
-                              : "-")),
-                          DataCell(Text(
-                              entry.rupeeValue > 0
-                                  ? entry.rupeeValue.toStringAsFixed(0)
-                                  : "-",
-                              style: const TextStyle(color: Colors.amber))),
-                          DataCell(Text(
-                              entry.scrapValue > 0
-                                  ? entry.scrapValue.toStringAsFixed(0)
-                                  : "-",
-                              style: TextStyle(color: Colors.blue[200]))),
-                          DataCell(Text(entry.quality ?? "-")),
-                          DataCell(Text(entry.origin ?? "-")),
-                          DataCell(Text(entry.type ?? "-")),
-                          DataCell(Text(
-                              totalValue > 0
-                                  ? totalValue.toStringAsFixed(0)
-                                  : "-",
-                              style:
-                                  const TextStyle(color: Colors.greenAccent))),
-                        ]);
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
+              child: _buildLedgerTable(ledgerEntries, context),
             ),
           ],
         ),
@@ -370,119 +245,167 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
     );
   }
 
-  void _sort<T extends Comparable>(Comparable Function(_LedgerEntry e) getField,
-      int columnIndex, bool ascending, List<_LedgerEntry> entries) {
-    setState(() {
-      _sortColumnIndex = columnIndex;
-      _sortAscending = ascending;
-      // Simple sort doesn't work well with headers interspersed.
-      // For a true ledger, maybe we don't want headers if we want full sortability?
-      // Or we only sort WITHIN sections.
-      // Given the requirement, let's try a global sort and see if it breaks the immersion of sections.
-      // User asked for "each column... should be sortable", implying global sort might be desired.
-      // Let's stick to simple global sort for now, it might mix sections but fulfills the functional requirement.
-    });
-  }
-
   List<_LedgerEntry> _generateLedger(GameState gameState) {
     List<_LedgerEntry> entries = [];
 
     // --- RESOURCES ---
-    entries.add(_LedgerEntry.header("Raw Resources"));
-    if (gameState.communalMeat > 0)
-      entries.add(_LedgerEntry.resource(Icons.kebab_dining, Colors.redAccent,
-          "Meat (Raw)", gameState.communalMeat, 1.0, 0, 2.0));
-    if (gameState.communalRice > 0)
-      entries.add(_LedgerEntry.resource(Icons.rice_bowl, Colors.white, "Rice",
-          gameState.communalRice, 1.0, 0, 1.0));
-    if (gameState.communalWood > 0)
-      entries.add(_LedgerEntry.resource(Icons.forest, Colors.brown, "Wood",
-          gameState.communalWood, 1.0, 0, 0.5));
-    if (gameState.communalIronOre > 0)
-      entries.add(_LedgerEntry.resource(Icons.landscape, Colors.grey,
-          "Iron Ore", gameState.communalIronOre, 1.0, 0, 1.0));
-    if (gameState.communalScrap > 0)
-      entries.add(_LedgerEntry.resource(Icons.build, Colors.blue[200]!, "Scrap",
-          gameState.communalScrap, 0.1, 0, 1.0));
-
-    // --- MUNITIONS ---
+    if (gameState.communalMeat > 0) {
+      double val = 2.0;
+      entries.add(_LedgerEntry(
+        icon: const Icon(Icons.kebab_dining, color: Colors.redAccent, size: 24),
+        name: "Meat (Raw)",
+        quantity: gameState.communalMeat.toStringAsFixed(0),
+        weight: gameState.communalMeat.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Normal',
+        origin: 'Gathered',
+        type: 'Food',
+        totalValueRaw: gameState.communalMeat * val,
+      ));
+    }
+    if (gameState.communalRice > 0) {
+      double val = 1.0;
+      entries.add(_LedgerEntry(
+        icon: const Icon(Icons.rice_bowl, color: Colors.white, size: 24),
+        name: "Rice",
+        quantity: gameState.communalRice.toStringAsFixed(0),
+        weight: gameState.communalRice.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Normal',
+        origin: 'Gathered',
+        type: 'Food',
+        totalValueRaw: gameState.communalRice * val,
+      ));
+    }
+    if (gameState.communalWood > 0) {
+      double val = 0.5;
+      entries.add(_LedgerEntry(
+        icon: const Icon(Icons.forest, color: Colors.brown, size: 24),
+        name: "Wood",
+        quantity: gameState.communalWood.toStringAsFixed(0),
+        weight: gameState.communalWood.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Normal',
+        origin: 'Gathered',
+        type: 'Material',
+        totalValueRaw: gameState.communalWood * val,
+      ));
+    }
+    if (gameState.communalIronOre > 0) {
+      double val = 1.0;
+      entries.add(_LedgerEntry(
+        icon: const Icon(Icons.landscape, color: Colors.grey, size: 24),
+        name: "Iron Ore",
+        quantity: gameState.communalIronOre.toStringAsFixed(0),
+        weight: gameState.communalIronOre.toStringAsFixed(0),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Raw',
+        origin: 'Mined',
+        type: 'Ore',
+        totalValueRaw: gameState.communalIronOre * val,
+      ));
+    }
+    if (gameState.communalScrap > 0) {
+      double val = 1.0;
+      entries.add(_LedgerEntry(
+        icon: Icon(Icons.build, color: Colors.blue[200]!, size: 24),
+        name: "Scrap",
+        quantity: gameState.communalScrap.toStringAsFixed(0),
+        weight: (gameState.communalScrap * 0.5).toStringAsFixed(1),
+        rupeeValue: '0.1',
+        scrapValue: val.toStringAsFixed(1),
+        quality: 'Mixed',
+        origin: 'Scavenged',
+        type: 'Salvage',
+        totalValueRaw: gameState.communalScrap * 0.1,
+      ));
+    }
     if (gameState.communalArrows > 0) {
-      entries.add(_LedgerEntry.header("Munitions"));
-      entries.add(_LedgerEntry.resource(
-          Icons.arrow_upward,
-          Colors.white70,
-          "Arrows (Standard)",
-          gameState.communalArrows.toDouble(),
-          0.05,
-          0,
-          0.5));
+      double val = 0.5;
+      entries.add(_LedgerEntry(
+        icon: const Icon(Icons.arrow_upward, color: Colors.white70, size: 24),
+        name: "Arrows (Standard)",
+        quantity: '${gameState.communalArrows}',
+        weight: (gameState.communalArrows * 0.05).toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Standard',
+        origin: 'Crafted',
+        type: 'Ammo',
+        totalValueRaw: gameState.communalArrows * val,
+      ));
     }
 
     // --- COMMUNAL STASH (Grouped) ---
     if (gameState.communalStash.isNotEmpty) {
-      entries.add(_LedgerEntry.header("Equipment & Goods"));
       final Map<String, List<InventoryItem>> grouped = {};
       for (var item in gameState.communalStash) {
         grouped.putIfAbsent(item.templateId, () => []).add(item);
       }
       grouped.forEach((templateId, items) {
         final prototype = items.first;
+        double val =
+            prototype.valueType == ValueType.Treasure ? prototype.baseValue : 0;
+        double scrap =
+            prototype.valueType == ValueType.Supply ? prototype.baseValue : 0;
+
         entries.add(_LedgerEntry(
           icon: ItemSpriteWidget(item: prototype, size: const Size(24, 24)),
           name: prototype.name,
-          quantity: items.length,
-          weightPerUnit: prototype.weight,
-          rupeeValue: prototype.valueType == ValueType.Treasure
-              ? prototype.baseValue
-              : 0,
-          scrapValue:
-              prototype.valueType == ValueType.Supply ? prototype.baseValue : 0,
+          quantity: '${items.length}',
+          weight: (prototype.weight * items.length).toStringAsFixed(1),
+          rupeeValue: val.toStringAsFixed(0),
+          scrapValue: scrap.toStringAsFixed(0),
+          quality: prototype.quality ?? 'Standard',
+          origin: prototype.origin,
+          type: prototype.itemType.name,
+          totalValueRaw: val * items.length,
         ));
       });
     }
 
     // --- LIVESTOCK ---
-    entries.add(_LedgerEntry.header(
-        "Cattle Herd (${gameState.communalCattle.totalPopulation})"));
     // Group cattle by age/sex for cleaner ledger
     Map<String, int> cattleGroups = {};
     for (var cow in gameState.communalCattle.animals) {
-      String key =
-          "Steppe ${cow.isMale ? 'Bull' : 'Cow'} (${cow.age}y)"; // Simplified grouping
+      String key = "Steppe ${cow.isMale ? 'Bull' : 'Cow'} (${cow.age}y)";
       cattleGroups[key] = (cattleGroups[key] ?? 0) + 1;
     }
     cattleGroups.forEach((name, count) {
       entries.add(_LedgerEntry(
-          icon: const Icon(Icons.grass, color: Colors.brown, size: 24),
-          name: name,
-          quantity: count,
-          weightPerUnit: 400.0, // Avg
-          scrapValue: 200.0));
+        icon: const Icon(Icons.grass, color: Colors.brown, size: 24),
+        name: name,
+        quantity: '$count',
+        weight: (count * 400).toStringAsFixed(0),
+        rupeeValue: '0',
+        scrapValue: '200',
+        quality: 'Normal',
+        origin: 'Herd',
+        type: 'Livestock',
+        totalValueRaw:
+            0, // Cattle have no rupee value currently? Or maybe they do.
+      ));
     });
 
     if (gameState.communalHerd.isNotEmpty) {
-      entries.add(
-          _LedgerEntry.header("Horse Herd (${gameState.communalHerd.length})"));
       for (var horse in gameState.communalHerd) {
         entries.add(_LedgerEntry(
-            icon: const Icon(Icons.pets, color: Colors.orangeAccent, size: 24),
-            name: horse.name,
-            quantity: 1,
-            weightPerUnit: 350.0,
-            rupeeValue: horse.baseValue));
+          icon: const Icon(Icons.pets, color: Colors.orangeAccent, size: 24),
+          name: horse.name,
+          quantity: '1',
+          weight: '350',
+          rupeeValue: horse.baseValue.toStringAsFixed(0),
+          scrapValue: '0',
+          quality: 'Normal',
+          origin: 'Herd',
+          type: 'Mount',
+          totalValueRaw: horse.baseValue,
+        ));
       }
-    }
-
-    // Apply sorting if active (ignores headers for now to avoid weirdness, or just sort everything)
-    if (_sortColumnIndex != 1 || !_sortAscending) {
-      // If user explicitly sorted, we might want to remove headers or sort within them.
-      // For true ledger functionality, a flat sort might be preferred by power users.
-      // Let's keep it simple: if they sort, we just sort the non-header entries.
-      final headers = entries.where((e) => e.isHeader).toList();
-      final items = entries.where((e) => !e.isHeader).toList();
-
-      // ... sorting logic would go here if we wanted to maintain headers ...
-      // For now, the basic sort in build() will just jumble headers, which is a trade-off.
     }
 
     return entries;
@@ -509,66 +432,111 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
 }
 
 class _LedgerEntry {
-  final Widget? icon;
+  final Widget icon;
   final String name;
-  final int quantity;
-  final double weightPerUnit;
-  final double rupeeValue;
-  final double scrapValue;
-  final String? quality;
-  final String? origin;
-  final String? type;
-  final bool isHeader;
+  final String quantity;
+  final String weight;
+  final String rupeeValue;
+  final String scrapValue;
+  final String quality;
+  final String origin;
+  final String type;
+  final double totalValueRaw;
 
   _LedgerEntry({
-    this.icon,
+    required this.icon,
     required this.name,
     required this.quantity,
-    this.weightPerUnit = 0.0,
-    this.rupeeValue = 0.0,
-    this.scrapValue = 0.0,
-    this.quality,
-    this.origin,
-    this.type,
-    this.isHeader = false,
+    required this.weight,
+    required this.rupeeValue,
+    required this.scrapValue,
+    required this.quality,
+    required this.origin,
+    required this.type,
+    required this.totalValueRaw,
   });
 
-  /// Calculate total value in rupees using dynamic conversion
-  double getTotalValue(double conversionRate) {
-    return (rupeeValue * quantity) + (scrapValue * quantity * conversionRate);
-  }
-
-  factory _LedgerEntry.header(String title) {
-    return _LedgerEntry(name: title, quantity: 0, isHeader: true);
-  }
-
-  factory _LedgerEntry.resource(IconData iconData, Color color, String name,
-      double quantity, double weight, double rupeeVal, double scrapVal) {
-    return _LedgerEntry(
-        icon: Icon(iconData, color: color, size: 24),
-        name: name,
-        quantity: quantity.floor(),
-        weightPerUnit: weight,
-        rupeeValue: rupeeVal,
-        scrapValue: scrapVal,
-        type: 'Resource');
-  }
-
-  factory _LedgerEntry.item(InventoryItem item, int qty) {
-    return _LedgerEntry(
-        icon: Icon(Icons.inventory_2, color: Colors.grey, size: 24),
-        name: item.name,
-        quantity: qty,
-        weightPerUnit: item.weight,
-        rupeeValue: item.valueType == ValueType.Treasure ? item.baseValue : 0,
-        scrapValue: item.valueType == ValueType.Supply ? item.baseValue : 0,
-        quality: item.quality,
-        origin: item.origin,
-        type: item.itemType.name);
-  }
+  String get totalValue => totalValueRaw.toStringAsFixed(0);
 }
 
-// --- Tab 3: Global Inventory ---
+Widget _buildLedgerTable(List<_LedgerEntry> entries, BuildContext context) {
+  if (entries.isEmpty) {
+    return const Center(
+        child: Padding(
+      padding: EdgeInsets.all(16.0),
+      child:
+          Text("No items in ledger.", style: TextStyle(color: Colors.white54)),
+    ));
+  }
+
+  // Sort by total value descending by default
+  entries.sort((a, b) => b.totalValueRaw.compareTo(a.totalValueRaw));
+
+  return LayoutBuilder(builder: (context, constraints) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingRowHeight: 40,
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 64,
+            columnSpacing: 24,
+            horizontalMargin: 12,
+            headingTextStyle:
+                GoogleFonts.cinzel(color: Colors.white70, fontSize: 12),
+            dataTextStyle: const TextStyle(color: Colors.white, fontSize: 12),
+            columns: const [
+              DataColumn(label: Text('Item')),
+              DataColumn(label: Text('Qty'), numeric: true),
+              DataColumn(label: Text('Wgt (Kg)'), numeric: true),
+              DataColumn(label: Text('Val (₹)'), numeric: true),
+              DataColumn(label: Text('Scrap (§)'), numeric: true),
+              DataColumn(
+                  label: Padding(
+                padding: EdgeInsets.only(left: 16.0),
+                child: Text('Qual'),
+              )),
+              DataColumn(label: Text('Origin')),
+              DataColumn(label: Text('Type')),
+              DataColumn(label: Text('Total (₹)'), numeric: true),
+            ],
+            rows: entries.map((entry) {
+              return DataRow(cells: [
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    entry.icon,
+                    const SizedBox(width: 8),
+                    Text(entry.name),
+                  ],
+                )),
+                DataCell(Text(entry.quantity)),
+                DataCell(Text(entry.weight)),
+                DataCell(Text(entry.rupeeValue,
+                    style: const TextStyle(color: Colors.amber))),
+                DataCell(Text(entry.scrapValue,
+                    style: TextStyle(color: Colors.blue[200]))),
+                DataCell(Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: Text(entry.quality),
+                )),
+                DataCell(Text(entry.origin)),
+                DataCell(Text(entry.type)),
+                DataCell(Text(entry.totalValue,
+                    style: const TextStyle(
+                        color: Colors.amber, fontWeight: FontWeight.bold))),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  });
+}
+
 class GlobalInventoryTab extends StatelessWidget {
   final bool isOmniscient;
   const GlobalInventoryTab({super.key, required this.isOmniscient});

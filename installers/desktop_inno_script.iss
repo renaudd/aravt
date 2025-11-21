@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "Aravt"
-#define MyAppVersion "0.2"
+#define MyAppVersion "0.4"
 #define MyAppPublisher "Dashiell Renaud"
 #define MyAppURL "https://www.dashiellrenaud.com/"
 #define MyAppExeName "aravt_1.exe"

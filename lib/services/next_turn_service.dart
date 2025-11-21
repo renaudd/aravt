@@ -370,11 +370,12 @@ class NextTurnService {
                   aravtMembers[_random.nextInt(aravtMembers.length)];
             }
 
-            // 3. Store trade offer data for Camp screen to trigger narrative
-            gameState.hasPendingTradeOffer = true;
-            gameState.pendingTradeCaptainId = captain.id;
-            gameState.pendingTradeSoldierId = offeredSoldier.id;
-            // [GEMINI-FIX] Narrative will be triggered when player enters Camp screen
+            // 3. Trigger the event
+            gameState.startNarrativeEvent(NarrativeEvent(
+              type: NarrativeEventType.day5Trade,
+              instigatorId: captain.id,
+              targetId: offeredSoldier.id,
+            ));
           }
         }
       }

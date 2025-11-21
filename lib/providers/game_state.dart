@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:aravt/models/area_data.dart';
 import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/models/game_date.dart';
@@ -27,7 +26,6 @@ import 'package:aravt/models/tournament_data.dart';
 import 'package:aravt/models/hunting_report.dart';
 import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/models/herd_data.dart';
-import 'package:aravt/game_data/item_templates.dart'; // [GEMINI-FIX] Import for ItemDatabase
 // [GEMINI-NEW] Import for ResourceTripReport
 import 'package:aravt/models/resource_report.dart';
 import 'package:aravt/models/trade_report.dart';
@@ -134,6 +132,7 @@ class GameState with ChangeNotifier {
 
   bool isOmniscientMode = false;
   bool isOmniscienceAllowed = false;
+  bool isGameInitialized = false;
 
   List<Soldier> npcHorde1 = [];
   List<Aravt> npcAravts1 = [];
@@ -157,7 +156,7 @@ class GameState with ChangeNotifier {
   double _communalIronOre = 0.0;
   double get communalIronOre => _communalIronOre;
 
-  double _communalWood = 0.0;
+  double _communalWood = 50.0;
   double get communalWood => _communalWood;
 
   double _communalScrap = 50.0;
@@ -605,6 +604,10 @@ class GameState with ChangeNotifier {
     activeNarrativeEvent = event;
     if (event.type == NarrativeEventType.day5Trade) {
       hasDay5TradeOccurred = true;
+      // [GEMINI-FIX] Set pending trade flags so CampScreen can pick it up
+      hasPendingTradeOffer = true;
+      pendingTradeCaptainId = event.instigatorId;
+      pendingTradeSoldierId = event.targetId;
     }
     notifyListeners();
   }
@@ -749,8 +752,7 @@ class GameState with ChangeNotifier {
     print("[GameState Provider] Initializing new game...");
     try {
       final gameService = setup_service.GameSetupService();
-      final setup_service.GameState initialStateContainer =
-          gameService.createNewGame(
+      final GameState initialStateContainer = gameService.createNewGame(
         difficulty: difficulty,
         allowOmniscience: allowOmniscience,
       );
@@ -777,6 +779,28 @@ class GameState with ChangeNotifier {
       npcAravts2 = initialStateContainer.npcAravts2;
       garrisonSoldiers = initialStateContainer.garrisonSoldiers;
       garrisonAravts = initialStateContainer.garrisonAravts;
+
+      // [GEMINI-FIX] Copy Communal Resources & Herds
+      communalCattle = initialStateContainer.communalCattle;
+      _communalHerd = initialStateContainer.communalHerd;
+      _communalMeat = initialStateContainer.communalMeat;
+      _communalRice = initialStateContainer.communalRice;
+      _communalIronOre = initialStateContainer.communalIronOre;
+      _communalWood = initialStateContainer.communalWood;
+      _communalScrap = initialStateContainer.communalScrap;
+      _communalArrows = initialStateContainer.communalArrows;
+      _communalMilk = initialStateContainer.communalMilk;
+      _communalCheese = initialStateContainer.communalCheese;
+      _communalGrain = initialStateContainer.communalGrain;
+
+      communalStash = initialStateContainer.communalStash;
+      _locationResourceLevels = Map.from(
+          initialStateContainer._locationResourceLevels); // Deep copy map
+
+      butcheringQueue = List.from(initialStateContainer.butcheringQueue);
+      butcheringRate = initialStateContainer.butcheringRate;
+      allowAlcohol = initialStateContainer.allowAlcohol;
+      vegetarianDiet = initialStateContainer.vegetarianDiet;
 
       // Initialize Communal Cattle Herd with individual animals
 
@@ -1823,6 +1847,72 @@ class GameState with ChangeNotifier {
     activeCombat = null;
     pendingCombat = null;
     lastCombatReport = null;
+  }
+
+  // [GEMINI-NEW] Resolve Trade Offer (Blind Trade with Optional Swap)
+  void resolveTradeOffer(bool accepted, {int? outgoingSoldierId}) {
+    if (accepted) {
+      // 1. Incoming Soldier (from Captain to Player)
+      if (pendingTradeSoldierId != null && player != null) {
+        final incomingSoldier = horde.firstWhere(
+            (s) => s.id == pendingTradeSoldierId,
+            orElse: () => horde.first);
+
+        // Remove from old aravt (Captain's)
+        final oldAravt = findAravtById(incomingSoldier.aravt);
+        if (oldAravt != null) {
+          oldAravt.soldierIds.remove(incomingSoldier.id);
+        }
+
+        // Add to Player's Aravt
+        incomingSoldier.aravt = player!.aravt;
+        final playerAravt = findAravtById(player!.aravt);
+        if (playerAravt != null &&
+            !playerAravt.soldierIds.contains(incomingSoldier.id)) {
+          playerAravt.soldierIds.add(incomingSoldier.id);
+        }
+
+        logEvent(
+          "${incomingSoldier.name} has joined your Aravt via trade.",
+          category: EventCategory.general,
+          aravtId: player!.aravt,
+        );
+      }
+
+      // 2. Outgoing Soldier (from Player to Captain) - Optional
+      if (outgoingSoldierId != null && pendingTradeCaptainId != null) {
+        final outgoingSoldier = horde.firstWhere(
+            (s) => s.id == outgoingSoldierId,
+            orElse: () => horde.first);
+        final captain = horde.firstWhere((s) => s.id == pendingTradeCaptainId,
+            orElse: () => horde.first);
+
+        // Remove from Player's Aravt
+        final playerAravt = findAravtById(outgoingSoldier.aravt);
+        if (playerAravt != null) {
+          playerAravt.soldierIds.remove(outgoingSoldier.id);
+        }
+
+        // Add to Captain's Aravt
+        outgoingSoldier.aravt = captain.aravt;
+        final captainAravt = findAravtById(captain.aravt);
+        if (captainAravt != null &&
+            !captainAravt.soldierIds.contains(outgoingSoldier.id)) {
+          captainAravt.soldierIds.add(outgoingSoldier.id);
+        }
+
+        logEvent(
+          "${outgoingSoldier.name} has been sent to Captain ${captain.name}'s Aravt.",
+          category: EventCategory.general,
+          aravtId: captain.aravt,
+        );
+      }
+    }
+
+    hasPendingTradeOffer = false;
+    pendingTradeCaptainId = null;
+    pendingTradeSoldierId = null;
+    notifyListeners();
   }
 }
 

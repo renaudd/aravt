@@ -15,6 +15,7 @@ import '../models/assignment_data.dart';
 import '../models/location_data.dart';
 import '../models/herd_data.dart';
 import 'package:aravt/game_data/item_templates.dart';
+import 'package:aravt/providers/game_state.dart';
 
 class _ProtoSoldier {
   final int id;
@@ -108,31 +109,6 @@ class NpcHorde {
   final List<Soldier> soldiers;
   final List<Aravt> aravts;
   NpcHorde(this.hordeName, this.soldiers, this.aravts);
-}
-
-class GameState {
-  List<Soldier> horde = [];
-  List<Aravt> aravts = [];
-  List<Yurt> yurts = [];
-  GameArea? currentArea;
-  Map<String, GameArea> worldMap = {};
-  Soldier? player;
-  GameDate? currentDate;
-  int? tutorialCaptainId;
-  bool isOmniscientMode = true;
-  bool isGameInitialized = false;
-  List<Soldier> npcHorde1 = [];
-  List<Aravt> npcAravts1 = [];
-  List<Soldier> npcHorde2 = [];
-  List<Aravt> npcAravts2 = [];
-  List<Settlement> settlements = [];
-  List<Soldier> garrisonSoldiers = [];
-  List<Aravt> garrisonAravts = [];
-  late Herd communalCattle;
-
-  GameState() {
-    communalCattle = Herd(type: AnimalType.Cattle);
-  }
 }
 
 class GameSetupService {

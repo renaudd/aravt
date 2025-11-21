@@ -406,6 +406,20 @@ class Soldier {
         .fold(0.0, (sum, item) => sum + item.baseValue);
   }
 
+  int get combinedMeritScore =>
+      strength +
+      intelligence +
+      ambition +
+      perception +
+      longRangeArcherySkill +
+      mountedArcherySkill +
+      spearSkill +
+      swordSkill +
+      temperament.toInt() +
+      knowledge +
+      patience +
+      age ~/ 5;
+
   Soldier({
     required this.id,
     required this.aravt,

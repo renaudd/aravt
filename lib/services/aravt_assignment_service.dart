@@ -178,7 +178,8 @@ class AravtAssignmentService {
         currentTask.assignment == AravtAssignment.GuardPrisoners ||
         currentTask.assignment == AravtAssignment.Ambush ||
         currentTask.assignment == AravtAssignment.Patrol ||
-        currentTask.assignment == AravtAssignment.Shepherd;
+        currentTask.assignment == AravtAssignment.Shepherd ||
+        currentTask.assignment == AravtAssignment.FletchArrows;
 
     if (!isContinuous) {
       if (poi != null) {
