@@ -6,6 +6,8 @@ import '../models/soldier_data.dart';
 import '../models/horde_data.dart';
 import 'soldier_portrait_widget.dart';
 import 'package:aravt/models/game_event.dart';
+import 'package:aravt/models/narrative_models.dart';
+import 'narrative/tournament_conclusion_dialog.dart';
 
 class NarrativeOverlayWidget extends StatefulWidget {
   const NarrativeOverlayWidget({super.key});
@@ -28,6 +30,8 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
         switch (event.type) {
           case NarrativeEventType.day5Trade:
             return _buildTradeDialog(context, gameState, event);
+          case NarrativeEventType.tournamentConclusion:
+            return TournamentConclusionDialog(event: event);
           default:
             return const SizedBox.shrink();
         }

@@ -12,6 +12,17 @@ import 'package:aravt/game_data/item_templates.dart';
 import 'package:aravt/models/justification_event.dart';
 import 'package:aravt/services/social_helper.dart';
 
+/// The status of a soldier.
+enum SoldierStatus { alive, wounded, unconscious, fled, killed }
+
+/// Helper to get SoldierStatus from a string name
+SoldierStatus soldierStatusFromName(String? name) {
+  for (final val in SoldierStatus.values) {
+    if (val.name == name) return val;
+  }
+  return SoldierStatus.alive; // Default
+}
+
 class RelationshipValues {
   double admiration;
   double respect;

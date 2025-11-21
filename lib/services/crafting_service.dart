@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/models/combat_models.dart';
+import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/interaction_models.dart';

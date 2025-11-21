@@ -14,6 +14,7 @@ import 'package:aravt/services/aravt_assignment_service.dart';
 import 'package:aravt/services/tournament_service.dart';
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/aravt_models.dart';
+import 'package:aravt/models/narrative_models.dart';
 
 import 'package:aravt/services/daily_maintenance_service.dart';
 import 'package:aravt/services/training_discipline_service.dart';
@@ -346,8 +347,36 @@ class NextTurnService {
           if (loserAravt != null) {
             // Is it the player?
             if (loserAravt.soldierIds.contains(gameState.player?.id)) {
-              gameState.triggerGameOver(
-                  "Your Aravt finished last in the Great Downsizing Tournament and has been exiled to the harsh steppe without supplies. Your journey ends here.");
+              // Generate tournament results summary
+              final StringBuffer results = StringBuffer();
+              results
+                  .writeln("The Great Downsizing Tournament has concluded.\n");
+              results.writeln("Final Standings:");
+
+              final sortedStandings = result.finalAravtStandings.entries
+                  .toList()
+                ..sort((a, b) => b.value.compareTo(a.value));
+
+              for (int i = 0; i < sortedStandings.length; i++) {
+                final aravt = gameState.findAravtById(sortedStandings[i].key);
+                final score = sortedStandings[i].value;
+                final isPlayer =
+                    aravt?.soldierIds.contains(gameState.player?.id) ?? false;
+                final marker = isPlayer ? " (YOUR ARAVT)" : "";
+                results.writeln(
+                    "  ${i + 1}. Aravt ${aravt?.id ?? 'Unknown'}: $score points$marker");
+              }
+
+              results.writeln(
+                  "\nYour Aravt finished last and will be exiled from the horde.");
+
+              // Trigger narrative event to show results before game over
+              gameState.startNarrativeEvent(NarrativeEvent(
+                type: NarrativeEventType.tournamentConclusion,
+                instigatorId: 0, // Not used for this event type
+                targetId: 0, // Not used for this event type
+                description: results.toString(),
+              ));
               return;
             }
 

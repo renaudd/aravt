@@ -55,6 +55,7 @@ class ActiveTournament {
   int currentDay; // 1 to 4
   Map<int, List<EventResult>> dailyResults; // Day -> Results
   Map<String, int> currentStandings; // AravtId -> Score
+  Map<int, String> dailyReports; // Day -> Formatted Report Text
 
   ActiveTournament({
     required this.name,
@@ -64,8 +65,10 @@ class ActiveTournament {
     this.currentDay = 1,
     Map<int, List<EventResult>>? dailyResults,
     Map<String, int>? currentStandings,
+    Map<int, String>? dailyReports,
   })  : dailyResults = dailyResults ?? {},
-        currentStandings = currentStandings ?? {};
+        currentStandings = currentStandings ?? {},
+        dailyReports = dailyReports ?? {};
 
   Map<String, dynamic> toJson() => {
         'name': name,
@@ -77,6 +80,7 @@ class ActiveTournament {
         'dailyResults': dailyResults.map((k, v) =>
             MapEntry(k.toString(), v.map((e) => e.toJson()).toList())),
         'currentStandings': currentStandings,
+        'dailyReports': dailyReports.map((k, v) => MapEntry(k.toString(), v)),
       };
 
   factory ActiveTournament.fromJson(Map<String, dynamic> json) {
@@ -97,6 +101,10 @@ class ActiveTournament {
         ),
       ),
       currentStandings: Map<String, int>.from(json['currentStandings']),
+      dailyReports: (json['dailyReports'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(int.parse(k), v as String),
+          ) ??
+          {},
     );
   }
 }

@@ -108,16 +108,3 @@ CombatResult combatResultFromName(String? name) {
   }
   return CombatResult.mutualRout; // Default
 }
-
-/// The final status of a soldier after combat.
-/// (This will also be used on your main Soldier model)
-enum SoldierStatus { alive, wounded, unconscious, fled, killed }
-
-/// Helper to get SoldierStatus from a string name
-SoldierStatus soldierStatusFromName(String? name) {
-  for (final val in SoldierStatus.values) {
-    if (val.name == name) return val;
-  }
-  return SoldierStatus.alive; // Default
-}
-

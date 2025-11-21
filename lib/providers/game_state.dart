@@ -28,6 +28,7 @@ import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/models/herd_data.dart';
 // [GEMINI-NEW] Import for ResourceTripReport
 import 'package:aravt/models/resource_report.dart';
+import 'package:aravt/models/narrative_models.dart';
 import 'package:aravt/models/trade_report.dart';
 import 'package:aravt/models/wealth_event.dart';
 import 'package:aravt/models/culinary_news.dart';
@@ -1906,33 +1907,5 @@ class GameState with ChangeNotifier {
     pendingTradeCaptainId = null;
     pendingTradeSoldierId = null;
     notifyListeners();
-  }
-}
-
-enum NarrativeEventType { day5Trade }
-
-class NarrativeEvent {
-  final NarrativeEventType type;
-  final int instigatorId; // Captain ID
-  final int targetId; // "Useless" Soldier ID
-
-  NarrativeEvent({
-    required this.type,
-    required this.instigatorId,
-    required this.targetId,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'type': type.name,
-        'instigatorId': instigatorId,
-        'targetId': targetId,
-      };
-
-  factory NarrativeEvent.fromJson(Map<String, dynamic> json) {
-    return NarrativeEvent(
-      type: NarrativeEventType.values.firstWhere((e) => e.name == json['type']),
-      instigatorId: json['instigatorId'],
-      targetId: json['targetId'],
-    );
   }
 }
