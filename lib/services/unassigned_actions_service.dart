@@ -9,6 +9,7 @@ import 'package:aravt/services/unassigned_actions_helpers/social_helper.dart';
 import 'package:aravt/services/unassigned_actions_helpers/proselytize_helper.dart';
 import 'package:aravt/services/unassigned_actions_helpers/gossip_helper.dart';
 import 'package:aravt/services/unassigned_actions_helpers/advice_helper.dart';
+import 'package:aravt/services/unassigned_actions_helpers/assassination_helper.dart';
 
 /// Service to handle all of Step 4: Unassigned Soldier Actions
 /// This is the core system that drives emergent social dynamics in the horde
@@ -160,6 +161,9 @@ class UnassignedActionsService {
         break;
       case UnassignedActionType.playGame:
         _executePlayGame(action, gameState);
+        break;
+      case UnassignedActionType.murderAttempt:
+        await _executeMurderAttempt(action, gameState);
         break;
       case UnassignedActionType.idle:
       default:
@@ -631,5 +635,114 @@ class UnassignedActionsService {
     ];
 
     return infoTemplates[_random.nextInt(infoTemplates.length)];
+  }
+
+  /// Execute murder attempt
+  Future<void> _executeMurderAttempt(
+      SoldierActionProposal action, GameState gameState) async {
+    final assassin = action.soldier;
+    final target = gameState.findSoldierById(action.targetSoldierId!);
+
+    if (target == null) return;
+
+    // Select assassination type
+    final type = AssassinationHelper.selectAssassinationType(
+        assassin, target, gameState);
+
+    // Execute assassination
+    final result = AssassinationHelper.executeAssassination(
+        assassin, target, type, gameState);
+
+    // Handle result
+    if (result.success) {
+      // Target dies
+      if (target.isPlayer) {
+        // PLAYER DEATH - GAME OVER
+        gameState.logEvent(
+          result.description,
+          category: EventCategory.combat,
+          severity: EventSeverity.critical,
+          soldierId: target.id,
+        );
+
+        // Trigger game over
+        gameState.triggerGameOver(
+          "You were assassinated by ${assassin.name}",
+        );
+      } else {
+        // NPC death
+        gameState.logEvent(
+          result.description,
+          category: EventCategory.combat,
+          severity: EventSeverity.critical,
+          soldierId: target.id,
+        );
+
+        // Remove target from horde
+        gameState.executeSoldier(target);
+      }
+    } else {
+      // Assassination failed
+      if (result.discovered) {
+        // Assassin was discovered
+        gameState.logEvent(
+          result.description,
+          category: EventCategory.combat,
+          severity: EventSeverity.critical,
+          soldierId: target.id,
+        );
+
+        // Severe consequences for assassin
+        if (target.isPlayer) {
+          // Player can execute the assassin
+          gameState.logEvent(
+            "${assassin.name} has been caught attempting to assassinate you! You may execute them.",
+            category: EventCategory.system,
+            severity: EventSeverity.critical,
+            soldierId: assassin.id,
+          );
+        } else {
+          // Target may execute or exile assassin
+          if (_random.nextDouble() < 0.7) {
+            gameState.logEvent(
+              "${target.name} executed ${assassin.name} for the assassination attempt.",
+              category: EventCategory.combat,
+              severity: EventSeverity.high,
+              soldierId: assassin.id,
+            );
+            gameState.executeSoldier(assassin);
+          }
+        }
+      } else {
+        // Failed but not discovered
+        if (gameState.isOmniscientMode) {
+          gameState.logEvent(
+            result.description,
+            category: EventCategory.combat,
+            severity: EventSeverity.high,
+            soldierId: target.id,
+            isPlayerKnown: false,
+          );
+        }
+
+        // Target may be injured
+        if (result.injuryDamage != null) {
+          target.bodyHealthCurrent =
+              (target.bodyHealthCurrent - result.injuryDamage!).clamp(0, 100);
+        }
+      }
+    }
+
+    // Handle confrontation special case (one dies)
+    if (result.type == AssassinationType.confront && !result.success) {
+      // Assassin lost the confrontation and died
+      gameState.logEvent(
+        "${target.name} killed ${assassin.name} in self-defense.",
+        category: EventCategory.combat,
+        severity: EventSeverity.critical,
+        soldierId: assassin.id,
+      );
+      gameState.executeSoldier(assassin);
+    }
   }
 }

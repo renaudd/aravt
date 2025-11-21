@@ -271,7 +271,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     final textStyle = GoogleFonts.cinzel(color: Colors.white);
 
     return UiPanel(
-      width: 330,
+      width: 335,
       height: 255,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,7 +655,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     });
 
     return UiPanel(
-      width: 330,
+      width: 335,
       height: 400,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

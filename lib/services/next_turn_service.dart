@@ -3,7 +3,7 @@ import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/tournament_data.dart';
-import 'package:aravt/models/horde_data.dart'; // Needed for Step 2
+import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/services/aravt_captain_service.dart';
 import 'package:aravt/services/horde_ai_service.dart';
 import 'package:aravt/services/unassigned_actions_service.dart';
@@ -13,6 +13,12 @@ import 'package:aravt/services/npc_horde_turn_service.dart';
 import 'package:aravt/services/aravt_assignment_service.dart';
 import 'package:aravt/services/tournament_service.dart';
 import 'package:aravt/models/combat_models.dart';
+import 'package:aravt/models/aravt_models.dart';
+
+import 'package:aravt/services/daily_maintenance_service.dart';
+import 'package:aravt/services/training_discipline_service.dart';
+import 'package:aravt/services/morale_narrative_service.dart';
+import 'package:aravt/services/leadership_reports_service.dart';
 
 /// NextTurnService is the main "conductor" for all game logic that
 /// happens when the player ends their turn.
@@ -28,6 +34,14 @@ class NextTurnService {
   final AravtAssignmentService _aravtAssignmentService =
       AravtAssignmentService();
   final TournamentService _tournamentService = TournamentService();
+  final DailyMaintenanceService _dailyMaintenanceService =
+      DailyMaintenanceService();
+  final TrainingDisciplineService _trainingDisciplineService =
+      TrainingDisciplineService();
+  final MoraleNarrativeService _moraleNarrativeService =
+      MoraleNarrativeService();
+  final LeadershipReportsService _leadershipReportsService =
+      LeadershipReportsService();
 
   final Random _random = Random();
 
@@ -73,6 +87,18 @@ class NextTurnService {
 
       // --- 10. POST-COMBAT SURGERY/TRIAGE ---
       await _step10_ResolvePostCombatTriage(gameState);
+
+      // --- 10.5 DAILY MAINTENANCE (Cook, Equerry) ---
+      await _step10_5_ResolveDailyMaintenance(gameState);
+
+      // --- 10.6 TRAINING & DISCIPLINE (Drill Sergeant, Disciplinarian) ---
+      await _step10_6_ResolveTrainingAndDiscipline(gameState);
+
+      // --- 10.7 MORALE & NARRATIVE (Tuulch, Chaplain) ---
+      await _step10_7_ResolveMoraleAndNarrativeRoles(gameState);
+
+      // --- 10.8 LEADERSHIP & REPORTS (Lieutenant, Chronicler) ---
+      await _step10_8_ResolveLeadershipAndReports(gameState);
 
       // --- 11. SOLDIER UPDATES (Aging, Health, Birthdays) ---
       await _step11_UpdateSoldiers(gameState);
@@ -216,8 +242,79 @@ class NextTurnService {
     // Placeholder
   }
 
+  Future<void> _step10_5_ResolveDailyMaintenance(GameState gameState) async {
+    await _dailyMaintenanceService.resolveDailyMaintenance(gameState);
+  }
+
+  Future<void> _step10_6_ResolveTrainingAndDiscipline(
+      GameState gameState) async {
+    await _trainingDisciplineService.resolveTrainingAndDiscipline(gameState);
+  }
+
+  Future<void> _step10_7_ResolveMoraleAndNarrativeRoles(
+      GameState gameState) async {
+    await _moraleNarrativeService.resolveMoraleAndNarrativeRoles(gameState);
+  }
+
+  Future<void> _step10_8_ResolveLeadershipAndReports(
+      GameState gameState) async {
+    await _leadershipReportsService.resolveLeadershipAndReports(gameState);
+  }
+
   Future<void> _step11_UpdateSoldiers(GameState gameState) async {
-    // Placeholder
+    print("Step 11: Updating soldiers (Health, Age)...");
+
+    for (final soldier in gameState.horde) {
+      // --- 1. HEALING ---
+      if (soldier.status == SoldierStatus.alive) {
+        int healingAmount = 1; // Base natural healing
+
+        // Apply Medic Bonus
+        final aravt = gameState.findAravtById(soldier.aravt);
+        if (aravt != null) {
+          final medicId = aravt.dutyAssignments[AravtDuty.medic];
+          if (medicId != null) {
+            final medic = gameState.findSoldierById(medicId);
+            if (medic != null && medic.status == SoldierStatus.alive) {
+              healingAmount += 1; // Base medic bonus
+              if (medic.knowledge >= 7) healingAmount += 1;
+              if (medic.specialSkills.contains(SpecialSkill.surgeon))
+                healingAmount += 1;
+            }
+          }
+        }
+
+        // Apply healing to all limbs
+        soldier.headHealthCurrent = (soldier.headHealthCurrent + healingAmount)
+            .clamp(0, soldier.headHealthMax);
+        soldier.bodyHealthCurrent = (soldier.bodyHealthCurrent + healingAmount)
+            .clamp(0, soldier.bodyHealthMax);
+        soldier.rightArmHealthCurrent =
+            (soldier.rightArmHealthCurrent + healingAmount)
+                .clamp(0, soldier.rightArmHealthMax);
+        soldier.leftArmHealthCurrent =
+            (soldier.leftArmHealthCurrent + healingAmount)
+                .clamp(0, soldier.leftArmHealthMax);
+        soldier.rightLegHealthCurrent =
+            (soldier.rightLegHealthCurrent + healingAmount)
+                .clamp(0, soldier.rightLegHealthMax);
+        soldier.leftLegHealthCurrent =
+            (soldier.leftLegHealthCurrent + healingAmount)
+                .clamp(0, soldier.leftLegHealthMax);
+      }
+
+      // --- 2. AGING ---
+      if (gameState.gameDate.month == soldier.dateOfBirth.month &&
+          gameState.gameDate.day == soldier.dateOfBirth.day) {
+        soldier.age++;
+        gameState.logEvent(
+          "${soldier.name} has turned ${soldier.age} years old today.",
+          category: EventCategory.general,
+          severity: EventSeverity.normal,
+          soldierId: soldier.id,
+        );
+      }
+    }
   }
 
   // Step 11.5: Narrative Events & Tournaments
@@ -339,7 +436,7 @@ class NextTurnService {
             severity: EventSeverity.critical,
           );
 
-          // [GEMINI-FIX] Log Games category event for tournament completion
+          // Log Games category event for tournament completion
           gameState.logEvent(
             "The Great Downsizing Tournament has concluded! Check the Games tab for full results.",
             category: EventCategory.games,
@@ -360,19 +457,23 @@ class NextTurnService {
     }
   }
 
+  // --- 12. AUTOSAVE ---
   Future<void> _step12_Autosave(GameState gameState) async {
-    if (gameState.autoSaveEnabled && !gameState.isGameOver) {
-      await gameState.autoSave();
-    }
+    print("Step 12: Autosaving...");
+    // TODO: Implement autosave logic
+    // await gameState.saveGame();
   }
 
+  // --- 13. PRESENT AVOIDABLE COMBAT ---
   Future<void> _step13_PresentAvoidableCombat(GameState gameState) async {
-    // Placeholder
+    print("Step 13: Checking for avoidable combat...");
+    // TODO: Implement avoidable combat logic
   }
 
+  // --- 14. REPLENISH TOKENS & END ---
   void _step14_ReplenishPlayerTokens(GameState gameState) {
+    print("Step 14: Replenishing player tokens...");
     gameState.resetInteractionTokens();
-    print("Step 14: Replenishing player tokens. Turn complete.");
   }
 
   // Final check for Game Over conditions

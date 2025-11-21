@@ -13,7 +13,8 @@ class SoldierProfileAravtPanel extends StatefulWidget {
   const SoldierProfileAravtPanel({super.key, required this.soldier});
 
   @override
-  State<SoldierProfileAravtPanel> createState() => _SoldierProfileAravtPanelState();
+  State<SoldierProfileAravtPanel> createState() =>
+      _SoldierProfileAravtPanelState();
 }
 
 class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
@@ -23,17 +24,22 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
     final aravt = gameState.findAravtById(widget.soldier.aravt);
 
     if (aravt == null) {
-        return Center(child: Text("No Aravt assigned.", style: GoogleFonts.cinzel(color: Colors.white54)));
+      return Center(
+          child: Text("No Aravt assigned.",
+              style: GoogleFonts.cinzel(color: Colors.white54)));
     }
 
     final bool isPlayerAravt = aravt.soldierIds.contains(gameState.player?.id);
-    final soldiers = aravt.soldierIds.map((id) => gameState.findSoldierById(id)).whereType<Soldier>().toList();
+    final soldiers = aravt.soldierIds
+        .map((id) => gameState.findSoldierById(id))
+        .whereType<Soldier>()
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+        color: Colors.black.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
       ),
       margin: const EdgeInsets.all(8.0),
       padding: const EdgeInsets.all(16.0),
@@ -41,22 +47,29 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Aravt: ${aravt.id}", style: GoogleFonts.cinzel(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text("Aravt: ${aravt.id}",
+                style: GoogleFonts.cinzel(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                    Text("Duty Roster", style: GoogleFonts.cinzel(color: const Color(0xFFE0D5C1), fontSize: 18)),
-                    if (isPlayerAravt)
-                        Text("(Interact to Assign)", style: GoogleFonts.cinzel(color: Colors.white38, fontSize: 12)),
-                ],
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Duty Roster",
+                    style: GoogleFonts.cinzel(
+                        color: const Color(0xFFE0D5C1), fontSize: 18)),
+                if (isPlayerAravt)
+                  Text("(Interact to Assign)",
+                      style: GoogleFonts.cinzel(
+                          color: Colors.white38, fontSize: 12)),
+              ],
             ),
             const Divider(color: Colors.white24),
-            
-            if (isPlayerAravt) 
-                _buildEditableDutyMatrix(aravt, soldiers)
-            else 
-                _buildReadOnlyDutyList(aravt, gameState),
+            if (isPlayerAravt)
+              _buildEditableDutyMatrix(aravt, soldiers)
+            else
+              _buildReadOnlyDutyList(aravt, gameState),
           ],
         ),
       ),
@@ -73,8 +86,11 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: Row(
             children: [
-               Text("${duty.name}: ", style: GoogleFonts.cinzel(color: Colors.white70)),
-               Text(assignee?.name ?? "Unassigned", style: GoogleFonts.cinzel(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text("${duty.name}: ",
+                  style: GoogleFonts.cinzel(color: Colors.white70)),
+              Text(assignee?.name ?? "Unassigned",
+                  style: GoogleFonts.cinzel(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
         );
@@ -83,60 +99,64 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
   }
 
   Widget _buildEditableDutyMatrix(Aravt aravt, List<Soldier> soldiers) {
-      final duties = AravtDuty.values;
-      // Slightly larger font for horizontal headers
-      final headerStyle = GoogleFonts.cinzel(color: const Color(0xFFE0D5C1), fontWeight: FontWeight.bold, fontSize: 11);
-      
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowHeight: 40,
-          dataRowMinHeight: 48,
-          dataRowMaxHeight: 48,
-          columnSpacing: 25, // [GEMINI-FIX] More space between columns
-          horizontalMargin: 10,
-          columns: [
-            DataColumn(label: Text('Soldier', style: headerStyle)),
-            // [GEMINI-FIX] Removed RotatedBox, now horizontal
-            ...duties.map((d) => DataColumn(label: Text(d.name, style: headerStyle))),
-          ],
-          rows: soldiers.map((s) {
-             return DataRow(cells: [
-                 DataCell(Text(s.name, style: GoogleFonts.cinzel(color: s.isPlayer ? const Color(0xFFE0D5C1) : Colors.white, fontSize: 12))),
-                 ...duties.map((duty) {
-                     final isAssigned = aravt.dutyAssignments[duty] == s.id;
-                     
-                     // [GEMINI-FIX] Much higher opacity for visibility
-                     Color? cellColor;
-                     if (s.preferredDuties.contains(duty)) cellColor = Colors.green.withOpacity(0.3);
-                     else if (s.despisedDuties.contains(duty)) cellColor = Colors.red.withOpacity(0.3);
+    final duties = AravtDuty.values;
+    // Slightly larger font for horizontal headers
+    final headerStyle = GoogleFonts.cinzel(
+        color: const Color(0xFFE0D5C1),
+        fontWeight: FontWeight.bold,
+        fontSize: 11);
 
-                     return DataCell(
-                         Container(
-                             color: cellColor,
-                             alignment: Alignment.center,
-                             child: Checkbox(
-                                 value: isAssigned,
-                                 activeColor: const Color(0xFFE0D5C1),
-                                 checkColor: Colors.black,
-                                 onChanged: (val) {
-                                     setState(() {
-                                         if (val == true) {
-                                             aravt.dutyAssignments[duty] = s.id;
-                                         } else if (aravt.dutyAssignments[duty] == s.id) {
-                                             aravt.dutyAssignments.remove(duty);
-                                         }
-                                     });
-                                 }
-                             ),
-                         )
-                     );
-                 })
-             ]);
-          }).toList(),
-        ),
-      );
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowHeight: 40,
+        dataRowMinHeight: 48,
+        dataRowMaxHeight: 48,
+        columnSpacing: 25, // [GEMINI-FIX] More space between columns
+        horizontalMargin: 10,
+        columns: [
+          DataColumn(label: Text('Soldier', style: headerStyle)),
+          // [GEMINI-FIX] Removed RotatedBox, now horizontal
+          ...duties
+              .map((d) => DataColumn(label: Text(d.name, style: headerStyle))),
+        ],
+        rows: soldiers.map((s) {
+          return DataRow(cells: [
+            DataCell(Text(s.name,
+                style: GoogleFonts.cinzel(
+                    color: s.isPlayer ? const Color(0xFFE0D5C1) : Colors.white,
+                    fontSize: 12))),
+            ...duties.map((duty) {
+              final isAssigned = aravt.dutyAssignments[duty] == s.id;
+
+              // [GEMINI-FIX] Much higher opacity for visibility
+              Color? cellColor;
+              if (s.preferredDuties.contains(duty))
+                cellColor = Colors.green.withValues(alpha: 0.3);
+              else if (s.despisedDuties.contains(duty))
+                cellColor = Colors.red.withValues(alpha: 0.3);
+
+              return DataCell(Container(
+                color: cellColor,
+                alignment: Alignment.center,
+                child: Checkbox(
+                    value: isAssigned,
+                    activeColor: const Color(0xFFE0D5C1),
+                    checkColor: Colors.black,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          aravt.dutyAssignments[duty] = s.id;
+                        } else if (aravt.dutyAssignments[duty] == s.id) {
+                          aravt.dutyAssignments.remove(duty);
+                        }
+                      });
+                    }),
+              ));
+            })
+          ]);
+        }).toList(),
+      ),
+    );
   }
 }
-
-
