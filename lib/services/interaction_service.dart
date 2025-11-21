@@ -4,7 +4,9 @@ import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/assignment_data.dart'; // For AravtDuty enum
-import 'package:aravt/services/dialogue_helpers.dart'; // [GEMINI-NEW] Birthday & response dialogue
+import 'package:aravt/services/dialogue_helpers.dart';
+import 'package:aravt/models/justification_event.dart';
+import 'package:aravt/services/loyalty_service.dart';
 
 enum _InteractionTier { extraSuccess, success, lessSuccessful, unsuccessful }
 
@@ -64,12 +66,29 @@ class InteractionService {
     final int currentTurn = gameState.turn.turnNumber;
     final rel = target.getRelationship(player.id);
 
-    // 1. Calculate Justification based on recent poor performance
-    final poorPerformance = target.performanceLog
-        .where((e) => !e.isPositive && (currentTurn - e.turnNumber) <= 2)
+    // 1. Calculate Justification
+    double justification = 0.0;
+    JustificationEvent? usedEvent;
+
+    // Check pending justifications first
+    final scoldEvents = target.pendingJustifications
+        .where((j) =>
+            (j.type == JustificationType.scold ||
+                j.type == JustificationType.any) &&
+            j.expiryTurn >= currentTurn)
         .toList();
-    double justification =
-        poorPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
+
+    if (scoldEvents.isNotEmpty) {
+      usedEvent = scoldEvents.first;
+      justification = usedEvent.magnitude;
+    } else {
+      // Fallback to performance log
+      final poorPerformance = target.performanceLog
+          .where((e) => !e.isPositive && (currentTurn - e.turnNumber) <= 2)
+          .toList();
+      justification =
+          poorPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
+    }
 
     // 2. Base Chance
     double baseChance = 0.40;
@@ -97,7 +116,12 @@ class InteractionService {
         double respectGain = 0.2 + (justification * 0.05).clamp(0.0, 0.2);
         rel.updateFear(fearGain);
         rel.updateRespect(respectGain);
-        rel.updateLoyalty(0.1);
+        rel.updateFear(fearGain);
+        rel.updateRespect(respectGain);
+        LoyaltyService.updateLoyalty(target, player.id, 0.1);
+        if (usedEvent != null) {
+          target.pendingJustifications.remove(usedEvent);
+        }
         if (gameState.isOmniscientMode) {
           statChanges =
               "${target.name} gains ${fearGain.toStringAsFixed(2)} Fear, ${respectGain.toStringAsFixed(2)} Respect.";
@@ -117,7 +141,11 @@ class InteractionService {
         outcomeSummary = "They accepted the rebuke.";
         double fearGain = 0.15 + (justification * 0.05).clamp(0.0, 0.15);
         rel.updateFear(fearGain);
+        rel.updateFear(fearGain);
         rel.updateRespect(0.1);
+        if (usedEvent != null) {
+          target.pendingJustifications.remove(usedEvent);
+        }
         if (gameState.isOmniscientMode) {
           statChanges =
               "${target.name} gains ${fearGain.toStringAsFixed(2)} Fear, 0.1 Respect.";
@@ -135,7 +163,9 @@ class InteractionService {
       case _InteractionTier.lessSuccessful:
         outcomeSummary = "They listened, but seemed resentful.";
         rel.updateAdmiration(-0.1);
-        rel.updateLoyalty(-0.05);
+        rel.updateAdmiration(-0.1);
+        LoyaltyService.updateLoyalty(target, player.id, -0.05);
+        rel.updateFear(0.05);
         rel.updateFear(0.05);
         if (gameState.isOmniscientMode) {
           statChanges =
@@ -149,7 +179,9 @@ class InteractionService {
       case _InteractionTier.unsuccessful:
         outcomeSummary = "They rejected your authority!";
         rel.updateAdmiration(-0.3);
-        rel.updateLoyalty(-0.2);
+        rel.updateAdmiration(-0.3);
+        LoyaltyService.updateLoyalty(target, player.id, -0.2);
+        rel.updateRespect(-0.2);
         rel.updateRespect(-0.2);
         if (gameState.isOmniscientMode) {
           statChanges =
@@ -188,12 +220,29 @@ class InteractionService {
     final int currentTurn = gameState.turn.turnNumber;
     final rel = target.getRelationship(player.id);
 
-    // 1. Calculate Justification based on recent good performance
-    final goodPerformance = target.performanceLog
-        .where((e) => e.isPositive && (currentTurn - e.turnNumber) <= 2)
+    // 1. Calculate Justification
+    double justification = 0.0;
+    JustificationEvent? usedEvent;
+
+    // Check pending justifications first
+    final praiseEvents = target.pendingJustifications
+        .where((j) =>
+            (j.type == JustificationType.praise ||
+                j.type == JustificationType.any) &&
+            j.expiryTurn >= currentTurn)
         .toList();
-    double justification =
-        goodPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
+
+    if (praiseEvents.isNotEmpty) {
+      usedEvent = praiseEvents.first;
+      justification = usedEvent.magnitude;
+    } else {
+      // Fallback to performance log
+      final goodPerformance = target.performanceLog
+          .where((e) => e.isPositive && (currentTurn - e.turnNumber) <= 2)
+          .toList();
+      justification =
+          goodPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
+    }
 
     // 2. Base Chance
     double baseChance = 0.50;
@@ -220,7 +269,12 @@ class InteractionService {
         double admGain = 0.3 + (justification * 0.1).clamp(0.0, 0.3);
         double loyGain = 0.2 + (target.ambition * 0.02);
         rel.updateAdmiration(admGain);
-        rel.updateLoyalty(loyGain);
+        rel.updateAdmiration(admGain);
+        LoyaltyService.updateLoyalty(target, player.id, loyGain);
+        rel.updateRespect(0.1);
+        if (usedEvent != null) {
+          target.pendingJustifications.remove(usedEvent);
+        }
         rel.updateRespect(0.1);
         if (gameState.isOmniscientMode) {
           statChanges =
@@ -241,7 +295,11 @@ class InteractionService {
         outcomeSummary = "They were encouraged.";
         double admGain = 0.15 + (justification * 0.05).clamp(0.0, 0.15);
         rel.updateAdmiration(admGain);
-        rel.updateLoyalty(0.1);
+        rel.updateAdmiration(admGain);
+        LoyaltyService.updateLoyalty(target, player.id, 0.1);
+        if (usedEvent != null) {
+          target.pendingJustifications.remove(usedEvent);
+        }
         if (gameState.isOmniscientMode) {
           statChanges =
               "${target.name} gains ${admGain.toStringAsFixed(2)} Admiration, 0.1 Loyalty.";
@@ -366,12 +424,29 @@ class InteractionService {
     final isBirthday = (target.dateOfBirth.month == currentDate.month &&
         target.dateOfBirth.day == currentDate.day);
 
-    // 2. Check if gift is appropriate (good performance in last 2 days OR birthday)
-    final goodPerformance = target.performanceLog
-        .where((e) => e.isPositive && (currentTurn - e.turnNumber) <= 2)
+    // 2. Check if gift is appropriate
+    double justification = 0.0;
+    JustificationEvent? usedEvent;
+
+    // Check pending justifications first
+    final giftEvents = target.pendingJustifications
+        .where((j) =>
+            (j.type == JustificationType.gift ||
+                j.type == JustificationType.any) &&
+            j.expiryTurn >= currentTurn)
         .toList();
-    double justification =
-        goodPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
+
+    if (giftEvents.isNotEmpty) {
+      usedEvent = giftEvents.first;
+      justification = usedEvent.magnitude;
+    } else {
+      // Fallback to performance log
+      final goodPerformance = target.performanceLog
+          .where((e) => e.isPositive && (currentTurn - e.turnNumber) <= 2)
+          .toList();
+      justification =
+          goodPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
+    }
 
     final bool isAppropriate = (justification > 0) || isBirthday;
 
@@ -412,7 +487,10 @@ class InteractionService {
 
       if (isBirthday) {
         outcomeSummary = "They were delighted by the birthday gift!";
-        rel.updateLoyalty(0.1); // Birthday bonus
+        LoyaltyService.updateLoyalty(target, player.id, 0.1); // Birthday bonus
+        if (usedEvent != null) {
+          target.pendingJustifications.remove(usedEvent);
+        }
       } else {
         outcomeSummary = "They appreciated the thoughtful gift.";
       }

@@ -9,6 +9,8 @@ import 'package:aravt/models/social_interaction_data.dart';
 import 'package:aravt/models/disease_data.dart';
 import 'package:flutter/material.dart'; // For Color
 import 'package:aravt/game_data/item_templates.dart';
+import 'package:aravt/models/justification_event.dart';
+import 'package:aravt/services/social_helper.dart';
 
 class RelationshipValues {
   double admiration;
@@ -39,20 +41,37 @@ class RelationshipValues {
     );
   }
 
-  void updateAdmiration(double amount) {
-    admiration = (admiration + amount).clamp(0.0, 5.0);
+  double updateAdmiration(double amount) {
+    double actualChange =
+        SocialHelper.calculateDampedChange(admiration, amount);
+    double newValue = (admiration + actualChange).clamp(0.0, 5.0);
+    double diff = newValue - admiration;
+    admiration = newValue;
+    return diff;
   }
 
-  void updateRespect(double amount) {
-    respect = (respect + amount).clamp(0.0, 5.0);
+  double updateRespect(double amount) {
+    double actualChange = SocialHelper.calculateDampedChange(respect, amount);
+    double newValue = (respect + actualChange).clamp(0.0, 5.0);
+    double diff = newValue - respect;
+    respect = newValue;
+    return diff;
   }
 
-  void updateFear(double amount) {
-    fear = (fear + amount).clamp(0.0, 5.0);
+  double updateFear(double amount) {
+    double actualChange = SocialHelper.calculateDampedChange(fear, amount);
+    double newValue = (fear + actualChange).clamp(0.0, 5.0);
+    double diff = newValue - fear;
+    fear = newValue;
+    return diff;
   }
 
-  void updateLoyalty(double amount) {
-    loyalty = (loyalty + amount).clamp(0.0, 5.0);
+  double updateLoyalty(double amount) {
+    double actualChange = SocialHelper.calculateDampedChange(loyalty, amount);
+    double newValue = (loyalty + actualChange).clamp(0.0, 5.0);
+    double diff = newValue - loyalty;
+    loyalty = newValue;
+    return diff;
   }
 }
 
@@ -385,6 +404,7 @@ class Soldier {
   List<InformationPiece> knownInformation = [];
   Disease? currentDisease;
   int? plotDrivenActionPriority; // Lower number = higher priority
+  List<JustificationEvent> pendingJustifications = [];
 
   double get suppliesWealth {
     double itemWealth = personalInventory
@@ -595,6 +615,8 @@ class Soldier {
         'knownInformation': knownInformation.map((i) => i.toJson()).toList(),
         'currentDisease': currentDisease?.toJson(),
         'plotDrivenActionPriority': plotDrivenActionPriority,
+        'pendingJustifications':
+            pendingJustifications.map((j) => j.toJson()).toList(),
       };
 
   factory Soldier.fromJson(Map<String, dynamic> json) {
@@ -703,7 +725,10 @@ class Soldier {
       ..currentDisease = json['currentDisease'] != null
           ? Disease.fromJson(json['currentDisease'])
           : null
-      ..plotDrivenActionPriority = json['plotDrivenActionPriority'];
+      ..plotDrivenActionPriority = json['plotDrivenActionPriority']
+      ..pendingJustifications = (json['pendingJustifications'] as List? ?? [])
+          .map((j) => JustificationEvent.fromJson(j))
+          .toList();
   }
 
   RelationshipValues getRelationship(int soldierId) {

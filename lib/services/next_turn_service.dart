@@ -321,6 +321,64 @@ class NextTurnService {
   Future<void> _step11_5_ResolveNarrativeEvents(GameState gameState) async {
     print("Step 11.5: Checking narrative triggers for ${gameState.gameDate}");
 
+    // --- 1. Check for Active Tournament ---
+    if (gameState.activeTournament != null) {
+      print(
+          "Continuing Active Tournament: ${gameState.activeTournament!.name}");
+      final result = await _tournamentService.processDailyStage(gameState);
+
+      if (result != null) {
+        // Tournament Concluded!
+        gameState.addTournamentResult(result);
+
+        // Execute Consequences: Exile the loser
+        String? loserAravtId;
+        int minScore = 99999;
+        result.finalAravtStandings.forEach((aravtId, score) {
+          if (score < minScore) {
+            minScore = score;
+            loserAravtId = aravtId;
+          }
+        });
+
+        if (loserAravtId != null) {
+          final loserAravt = gameState.findAravtById(loserAravtId!);
+          if (loserAravt != null) {
+            // Is it the player?
+            if (loserAravt.soldierIds.contains(gameState.player?.id)) {
+              gameState.triggerGameOver(
+                  "Your Aravt finished last in the Great Downsizing Tournament and has been exiled to the harsh steppe without supplies. Your journey ends here.");
+              return;
+            }
+
+            // Exile Friendly Aravt
+            gameState.logEvent(
+              "Aravt ${loserAravt.id} finished last and has been exiled from the horde.",
+              category: EventCategory.general,
+              severity: EventSeverity.critical,
+            );
+
+            // Log Games category event for tournament completion
+            gameState.logEvent(
+              "The Great Downsizing Tournament has concluded! Check the Games tab for full results.",
+              category: EventCategory.games,
+              severity: EventSeverity.critical,
+            );
+
+            // Remove soldiers
+            for (var id in List.from(loserAravt.soldierIds)) {
+              final s = gameState.findSoldierById(id);
+              if (s != null) {
+                gameState.horde.remove(s);
+              }
+            }
+            // Remove Aravt
+            gameState.aravts.remove(loserAravt);
+          }
+        }
+      }
+    }
+
     // --- DAY 5: Trade Offer (April 26th, 1140) ---
     if (gameState.gameDate.year == 1140 &&
         gameState.gameDate.month == 4 &&
@@ -376,6 +434,8 @@ class NextTurnService {
               instigatorId: captain.id,
               targetId: offeredSoldier.id,
             ));
+
+            gameState.hasDay5TradeOccurred = true;
           }
         }
       }
@@ -398,63 +458,14 @@ class NextTurnService {
         return;
       }
 
-      // 2. Run the Tournament
-      final result = await _tournamentService.runTournament(
+      // Start Tournament
+      _tournamentService.startTournament(
         name: "Great Downsizing Tournament",
         date: gameState.gameDate,
         events: TournamentEventType.values,
         participatingAravts: participatingAravts,
         gameState: gameState,
       );
-
-      // 3. Save Results
-      gameState.addTournamentResult(result);
-
-      // 4. Execute Consequences: Exile the loser
-      String? loserAravtId;
-      int minScore = 99999;
-      result.finalAravtStandings.forEach((aravtId, score) {
-        if (score < minScore) {
-          minScore = score;
-          loserAravtId = aravtId;
-        }
-      });
-
-      if (loserAravtId != null) {
-        final loserAravt = gameState.findAravtById(loserAravtId!);
-        if (loserAravt != null) {
-          // Is it the player?
-          if (loserAravt.soldierIds.contains(gameState.player?.id)) {
-            gameState.triggerGameOver(
-                "Your Aravt finished last in the Great Downsizing Tournament and has been exiled to the harsh steppe without supplies. Your journey ends here.");
-            return;
-          }
-
-          // Exile Friendly Aravt
-          gameState.logEvent(
-            "Aravt ${loserAravt.id} finished last and has been exiled from the horde.",
-            category: EventCategory.general,
-            severity: EventSeverity.critical,
-          );
-
-          // Log Games category event for tournament completion
-          gameState.logEvent(
-            "The Great Downsizing Tournament has concluded! Check the Games tab for full results.",
-            category: EventCategory.games,
-            severity: EventSeverity.critical,
-          );
-
-          // Remove soldiers
-          for (var id in List.from(loserAravt.soldierIds)) {
-            final s = gameState.findSoldierById(id);
-            if (s != null) {
-              gameState.horde.remove(s);
-            }
-          }
-          // Remove Aravt
-          gameState.aravts.remove(loserAravt);
-        }
-      }
     }
   }
 

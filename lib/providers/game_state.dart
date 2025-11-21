@@ -66,6 +66,7 @@ class GameState with ChangeNotifier {
 
   List<TournamentResult> tournamentHistory = [];
   List<FutureTournament> upcomingTournaments = [];
+  ActiveTournament? activeTournament; // [GEMINI-NEW] Track ongoing tournament
 
   List<double> wealthHistory = [];
   List<ResourceReport> resourceReports = [];
@@ -1621,18 +1622,6 @@ class GameState with ChangeNotifier {
       'communalArrows': _communalArrows,
       'locationResourceLevels': _locationResourceLevels,
       'communalHerd': _communalHerd.map((m) => m.toJson()).toList(),
-      'communalCattle': communalCattle.toJson(),
-      'communalStash': communalStash.map((i) => i.toJson()).toList(),
-      'combatReports': combatReports.map((r) => r.toJson()).toList(),
-      'eventLog': eventLog.map((e) => e.toJson()).toList(),
-      'tournamentHistory': tournamentHistory.map((t) => t.toJson()).toList(),
-      'upcomingTournaments':
-          upcomingTournaments.map((t) => t.toJson()).toList(),
-      'activeNarrativeEvent': activeNarrativeEvent?.toJson(),
-      'hasDay5TradeOccurred': hasDay5TradeOccurred,
-      'difficulty': difficulty,
-      'isGameOver': isGameOver,
-      'gameOverReason': gameOverReason,
       'isPlayerHordeAutomated': isPlayerHordeAutomated,
       'huntingReports': huntingReports.map((r) => r.toJson()).toList(),
       'fishingReports': fishingReports.map((r) => r.toJson()).toList(),
@@ -1771,6 +1760,10 @@ class GameState with ChangeNotifier {
     upcomingTournaments = (json['upcomingTournaments'] as List? ?? [])
         .map((t) => FutureTournament.fromJson(t))
         .toList();
+
+    if (json['activeTournament'] != null) {
+      activeTournament = ActiveTournament.fromJson(json['activeTournament']);
+    }
 
     activeNarrativeEvent = json['activeNarrativeEvent'] != null
         ? NarrativeEvent.fromJson(json['activeNarrativeEvent'])

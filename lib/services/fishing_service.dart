@@ -10,6 +10,7 @@ import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/services/combat_service.dart';
 // [GEMINI-NEW] Needed for PerformanceEvent
 import 'package:aravt/models/interaction_models.dart';
+import 'package:aravt/models/justification_event.dart';
 
 class FishingService {
   final Random _random = Random();
@@ -55,17 +56,35 @@ class FishingService {
               description: "Caught a huge amount of fish.",
               isPositive: true,
               magnitude: 2.0));
+          soldier.pendingJustifications.add(JustificationEvent(
+            description: "Caught a huge haul of fish (${result.totalMeat}kg)",
+            type: JustificationType.praise,
+            expiryTurn: currentTurn + 2,
+            magnitude: 1.0,
+          ));
         } else if (result.totalMeat > 0) {
           soldier.performanceLog.add(PerformanceEvent(
               turnNumber: currentTurn,
               description: "Successful fishing trip.",
               isPositive: true,
               magnitude: 1.0));
+          soldier.pendingJustifications.add(JustificationEvent(
+            description: "Caught some fish (${result.totalMeat}kg)",
+            type: JustificationType.praise,
+            expiryTurn: currentTurn + 2,
+            magnitude: 0.5,
+          ));
         } else {
           soldier.performanceLog.add(PerformanceEvent(
             turnNumber: currentTurn,
             description: "Caught nothing while fishing.",
             isPositive: false,
+          ));
+          soldier.pendingJustifications.add(JustificationEvent(
+            description: "Failed to catch any fish",
+            type: JustificationType.scold,
+            expiryTurn: currentTurn + 2,
+            magnitude: 0.3,
           ));
         }
       }

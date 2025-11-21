@@ -6,7 +6,8 @@ import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/resource_report.dart';
-import 'package:aravt/models/interaction_models.dart'; // Needed if we want to use PerformanceEvent internally here too, though mostly handled by calling service now for flexibility.
+import 'package:aravt/models/interaction_models.dart';
+import 'package:aravt/models/justification_event.dart';
 
 class ResourceService {
   final Random _random = Random();
@@ -137,6 +138,31 @@ class ResourceService {
           amountGathered: individualYield,
           performanceRating: performanceRating,
         ));
+
+        // [GEMINI-NEW] Log Performance & Justification
+        if (performanceRating >= 1.0) {
+          soldier.performanceLog.add(PerformanceEvent(
+              turnNumber: gameState.turn.turnNumber,
+              description: "Exceptional $resourceName gathering.",
+              isPositive: true,
+              magnitude: 1.5));
+          soldier.pendingJustifications.add(JustificationEvent(
+              description: "Gathered huge amount of $resourceName",
+              type: JustificationType.praise,
+              expiryTurn: gameState.turn.turnNumber + 2,
+              magnitude: 1.0));
+        } else if (performanceRating <= 0.2) {
+          soldier.performanceLog.add(PerformanceEvent(
+              turnNumber: gameState.turn.turnNumber,
+              description: "Poor $resourceName gathering.",
+              isPositive: false,
+              magnitude: 0.5));
+          soldier.pendingJustifications.add(JustificationEvent(
+              description: "Poor gathering performance",
+              type: JustificationType.scold,
+              expiryTurn: gameState.turn.turnNumber + 2,
+              magnitude: 0.5));
+        }
 
         totalGathered += individualYield;
       }

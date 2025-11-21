@@ -10,6 +10,7 @@ import 'package:aravt/services/combat_service.dart'; // For TerrainType
 import 'package:aravt/models/combat_models.dart';
 // [GEMINI-NEW] Import for PerformanceEvent
 import 'package:aravt/models/interaction_models.dart';
+import 'package:aravt/models/justification_event.dart';
 
 class HuntingService {
   final Random _random = Random();
@@ -54,18 +55,36 @@ class HuntingService {
               description: "Exceptional hunt, brought back a feast.",
               isPositive: true,
               magnitude: 2.0));
+          soldier.pendingJustifications.add(JustificationEvent(
+            description: "Exceptional hunt (${result.totalMeat}kg meat)",
+            type: JustificationType.praise,
+            expiryTurn: currentTurn + 2,
+            magnitude: 1.0,
+          ));
         } else if (result.totalMeat > 0) {
           soldier.performanceLog.add(PerformanceEvent(
               turnNumber: currentTurn,
               description: "Successful hunt.",
               isPositive: true,
               magnitude: 1.0));
+          soldier.pendingJustifications.add(JustificationEvent(
+            description: "Successful hunt (${result.totalMeat}kg meat)",
+            type: JustificationType.praise,
+            expiryTurn: currentTurn + 2,
+            magnitude: 0.5,
+          ));
         } else {
           // Coming back empty-handed is a failure
           soldier.performanceLog.add(PerformanceEvent(
             turnNumber: currentTurn,
             description: "Failed to catch anything while hunting.",
             isPositive: false,
+          ));
+          soldier.pendingJustifications.add(JustificationEvent(
+            description: "Failed hunt",
+            type: JustificationType.scold,
+            expiryTurn: currentTurn + 2,
+            magnitude: 0.3,
           ));
         }
       }

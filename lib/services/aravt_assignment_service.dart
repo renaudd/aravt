@@ -19,6 +19,7 @@ import 'package:aravt/services/resource_service.dart';
 import 'package:aravt/services/crafting_service.dart';
 // Models
 import 'package:aravt/models/interaction_models.dart';
+import 'package:aravt/models/justification_event.dart';
 import 'package:aravt/models/combat_models.dart';
 
 class AravtAssignmentService {
@@ -711,6 +712,11 @@ class AravtAssignmentService {
               description: "Explored new territory: ${areaToScout.name}",
               isPositive: true,
               magnitude: 1.5));
+          s.pendingJustifications.add(JustificationEvent(
+              description: "Explored new territory",
+              type: JustificationType.praise,
+              expiryTurn: gameState.turn.turnNumber + 2,
+              magnitude: 1.0));
         }
       }
     }
@@ -764,6 +770,11 @@ class AravtAssignmentService {
               description: "Discovered new territory while on patrol.",
               isPositive: true,
               magnitude: 1.0));
+          s.pendingJustifications.add(JustificationEvent(
+              description: "Patrol discovery",
+              type: JustificationType.praise,
+              expiryTurn: gameState.turn.turnNumber + 2,
+              magnitude: 0.5));
         }
       }
     }

@@ -5,6 +5,7 @@ import 'package:aravt/models/herd_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/interaction_models.dart';
+import 'package:aravt/models/justification_event.dart';
 import 'package:aravt/models/combat_models.dart'; // For SoldierStatus
 
 class ShepherdingService {
@@ -89,6 +90,12 @@ class ShepherdingService {
               description: "Helped drive off a wolf pack.",
               isPositive: true,
               magnitude: 1.5));
+          s.pendingJustifications.add(JustificationEvent(
+            description: "Fought off wolves",
+            type: JustificationType.praise,
+            expiryTurn: currentTurn + 2,
+            magnitude: 1.0,
+          ));
         }
       }
 
@@ -114,6 +121,12 @@ class ShepherdingService {
               description: "Failed to defend the herd from wolves.",
               isPositive: false,
               magnitude: 2.0));
+          s.pendingJustifications.add(JustificationEvent(
+            description: "Failed to protect herd from wolves",
+            type: JustificationType.scold,
+            expiryTurn: currentTurn + 2,
+            magnitude: 1.0,
+          ));
         }
       }
 
@@ -174,6 +187,12 @@ class ShepherdingService {
             description: "Excellent job tending the herd.",
             isPositive: true,
             magnitude: 1.0));
+        s.pendingJustifications.add(JustificationEvent(
+          description: "Excellent shepherding",
+          type: JustificationType.praise,
+          expiryTurn: currentTurn + 2,
+          magnitude: 0.5,
+        ));
       }
     } else if (successRatio > 0.8) {
       // STANDARD SUCCESS
@@ -197,6 +216,12 @@ class ShepherdingService {
               isPositive: false,
               magnitude: 2.0 // High scold justification
               ));
+          s.pendingJustifications.add(JustificationEvent(
+            description: "Lost an animal",
+            type: JustificationType.scold,
+            expiryTurn: currentTurn + 2,
+            magnitude: 1.0,
+          ));
         }
       } else {
         gameState.logEvent(
@@ -212,6 +237,12 @@ class ShepherdingService {
               description: "Poor grazing results.",
               isPositive: false,
               magnitude: 0.5));
+          s.pendingJustifications.add(JustificationEvent(
+            description: "Poor grazing results",
+            type: JustificationType.scold,
+            expiryTurn: currentTurn + 2,
+            magnitude: 0.3,
+          ));
         }
       }
     }
