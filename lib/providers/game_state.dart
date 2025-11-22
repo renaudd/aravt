@@ -83,9 +83,6 @@ class GameState with ChangeNotifier {
 
   // [GEMINI-NEW] Notification Badge Tracking
   Set<String> viewedReportTabs = {};
-  bool hasPendingTradeOffer = false;
-  int? pendingTradeCaptainId; // [GEMINI-NEW] Store captain ID for trade offer
-  int? pendingTradeSoldierId; // [GEMINI-NEW] Store soldier ID for trade offer
 
   // [GEMINI-NEW] Tutorial Persistence
   bool tutorialCompleted = false;
@@ -391,11 +388,6 @@ class GameState with ChangeNotifier {
     }
   }
 
-  void clearPendingTradeOffer() {
-    hasPendingTradeOffer = false;
-    notifyListeners();
-  }
-
   int getBadgeCountForTab(String tabName) {
     if (viewedReportTabs.contains(tabName)) return 0;
 
@@ -452,7 +444,7 @@ class GameState with ChangeNotifier {
   }
 
   int getCampBadgeCount() {
-    return hasPendingTradeOffer ? 1 : 0;
+    return 0; // No longer using badge for trade offers
   }
 
   void markReportTabViewed(String tabName) {
@@ -606,18 +598,11 @@ class GameState with ChangeNotifier {
     activeNarrativeEvent = event;
     if (event.type == NarrativeEventType.day5Trade) {
       hasDay5TradeOccurred = true;
-      // [GEMINI-FIX] Set pending trade flags so CampScreen can pick it up
-      hasPendingTradeOffer = true;
-      pendingTradeCaptainId = event.instigatorId;
-      pendingTradeSoldierId = event.targetId;
     }
     notifyListeners();
   }
 
   void dismissNarrativeEvent() {
-    if (activeNarrativeEvent?.type == NarrativeEventType.day5Trade) {
-      hasPendingTradeOffer = false;
-    }
     activeNarrativeEvent = null;
     notifyListeners();
   }
@@ -1629,9 +1614,6 @@ class GameState with ChangeNotifier {
       // [GEMINI-NEW] Save resource reports
       'resourceReports': resourceReports.map((r) => r.toJson()).toList(),
       'viewedReportTabs': viewedReportTabs.toList(),
-      'hasPendingTradeOffer': hasPendingTradeOffer,
-      'pendingTradeCaptainId': pendingTradeCaptainId,
-      'pendingTradeSoldierId': pendingTradeSoldierId,
       'tutorialCompleted': tutorialCompleted,
       'tutorialPermanentlyDismissed': tutorialPermanentlyDismissed,
       'tutorialDismissalCount': tutorialDismissalCount,
@@ -1796,9 +1778,6 @@ class GameState with ChangeNotifier {
     if (json['viewedReportTabs'] != null) {
       viewedReportTabs = Set<String>.from(json['viewedReportTabs']);
     }
-    hasPendingTradeOffer = json['hasPendingTradeOffer'] ?? false;
-    pendingTradeCaptainId = json['pendingTradeCaptainId'];
-    pendingTradeSoldierId = json['pendingTradeSoldierId'];
     tutorialCompleted = json['tutorialCompleted'] ?? false;
     tutorialPermanentlyDismissed =
         json['tutorialPermanentlyDismissed'] ?? false;
@@ -1841,71 +1820,5 @@ class GameState with ChangeNotifier {
     activeCombat = null;
     pendingCombat = null;
     lastCombatReport = null;
-  }
-
-  // [GEMINI-NEW] Resolve Trade Offer (Blind Trade with Optional Swap)
-  void resolveTradeOffer(bool accepted, {int? outgoingSoldierId}) {
-    if (accepted) {
-      // 1. Incoming Soldier (from Captain to Player)
-      if (pendingTradeSoldierId != null && player != null) {
-        final incomingSoldier = horde.firstWhere(
-            (s) => s.id == pendingTradeSoldierId,
-            orElse: () => horde.first);
-
-        // Remove from old aravt (Captain's)
-        final oldAravt = findAravtById(incomingSoldier.aravt);
-        if (oldAravt != null) {
-          oldAravt.soldierIds.remove(incomingSoldier.id);
-        }
-
-        // Add to Player's Aravt
-        incomingSoldier.aravt = player!.aravt;
-        final playerAravt = findAravtById(player!.aravt);
-        if (playerAravt != null &&
-            !playerAravt.soldierIds.contains(incomingSoldier.id)) {
-          playerAravt.soldierIds.add(incomingSoldier.id);
-        }
-
-        logEvent(
-          "${incomingSoldier.name} has joined your Aravt via trade.",
-          category: EventCategory.general,
-          aravtId: player!.aravt,
-        );
-      }
-
-      // 2. Outgoing Soldier (from Player to Captain) - Optional
-      if (outgoingSoldierId != null && pendingTradeCaptainId != null) {
-        final outgoingSoldier = horde.firstWhere(
-            (s) => s.id == outgoingSoldierId,
-            orElse: () => horde.first);
-        final captain = horde.firstWhere((s) => s.id == pendingTradeCaptainId,
-            orElse: () => horde.first);
-
-        // Remove from Player's Aravt
-        final playerAravt = findAravtById(outgoingSoldier.aravt);
-        if (playerAravt != null) {
-          playerAravt.soldierIds.remove(outgoingSoldier.id);
-        }
-
-        // Add to Captain's Aravt
-        outgoingSoldier.aravt = captain.aravt;
-        final captainAravt = findAravtById(captain.aravt);
-        if (captainAravt != null &&
-            !captainAravt.soldierIds.contains(outgoingSoldier.id)) {
-          captainAravt.soldierIds.add(outgoingSoldier.id);
-        }
-
-        logEvent(
-          "${outgoingSoldier.name} has been sent to Captain ${captain.name}'s Aravt.",
-          category: EventCategory.general,
-          aravtId: captain.aravt,
-        );
-      }
-    }
-
-    hasPendingTradeOffer = false;
-    pendingTradeCaptainId = null;
-    pendingTradeSoldierId = null;
-    notifyListeners();
   }
 }

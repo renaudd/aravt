@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // [GEMINI-NEW]
 
 import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
@@ -79,167 +78,11 @@ class _CampScreenState extends State<CampScreen>
       final tutorial = context.read<TutorialService>();
       final gameState = context.read<GameState>();
 
-      // Check for pending trade offer (Turn 5 event)
-      if (gameState.hasPendingTradeOffer) {
-        _showTradeOfferDialog(context, gameState);
-      } else if (!tutorial.isActive) {
-        // Only start tutorial if no trade offer (priority) and not already active
+      // Start tutorial if not already active
+      if (!tutorial.isActive) {
         tutorial.startTutorial(context, gameState);
       }
     });
-  }
-
-  // [GEMINI-NEW] Trade Offer Dialog (Blind Trade)
-  void _showTradeOfferDialog(BuildContext context, GameState gameState) {
-    final captainId = gameState.pendingTradeCaptainId;
-    final soldierId = gameState.pendingTradeSoldierId;
-
-    if (captainId == null || soldierId == null) {
-      gameState.resolveTradeOffer(false);
-      return;
-    }
-
-    final captain = gameState.horde.firstWhere((s) => s.id == captainId,
-        orElse: () => gameState.horde.first);
-    final incomingSoldier = gameState.horde.firstWhere((s) => s.id == soldierId,
-        orElse: () => gameState.horde.first);
-
-    // Get player's soldiers (excluding player) for potential trade
-    final playerAravtId = gameState.player?.aravt;
-    final playerSoldiers = gameState.horde
-        .where((s) => s.aravt == playerAravtId && !s.isPlayer)
-        .toList();
-
-    int? selectedOutgoingSoldierId;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF2C2C2C),
-            title: Text("Trade Offer",
-                style: GoogleFonts.cinzel(color: const Color(0xFFE0D5C1))),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Captain ${captain.name} approaches you.",
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "\"I have a soldier, ${incomingSoldier.name}, who needs a new post. I offer them to you.\"",
-                    style: const TextStyle(
-                        color: Colors.white, fontStyle: FontStyle.italic),
-                  ),
-                  const SizedBox(height: 8),
-                  // Blind Trade: No stats preview
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person, color: Colors.white, size: 40),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(incomingSoldier.name,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
-                            const Text("Stats: ???",
-                                style: TextStyle(
-                                    color: Colors.redAccent, fontSize: 12)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    "\"In exchange, is there anyone you wish to reassign to my command?\"",
-                    style: const TextStyle(
-                        color: Colors.white, fontStyle: FontStyle.italic),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    dropdownColor: const Color(0xFF3C3C3C),
-                    value: selectedOutgoingSoldierId,
-                    decoration: const InputDecoration(
-                      labelText: "Select Soldier to Trade (Optional)",
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white24)),
-                      focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.amber)),
-                    ),
-                    items: [
-                      const DropdownMenuItem<int>(
-                        value: null,
-                        child: Text("None (Just accept)",
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                      ...playerSoldiers.map((s) => DropdownMenuItem<int>(
-                            value: s.id,
-                            child: Text(
-                                "${s.name} (Str: ${s.strength}, Int: ${s.intelligence})",
-                                style: const TextStyle(color: Colors.white)),
-                          )),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedOutgoingSoldierId = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  gameState.resolveTradeOffer(false);
-                  Navigator.of(context).pop();
-                },
-                child: const Text("Reject",
-                    style: TextStyle(color: Colors.redAccent)),
-              ),
-              TextButton(
-                onPressed: () {
-                  gameState.resolveTradeOffer(true,
-                      outgoingSoldierId: selectedOutgoingSoldierId);
-                  Navigator.of(context).pop();
-
-                  String message =
-                      "${incomingSoldier.name} has joined your Aravt!";
-                  if (selectedOutgoingSoldierId != null) {
-                    final outgoingName = playerSoldiers
-                        .firstWhere((s) => s.id == selectedOutgoingSoldierId)
-                        .name;
-                    message += " You sent $outgoingName in exchange.";
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(message)),
-                  );
-                },
-                child: const Text("Accept Trade",
-                    style: TextStyle(color: Colors.greenAccent)),
-              ),
-            ],
-          );
-        },
-      ),
-    );
   }
 
   Future<void> _loadAssetsAndInitialize() async {

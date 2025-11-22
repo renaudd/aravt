@@ -205,12 +205,31 @@ class UnassignedActionsService {
           double murderProb =
               hostilityProb * (entry.value.admiration < 0.5 ? 2.0 : 1.0);
 
+          // [GEMINI-FIX] Murderers are MUCH more dangerous to the player
+          // If this soldier has the murderer attribute AND is targeting the player,
+          // give them a massive probability boost to ensure they're a real threat
+          if (target.isPlayer &&
+              soldier.attributes.contains(SoldierAttribute.murderer)) {
+            // Base 50% probability for murderers targeting player with low admiration
+            // This scales down as admiration increases toward 1.0
+            murderProb = (1.0 - entry.value.admiration) * 0.5; // Up to 50%
+
+            // Double it if admiration is very low (< 0.5)
+            if (entry.value.admiration < 0.5) {
+              murderProb *= 2.0; // Up to 100% if admiration near 0
+            }
+          }
+
           actions.add(SoldierActionProposal(
             actionType: UnassignedActionType.murderAttempt,
             soldier: soldier,
             probability: murderProb,
             targetSoldierId: target.id,
           ));
+          if (target.isPlayer) {
+            print(
+                "[MURDER DEBUG] ${soldier.name} (low admiration: ${entry.value.admiration}${soldier.attributes.contains(SoldierAttribute.murderer) ? ', MURDERER' : ''}) generated murder proposal against PLAYER with probability $murderProb");
+          }
         }
       }
     }
@@ -239,6 +258,24 @@ class UnassignedActionsService {
               probability: murderProb,
               targetSoldierId: target.id,
             ));
+            print(
+                "[MURDER DEBUG] ${soldier.name} (murderer) generated murder proposal against PLAYER with probability $murderProb");
+          } else {
+            // Too early to murder player - pick a non-player target instead
+            final nonPlayerVictims =
+                potentialVictims.where((s) => !s.isPlayer).toList();
+            if (nonPlayerVictims.isNotEmpty) {
+              final fallbackTarget =
+                  nonPlayerVictims[_random.nextInt(nonPlayerVictims.length)];
+              actions.add(SoldierActionProposal(
+                actionType: UnassignedActionType.murderAttempt,
+                soldier: soldier,
+                probability: murderProb,
+                targetSoldierId: fallbackTarget.id,
+              ));
+              print(
+                  "[MURDER DEBUG] ${soldier.name} (murderer) selected player but too early (turn ${gameState.turn.turnNumber}), targeting ${fallbackTarget.name} instead");
+            }
           }
         } else {
           actions.add(SoldierActionProposal(

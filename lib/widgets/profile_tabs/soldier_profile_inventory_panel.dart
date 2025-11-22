@@ -37,13 +37,14 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
         _buildEquippedGearPanel(context, soldier.equippedItems),
 
         // --- Inventory Grid ---
-        Expanded(child: _buildInventoryGrid(context, soldier.personalInventory)),
+        Expanded(
+            child: _buildInventoryGrid(context, soldier.personalInventory)),
       ],
     );
   }
 
-  Widget _buildEquippedGearPanel(BuildContext context,
-      Map<EquipmentSlot, InventoryItem> equippedItems) {
+  Widget _buildEquippedGearPanel(
+      BuildContext context, Map<EquipmentSlot, InventoryItem> equippedItems) {
     const double panelWidth = 200; // Increased width for better layout
     const double silhouetteHeight = 260;
     const double silhouetteWidth = 150;
@@ -81,8 +82,7 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
                 top: 75, left: 30, iconSize: iconSize),
             _buildEquipmentSlot(context, equippedItems, EquipmentSlot.armor,
                 top: 75, right: 30, iconSize: iconSize),
-            _buildEquipmentSlot(
-                context, equippedItems, EquipmentSlot.gauntlets,
+            _buildEquipmentSlot(context, equippedItems, EquipmentSlot.gauntlets,
                 top: 110, right: 15, iconSize: iconSize),
             _buildEquipmentSlot(context, equippedItems, EquipmentSlot.shield,
                 top: 110, left: 15, iconSize: iconSize),
@@ -106,10 +106,8 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildEquipmentSlot(
-      BuildContext context,
-      Map<EquipmentSlot, InventoryItem> equippedItems,
-      EquipmentSlot slot,
+  Widget _buildEquipmentSlot(BuildContext context,
+      Map<EquipmentSlot, InventoryItem> equippedItems, EquipmentSlot slot,
       {double? top,
       double? bottom,
       double? left,
@@ -185,7 +183,8 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
                                 size: Size(40, 40),
                               ),
                               title: Text(item.name,
-                                  style: GoogleFonts.cinzel(color: Colors.white)),
+                                  style:
+                                      GoogleFonts.cinzel(color: Colors.white)),
                               subtitle: Text(
                                 "Type: ${item.itemType.name} | Quality: ${item.quality ?? 'N/A'}",
                                 style:
@@ -193,8 +192,7 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
                               ),
                               trailing: Text(
                                 "Val: ${item.baseValue.toStringAsFixed(0)} ${item.valueType.name}",
-                                style:
-                                    GoogleFonts.cinzel(color: Colors.amber),
+                                style: GoogleFonts.cinzel(color: Colors.amber),
                               ),
                             ),
                           ),
@@ -206,4 +204,3 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
         ));
   }
 }
-
