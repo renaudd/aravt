@@ -16,7 +16,7 @@ import 'package:aravt/screens/save_game_screen.dart';
 import 'package:aravt/screens/new_game_screen.dart';
 import 'package:aravt/screens/world_map_screen.dart';
 import 'package:aravt/screens/camp_screen.dart';
-import 'package:aravt/screens/horde_screen.dart';
+
 import 'package:aravt/screens/global_reports_screen.dart';
 import 'package:aravt/screens/global_inventory_screen.dart';
 import 'package:aravt/screens/settings_screen.dart';
@@ -170,7 +170,7 @@ class _AravtGameState extends State<AravtGame> {
         '/gameOver': (context) => const GameOverScreen(),
         // --- IN-GAME ROUTES (Wrapped with Overlays) ---
         '/camp': (context) => const _GameScreenWrapper(child: CampScreen()),
-        '/horde': (context) => const _GameScreenWrapper(child: HordeScreen()),
+
         '/area': (context) => const _GameScreenWrapper(child: AreaScreen()),
         '/region': (context) => const _GameScreenWrapper(child: RegionScreen()),
         '/world': (context) =>

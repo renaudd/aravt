@@ -1618,6 +1618,8 @@ class GameState with ChangeNotifier {
       'tutorialPermanentlyDismissed': tutorialPermanentlyDismissed,
       'tutorialDismissalCount': tutorialDismissalCount,
       'tutorialStepIndex': tutorialStepIndex,
+      'tutorialCaptainId':
+          tutorialCaptainId, // [GEMINI-NEW] Persist tutorial captain
       // [GEMINI-NEW] Food management
       'communalMilk': _communalMilk,
       'communalCheese': _communalCheese,
@@ -1778,18 +1780,21 @@ class GameState with ChangeNotifier {
     if (json['viewedReportTabs'] != null) {
       viewedReportTabs = Set<String>.from(json['viewedReportTabs']);
     }
+
     tutorialCompleted = json['tutorialCompleted'] ?? false;
     tutorialPermanentlyDismissed =
         json['tutorialPermanentlyDismissed'] ?? false;
     tutorialDismissalCount = json['tutorialDismissalCount'] ?? 0;
     tutorialStepIndex = json['tutorialStepIndex'] ?? 0;
+    tutorialCaptainId =
+        json['tutorialCaptainId']; // [GEMINI-NEW] Load tutorial captain
 
     // [GEMINI-NEW] Food management
-    _communalMilk = json['communalMilk'] ?? 0.0;
-    _communalCheese = json['communalCheese'] ?? 0.0;
-    _communalGrain = json['communalGrain'] ?? 0.0;
+    _communalMilk = (json['communalMilk'] as num?)?.toDouble() ?? 0.0;
+    _communalCheese = (json['communalCheese'] as num?)?.toDouble() ?? 0.0;
+    _communalGrain = (json['communalGrain'] as num?)?.toDouble() ?? 0.0;
     butcheringQueue = (json['butcheringQueue'] as List? ?? []).cast<int>();
-    butcheringRate = json['butcheringRate'] ?? 1.0;
+    butcheringRate = (json['butcheringRate'] as num?)?.toDouble() ?? 1.0;
     allowAlcohol = json['allowAlcohol'] ?? true;
     vegetarianDiet = json['vegetarianDiet'] ?? false;
 

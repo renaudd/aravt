@@ -93,7 +93,9 @@ class TutorialOverlayWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(captain?.name ?? "Unknown Captain",
+                        Text(
+                            captain?.name ??
+                                "Aravt Captain", // [GEMINI-FIX] Better fallback
                             style: GoogleFonts.cinzel(
                                 color: isAnnoyed
                                     ? Colors.red.shade300
@@ -112,7 +114,8 @@ class TutorialOverlayWidget extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
-                              onPressed: () => tutorial.dismiss(gameState),
+                              onPressed: () =>
+                                  tutorial.dismiss(context, gameState),
                               child: Text("Dismiss",
                                   style: GoogleFonts.cinzel(
                                       color: Colors.white38)),
