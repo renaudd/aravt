@@ -905,12 +905,15 @@ class GameSetupService {
       if (!murderer.attributes.contains(SoldierAttribute.murderer)) {
         murderer.attributes.add(SoldierAttribute.murderer);
       }
+      // [GEMINI-FIX] Start with LOW admiration (0.35) to ensure murder attempt
+      // With 70% base * 1.5 turn multiplier * (1-0.35) = ~68% chance in danger window
+      // Player needs to actively build relationship to prevent assassination
       murderer.hordeRelationships[player.id] = RelationshipValues(
-          loyalty: 0.1, respect: 0.5, fear: 2.5, admiration: 1.0);
+          loyalty: 0.1, respect: 0.5, fear: 2.5, admiration: 0.35);
       player.hordeRelationships[murderer.id] = RelationshipValues(
           fear: 3.0, loyalty: 2.5, respect: 2.5, admiration: 2.5);
       print(
-          "[SABOTAGE DEBUG] Murderer is ${murderer.name} (ID: ${murderer.id})");
+          "[SABOTAGE DEBUG] Murderer is ${murderer.name} (ID: ${murderer.id}) - Starting admiration: 0.35");
 
       // 2. Assign Inept
       Soldier inept;

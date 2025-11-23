@@ -210,13 +210,33 @@ class UnassignedActionsService {
           // give them a massive probability boost to ensure they're a real threat
           if (target.isPlayer &&
               soldier.attributes.contains(SoldierAttribute.murderer)) {
-            // Base 50% probability for murderers targeting player with low admiration
-            // This scales down as admiration increases toward 1.0
-            murderProb = (1.0 - entry.value.admiration) * 0.5; // Up to 50%
+            // SPECIAL CASE: Tutorial murderer (in player's aravt) needs predictable behavior
+            bool isTutorialMurderer = soldier.aravt == target.aravt;
 
-            // Double it if admiration is very low (< 0.5)
-            if (entry.value.admiration < 0.5) {
-              murderProb *= 2.0; // Up to 100% if admiration near 0
+            if (isTutorialMurderer) {
+              // Tutorial murderer: GUARANTEED attempt in danger window if admiration stays low
+              murderProb = (1.0 - entry.value.admiration) * 0.7;
+
+              // CRITICAL WINDOW: Turns 10-30 are peak danger
+              if (gameState.turn.turnNumber >= 10 &&
+                  gameState.turn.turnNumber <= 30) {
+                murderProb = 0.95; // Nearly guaranteed if admiration < 0.5
+                // Only reduce if player has built significant relationship
+                if (entry.value.admiration > 0.5) {
+                  murderProb = (1.0 - entry.value.admiration) * 1.2;
+                  murderProb = murderProb.clamp(0.0, 0.95);
+                }
+              }
+
+              print("[MURDER DEBUG] ${soldier.name} (TUTORIAL MURDERER) targeting PLAYER: " +
+                  "Turn ${gameState.turn.turnNumber}, Adm ${entry.value.admiration.toStringAsFixed(2)}, " +
+                  "Murder Prob: ${(murderProb * 100).toStringAsFixed(1)}%");
+            } else {
+              // General murderer: Keep original logic
+              murderProb = (1.0 - entry.value.admiration) * 0.5;
+              if (entry.value.admiration < 0.5) {
+                murderProb *= 2.0;
+              }
             }
           }
 
