@@ -13,6 +13,7 @@ import '../models/location_data.dart';
 import '../models/area_data.dart';
 import '../screens/soldier_profile_screen.dart';
 import 'soldier_portrait_widget.dart';
+import 'tutorial_highlighter.dart';
 
 class HordePanel extends StatefulWidget {
   const HordePanel({super.key});
@@ -174,10 +175,18 @@ class _AravtRowState extends State<_AravtRow> {
                               SoldierProfileScreen(soldierId: captain.id))),
                   child: Padding(
                     padding: const EdgeInsets.all(6.0),
-                    child: SoldierPortrait(
-                        index: captain.portraitIndex,
-                        size: 52,
-                        backgroundColor: captain.backgroundColor),
+                    child: isPlayer
+                        ? TutorialHighlighter(
+                            highlightKey: 'open_player_profile',
+                            child: SoldierPortrait(
+                                index: captain.portraitIndex,
+                                size: 52,
+                                backgroundColor: captain.backgroundColor),
+                          )
+                        : SoldierPortrait(
+                            index: captain.portraitIndex,
+                            size: 52,
+                            backgroundColor: captain.backgroundColor),
                   ),
                 ),
                 Expanded(

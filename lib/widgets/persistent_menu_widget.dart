@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
 import 'horde_panel.dart'; // [GEMINI-FIX] Import the new panel
 import 'notification_badge.dart'; // [GEMINI-NEW] Import notification badge
+import 'tutorial_highlighter.dart'; // [GEMINI-NEW] Import highlighter
 // Removed unused screen imports
 
 class PersistentMenuWidget extends StatefulWidget {
@@ -189,22 +190,26 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                 ),
                 const SizedBox(width: 8),
 
-// [GEMINI-FIX] Horde Button -> Bottom Sheet with Padding
-                _buildMenuButton(
-                    icon: Icons.group,
-                    tooltip: "Horde",
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        isScrollControlled: true,
-                        builder: (context) => Padding(
-                          // Add 80px padding to the bottom so it sits above the menu
-                          padding: const EdgeInsets.only(bottom: 80.0),
-                          child: const HordePanel(),
-                        ),
-                      );
-                    }),
+                // [GEMINI-FIX] Horde Button -> Bottom Sheet with Padding
+                TutorialHighlighter(
+                  highlightKey: 'open_horde_panel',
+                  shape: BoxShape.circle,
+                  child: _buildMenuButton(
+                      icon: Icons.group,
+                      tooltip: "Horde",
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (context) => Padding(
+                            // Add 80px padding to the bottom so it sits above the menu
+                            padding: const EdgeInsets.only(bottom: 80.0),
+                            child: const HordePanel(),
+                          ),
+                        );
+                      }),
+                ),
 
                 _buildMenuButton(
                     icon: Icons.inventory_2_outlined,

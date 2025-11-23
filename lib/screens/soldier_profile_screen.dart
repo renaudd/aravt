@@ -17,6 +17,7 @@ import 'package:aravt/widgets/profile_tabs/soldier_profile_relationships_panel.d
 import 'package:aravt/widgets/profile_tabs/soldier_profile_reports_panel.dart';
 import 'package:aravt/widgets/profile_tabs/soldier_profile_yurt_panel.dart';
 import 'package:aravt/widgets/gifting_dialog.dart';
+import 'package:aravt/widgets/tutorial_highlighter.dart';
 
 const Map<EquipmentSlot, IconData> _placeholderIconMap = {
   EquipmentSlot.helmet: Icons.headset,
@@ -52,9 +53,10 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
   late TabController _tabController;
   final ScrollController _logScrollController = ScrollController();
 
-  final List<Tab> _tabs = [
+  final List<Widget> _tabs = [
     const Tab(text: 'Profile'),
-    const Tab(text: 'Aravt'),
+    const TutorialHighlighter(
+        highlightKey: 'open_aravt_tab', child: Tab(text: 'Aravt')),
     const Tab(text: 'Yurt'),
     const Tab(text: 'Inventory'),
     const Tab(text: 'Reports'),
@@ -350,10 +352,14 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
             ),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right, color: Colors.white),
-          onPressed: () => _navigateToSoldier(_currentIndex + 1),
-          tooltip: 'Next Member',
+        TutorialHighlighter(
+          highlightKey: 'navigate_next_soldier',
+          shape: BoxShape.circle,
+          child: IconButton(
+            icon: const Icon(Icons.chevron_right, color: Colors.white),
+            onPressed: () => _navigateToSoldier(_currentIndex + 1),
+            tooltip: 'Next Member',
+          ),
         ),
       ],
     );
@@ -718,13 +724,16 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                         InteractionType.praise, gameState, player, soldier)
                     : null,
               ),
-              _buildInteractionButton(
-                context: context,
-                text: 'Inquire',
-                onPressed: canInteract
-                    ? () => _handleInteraction(
-                        InteractionType.inquire, gameState, player, soldier)
-                    : null,
+              TutorialHighlighter(
+                highlightKey: 'inquire_soldier',
+                child: _buildInteractionButton(
+                  context: context,
+                  text: 'Inquire',
+                  onPressed: canInteract
+                      ? () => _handleInteraction(
+                          InteractionType.inquire, gameState, player, soldier)
+                      : null,
+                ),
               ),
               _buildInteractionButton(
                 context: context,

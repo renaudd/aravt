@@ -17,14 +17,12 @@ class TutorialOverlayWidget extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        final captainId = gameState.tutorialCaptainId;
-        final captain =
-            captainId != null ? gameState.findSoldierById(captainId) : null;
+        // [GEMINI-FIX] Use the helper method to get the correct captain (with fallback)
+        final captain = tutorial.getTutorialCaptain(gameState);
 
         // [DEBUG] Check why portrait might be missing
         if (tutorial.isActive && tutorial.currentStep != null) {
-          print(
-              "[TUTORIAL OVERLAY] Active. CaptainID: $captainId, Captain Found: ${captain != null}");
+          print("[TUTORIAL OVERLAY] Active. Captain Found: ${captain?.name}");
         }
 
         final step = tutorial.currentStep!;

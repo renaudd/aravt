@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'package:aravt/widgets/tutorial_highlighter.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';

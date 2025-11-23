@@ -160,6 +160,16 @@ class _AravtGameState extends State<AravtGame> {
         ),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            // Overlays now sit above EVERYTHING
+            const TutorialOverlayWidget(),
+            const NarrativeOverlayWidget(),
+          ],
+        );
+      },
       initialRoute: '/mainMenu',
       routes: {
         '/mainMenu': (context) => const MainMenuScreen(),
@@ -168,18 +178,14 @@ class _AravtGameState extends State<AravtGame> {
         '/load_game': (context) => const LoadGameScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/gameOver': (context) => const GameOverScreen(),
-        // --- IN-GAME ROUTES (Wrapped with Overlays) ---
-        '/camp': (context) => const _GameScreenWrapper(child: CampScreen()),
-
-        '/area': (context) => const _GameScreenWrapper(child: AreaScreen()),
-        '/region': (context) => const _GameScreenWrapper(child: RegionScreen()),
-        '/world': (context) =>
-            const _GameScreenWrapper(child: WorldMapScreen()),
-        '/reports': (context) =>
-            const _GameScreenWrapper(child: GlobalReportsScreen()),
-        '/inventory': (context) =>
-            const _GameScreenWrapper(child: GlobalInventoryScreen()),
-        // --- COMBAT ROUTES (Typically don't need standard overlays) ---
+        // --- IN-GAME ROUTES ---
+        '/camp': (context) => const CampScreen(),
+        '/area': (context) => const AreaScreen(),
+        '/region': (context) => const RegionScreen(),
+        '/world': (context) => const WorldMapScreen(),
+        '/reports': (context) => const GlobalReportsScreen(),
+        '/inventory': (context) => const GlobalInventoryScreen(),
+        // --- COMBAT ROUTES ---
         '/combat': (context) => const CombatScreen(),
         '/preCombat': (context) => const PreCombatScreen(),
         '/postCombat': (context) {
@@ -190,26 +196,6 @@ class _AravtGameState extends State<AravtGame> {
         },
       },
       debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-// --- WRAPPER FOR IN-GAME SCREENS ---
-// This ensures the Tutorial and Narrative overlays are present
-// AND have access to the correct Navigator context.
-class _GameScreenWrapper extends StatelessWidget {
-  final Widget child;
-  const _GameScreenWrapper({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        child,
-        // The order here matters: Narrative on top of Tutorial on top of Game
-        const TutorialOverlayWidget(),
-        const NarrativeOverlayWidget(),
-      ],
     );
   }
 }

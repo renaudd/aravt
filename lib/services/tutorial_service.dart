@@ -5,11 +5,9 @@ import 'package:aravt/models/game_event.dart';
 
 class TutorialStepData {
   final String text;
-
-  /// The named route to navigate to when this step begins.
-  /// If null, stays on the current screen.
   final String? requiredRoute;
-  TutorialStepData(this.text, {this.requiredRoute});
+  final String? highlightKey; // [GEMINI-NEW] Key for UI highlighting
+  TutorialStepData(this.text, {this.requiredRoute, this.highlightKey});
 }
 
 class TutorialService extends ChangeNotifier {
@@ -35,23 +33,28 @@ class TutorialService extends ChangeNotifier {
     // 0. Intro (Camp) -> Direct to Horde
     TutorialStepData(
         "Captain. I am the leader of the Second Aravt. We must organize. Access the Horde Panel to review our forces.",
-        requiredRoute: '/camp'),
+        requiredRoute: '/camp',
+        highlightKey: 'open_horde_panel'),
     // 1. Profile (Horde) -> Direct to Player Profile
     TutorialStepData(
         "You are the captain of the Third Aravt. Press your profile icon to inspect your own status.",
-        requiredRoute: '/horde'),
+        requiredRoute: '/camp', // Horde panel is in camp
+        highlightKey: 'open_player_profile'),
     // 2. Navigation (Profile) -> Direct to Next
     TutorialStepData(
         "Good. Now, press the navigate next button to cycle through the members of your aravt.",
-        requiredRoute: null), // User should be on profile screen
+        requiredRoute: null,
+        highlightKey: 'navigate_next_soldier'),
     // 3. Inquire (Profile) -> Direct to Inquire
     TutorialStepData(
         "You must know your men. Use the 'Inquire' button to learn of their traits and history.",
-        requiredRoute: null),
+        requiredRoute: null,
+        highlightKey: 'inquire_soldier'),
     // 4. Aravt Tab (Profile) -> Direct to Aravt Tab
     TutorialStepData(
         "Finally, go to the Aravt tab. Here you must distribute responsibilities. Do not let them sit idle.",
-        requiredRoute: null),
+        requiredRoute: null,
+        highlightKey: 'open_aravt_tab'),
   ];
 
   void startTutorial(BuildContext context, GameState gameState) {
@@ -60,7 +63,8 @@ class TutorialService extends ChangeNotifier {
 
     _isActive = true;
     _currentIndex = gameState.tutorialStepIndex;
-    _captainPortraitIndex = 0;
+    // [GEMINI-FIX] Don't reset index so it cycles/persists
+    // _captainPortraitIndex = 0;
     // [GEMINI-FIX] Start angry if they've dismissed us before
     _isShowingAngryPortrait = gameState.tutorialDismissalCount > 0;
 
@@ -162,5 +166,33 @@ class TutorialService extends ChangeNotifier {
     } catch (e) {
       print("[TUTORIAL] Navigation error: $e");
     }
+  }
+
+  // [GEMINI-NEW] Helper to find the tutorial captain, with fallback
+  Soldier? getTutorialCaptain(GameState gameState) {
+    // 1. Try ID from state
+    if (gameState.tutorialCaptainId != null) {
+      final s = gameState.findSoldierById(gameState.tutorialCaptainId!);
+      if (s != null) return s;
+    }
+
+    // 2. Fallback: Find captain of Second Aravt (aravt_2)
+    try {
+      final secondAravt = gameState.aravts.firstWhere(
+          (a) => a.id == 'aravt_2' || a.id.toLowerCase().contains('second'),
+          orElse: () => gameState.aravts[1] // Fallback to index 1
+          );
+
+      final captain = gameState.findSoldierById(secondAravt.captainId);
+      if (captain != null) {
+        // Auto-fix the state ID
+        gameState.tutorialCaptainId = captain.id;
+        return captain;
+      }
+    } catch (e) {
+      // print("Error finding fallback tutorial captain: $e");
+    }
+
+    return null;
   }
 }
