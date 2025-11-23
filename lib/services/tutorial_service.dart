@@ -16,7 +16,19 @@ class TutorialService extends ChangeNotifier {
   bool _isActive = false;
   int _currentIndex = 0;
 
+  // Portrait cycling state
+  int _captainPortraitIndex = 0; // 0-8 for grid position
+  bool _isShowingAngryPortrait = false;
+
   bool get isActive => _isActive;
+  int get captainPortraitIndex => _captainPortraitIndex;
+  bool get isShowingAngryPortrait => _isShowingAngryPortrait;
+
+  String getCaptainPortraitPath() {
+    return _isShowingAngryPortrait
+        ? 'assets/images/angry_captain.png'
+        : 'assets/images/happy_captain.png';
+  }
 
   // --- THE TUTORIAL SCRIPT ---
   final List<TutorialStepData> _steps = [
@@ -55,6 +67,11 @@ class TutorialService extends ChangeNotifier {
     _isActive = true;
     // [GEMINI-FIX] Resume from persistent step index
     _currentIndex = gameState.tutorialStepIndex;
+    _captainPortraitIndex = 0;
+    _isShowingAngryPortrait = false;
+
+    print(
+        "[TUTORIAL] Starting tutorial - portrait index: $_captainPortraitIndex, angry: $_isShowingAngryPortrait, path: ${getCaptainPortraitPath()}");
 
     // Ensure we start at the right place physically and visually
     if (_currentIndex < _steps.length) {
@@ -66,7 +83,14 @@ class TutorialService extends ChangeNotifier {
   TutorialStepData? get currentStep =>
       _isActive && _currentIndex < _steps.length ? _steps[_currentIndex] : null;
 
+  void cyclePortrait({bool angry = false}) {
+    _isShowingAngryPortrait = angry;
+    _captainPortraitIndex = (_captainPortraitIndex + 1) % 9;
+    notifyListeners();
+  }
+
   void advance(BuildContext context, GameState gameState) {
+    cyclePortrait(angry: false); // Cycle to next happy portrait
     // [GEMINI-FIX] Update persistent step index
     gameState.tutorialStepIndex++;
     _currentIndex = gameState.tutorialStepIndex;
@@ -94,6 +118,7 @@ class TutorialService extends ChangeNotifier {
   void dismiss(GameState gameState) {
     if (!_isActive) return;
 
+    cyclePortrait(angry: true); // Cycle to next angry portrait
     gameState.tutorialDismissalCount++;
     _isActive = false;
 

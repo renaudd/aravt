@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
 import '../services/tutorial_service.dart';
-import 'soldier_portrait_widget.dart';
+import '../widgets/grid_portrait_widget.dart';
 
 class TutorialOverlayWidget extends StatelessWidget {
   const TutorialOverlayWidget({super.key});
@@ -20,6 +20,13 @@ class TutorialOverlayWidget extends StatelessWidget {
         final captainId = gameState.tutorialCaptainId;
         final captain =
             captainId != null ? gameState.findSoldierById(captainId) : null;
+
+        // [DEBUG] Check why portrait might be missing
+        if (tutorial.isActive && tutorial.currentStep != null) {
+          print(
+              "[TUTORIAL OVERLAY] Active. CaptainID: $captainId, Captain Found: ${captain != null}");
+        }
+
         final step = tutorial.currentStep!;
 
         // Visual cue if they are annoyed (dismissal count > 0).
@@ -60,27 +67,25 @@ class TutorialOverlayWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // --- Captain Portrait ---
-                  if (captain != null)
-                    Container(
-                      margin: const EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                          border: Border.all(
-                              color: isAnnoyed
-                                  ? Colors.red.shade800
-                                  : const Color(0xFFE0D5C1),
-                              width: 2),
-                          boxShadow: const [
-                            BoxShadow(blurRadius: 4, color: Colors.black54)
-                          ]),
-                      child: SoldierPortrait(
-                          index: captain.portraitIndex,
-                          size: 80,
-                          // Darken their background color slightly if they are annoyed
-                          backgroundColor: isAnnoyed
-                              ? Color.lerp(
-                                  captain.backgroundColor, Colors.black, 0.5)!
-                              : captain.backgroundColor),
-                    ),
+                  // [GEMINI-FIX] Always show portrait - it comes from TutorialService, not GameState captain
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    decoration: BoxDecoration(
+                        border: Border.all(
+                            color: isAnnoyed
+                                ? Colors.red.shade800
+                                : const Color(0xFFE0D5C1),
+                            width: 2),
+                        boxShadow: const [
+                          BoxShadow(blurRadius: 4, color: Colors.black54)
+                        ]),
+                    child: GridPortraitWidget(
+                        key: ValueKey(
+                            'portrait_${tutorial.captainPortraitIndex}_${tutorial.isShowingAngryPortrait}'),
+                        imagePath: tutorial.getCaptainPortraitPath(),
+                        gridIndex: tutorial.captainPortraitIndex,
+                        size: 80),
+                  ),
 
                   // --- Text and Buttons ---
                   Expanded(

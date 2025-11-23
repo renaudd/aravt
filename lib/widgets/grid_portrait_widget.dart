@@ -17,12 +17,14 @@ class GridPortraitWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Calculate which cell we want (0-8 in row-major order)
-    // Grid layout:
-    // 0 1 2
-    // 3 4 5
-    // 6 7 8
     int row = gridIndex ~/ 3; // 0, 1, or 2
     int col = gridIndex % 3; // 0, 1, or 2
+
+    print(
+        "[GRID PORTRAIT] Rendering: $imagePath, index: $gridIndex (row: $row, col: $col), size: $size");
+
+    // Source cell size
+    const double cellSize = 340.0;
 
     return SizedBox(
       width: size,
@@ -30,19 +32,23 @@ class GridPortraitWidget extends StatelessWidget {
       child: FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
-          width: 340,
-          height: 340,
+          width: cellSize,
+          height: cellSize,
           child: ClipRect(
-            child: Transform.translate(
-              // Offset to show the correct cell
-              // Each cell is 340x340, so offset by -340 * col horizontally and -340 * row vertically
-              offset: Offset(-col * 340.0, -row * 340.0),
-              child: Image.asset(
-                imagePath,
-                width: 1020.0, // Full grid width (3 * 340)
-                height: 1020.0, // Full grid height (3 * 340)
-                fit: BoxFit.none,
-              ),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: -col * cellSize,
+                  top: -row * cellSize,
+                  child: Image.asset(
+                    imagePath,
+                    width: cellSize * 3, // 1020
+                    height: cellSize * 3, // 1020
+                    fit: BoxFit.none,
+                    alignment: Alignment.topLeft,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
