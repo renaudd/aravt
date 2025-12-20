@@ -7,7 +7,7 @@ turn-based strategy game set in 12th century Mongolia.
 
 ![Steppe Combat](screenshots/1%20-%20Steppe%20Combat.png)
 
-![Hidden Attributes](2%20-%20Hidden%20Attributes.png)
+![Hidden Attributes](screenshots/2%20-%20Hidden%20Attributes.png)
 
 ![Hexploration](screenshots/4%20-%20Hexploration.png)
 
