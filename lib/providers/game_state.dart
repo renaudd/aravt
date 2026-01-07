@@ -1,10 +1,28 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:async';
 import 'package:aravt/models/area_data.dart';
 import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/models/game_date.dart';
 import 'package:aravt/models/horde_data.dart';
+// Added imports
+import 'dart:convert';
+import '../models/inventory_item.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/yurt_data.dart';
+import 'package:aravt/models/mission_models.dart';
 import 'package:aravt/models/settlement_data.dart';
 import 'package:aravt/models/assignment_data.dart'; // Keep this as the primary source for AravtAssignment
 import 'package:aravt/models/game_turn.dart';
@@ -22,17 +40,22 @@ import 'package:aravt/services/next_turn_service.dart';
 import 'package:aravt/services/save_load_service.dart';
 import 'package:aravt/models/save_file_info.dart';
 import 'package:aravt/models/prisoner_action.dart';
+import 'package:aravt/services/training_service.dart';
 import 'package:aravt/models/tournament_data.dart';
 import 'package:aravt/models/hunting_report.dart';
 import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/models/herd_data.dart';
-// [GEMINI-NEW] Import for ResourceTripReport
+//  Import for ResourceTripReport
 import 'package:aravt/models/resource_report.dart';
 import 'package:aravt/models/narrative_models.dart';
 import 'package:aravt/models/trade_report.dart';
 import 'package:aravt/models/wealth_event.dart';
 import 'package:aravt/models/culinary_news.dart';
 import 'package:aravt/models/material_flow.dart';
+import 'package:aravt/models/shepherding_report.dart';
+import 'package:aravt/models/fletching_report.dart';
+import 'package:aravt/models/training_report.dart';
+import 'package:aravt/models/pillage_report.dart';
 
 // Wealth status for dynamic scrap-to-rupee conversion (7-level gradual spectrum)
 enum WealthStatus {
@@ -62,12 +85,15 @@ class ActiveCombatState {
 class GameState with ChangeNotifier {
   List<Soldier> horde = [];
   List<Aravt> aravts = [];
+  List<Mission> missions = [];
   List<Yurt> yurts = [];
   List<CombatReport> combatReports = [];
 
   List<TournamentResult> tournamentHistory = [];
   List<FutureTournament> upcomingTournaments = [];
-  ActiveTournament? activeTournament; // [GEMINI-NEW] Track ongoing tournament
+  ActiveTournament? activeTournament; //  Track ongoing tournament
+  Map<TournamentEventType, int> currentChampions =
+      {};
 
   List<double> wealthHistory = [];
   List<ResourceReport> resourceReports = [];
@@ -75,22 +101,27 @@ class GameState with ChangeNotifier {
   // Hunting, Fishing, & Resource History
   List<HuntingTripReport> huntingReports = [];
   List<FishingTripReport> fishingReports = [];
-  // [GEMINI-NEW] Resource reports (wood/mining)
+  List<ShepherdingReport> shepherdingReports = [];
+  List<FletchingReport> fletchingReports = [];
+  List<TrainingReport> trainingReports = [];
+  List<PillageReport> pillageReports = [];
+  //  Resource reports (wood/mining)
 
   // Narrative Event State
   NarrativeEvent? activeNarrativeEvent;
   bool hasDay5TradeOccurred = false;
 
-  // [GEMINI-NEW] Notification Badge Tracking
+  //  Notification Badge Tracking
   Set<String> viewedReportTabs = {};
 
-  // [GEMINI-NEW] Tutorial Persistence
+  //  Tutorial Persistence
   bool tutorialCompleted = false;
   bool tutorialPermanentlyDismissed = false;
   int tutorialDismissalCount = 0;
   int tutorialStepIndex = 0;
 
   String difficulty = 'medium';
+  String hordeName = "Player Horde";
 
   // Game Over State
   bool isGameOver = false;
@@ -98,13 +129,108 @@ class GameState with ChangeNotifier {
 
   // Automation flag for player's horde (before they are leader)
   bool isPlayerHordeAutomated = true;
+  bool get isPlayerLeader => player?.role == SoldierRole.hordeLeader;
 
   GameArea? currentArea;
   Soldier? player;
   GameDate? currentDate;
   int? tutorialCaptainId;
 
+  //  Method to update player reference (e.g. on death)
+  void setPlayer(Soldier newPlayer) {
+    player = newPlayer;
+    notifyListeners();
+  }
+
   Map<String, GameArea> worldMap = {};
+
+  // --- Caravan / Pack State ---
+  bool isCaravanMode = false;
+  double packingProgress = 0.0; // 0.0 to 1.0
+  HexCoordinates? caravanPosition;
+
+  void startPacking() {
+    isCaravanMode = false;
+    packingProgress = 0.0;
+    notifyListeners();
+  }
+
+  void updatePackingProgress(double progress) {
+    packingProgress = progress.clamp(0.0, 1.0);
+    if (packingProgress >= 1.0) {
+      finishPacking();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  void finishPacking() {
+    isCaravanMode = true;
+    packingProgress = 1.0;
+
+    // Find current camp area and revert it to Wilderness/Plains
+    for (var area in worldMap.values) {
+      if (area.type == AreaType.PlayerCamp) {
+        area.type = AreaType.Neutral; // Revert to Neutral
+        caravanPosition = area.coordinates;
+        // Also remove the "Player Camp" POI if it exists
+        area.pointsOfInterest.removeWhere((p) => p.id == 'camp-player');
+      }
+    }
+
+    // Fallback if no camp area found
+    if (caravanPosition == null && currentArea != null) {
+      caravanPosition = currentArea!.coordinates;
+    }
+
+    notifyListeners();
+  }
+
+  void establishCamp(HexCoordinates position) {
+    isCaravanMode = false;
+    packingProgress = 0.0;
+    caravanPosition = null;
+
+    // Find area at position and make it PlayerCamp
+    for (var area in worldMap.values) {
+      if (area.coordinates == position) {
+        area.type = AreaType.PlayerCamp;
+        // Add Camp POI
+        if (!area.pointsOfInterest.any((p) => p.id == 'camp-player')) {
+          area.pointsOfInterest.add(PointOfInterest(
+            id: 'camp-player',
+            name: 'My Camp',
+            type: PoiType.camp,
+            description: 'Your horde\'s current camp.',
+            isDiscovered: true,
+            position: position,
+          ));
+        }
+        break;
+      }
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> moveCaravan(HexCoordinates newPos) async {
+    if (caravanPosition == null) return;
+    int distance = caravanPosition!.distanceTo(newPos);
+    if (distance != 1) return; // Only 1 tile move allowed
+
+    caravanPosition = newPos;
+
+    logEvent(
+      "The caravan moves to a new location.",
+      category: EventCategory.general,
+      severity: EventSeverity.normal,
+    );
+
+    notifyListeners();
+
+    // Advance turn (1 day)
+    await advanceToNextTurn();
+  }
 
   List<Settlement> settlements = [];
 
@@ -130,8 +256,35 @@ class GameState with ChangeNotifier {
   }
 
   bool isOmniscientMode = false;
+
+  int get totalListenCount {
+    return horde.where((s) => s.queuedListenItem != null && !s.isPlayer).length;
+  }
+
+
+
+  //  UI State for Horde Panel
+  bool isHordePanelOpen = false;
+  void toggleHordePanel() {
+    isHordePanelOpen = !isHordePanelOpen;
+    notifyListeners();
+  }
+
+  void setHordePanelOpen(bool isOpen) {
+    if (isHordePanelOpen != isOpen) {
+      isHordePanelOpen = isOpen;
+      notifyListeners();
+    }
+  }
+
   bool isOmniscienceAllowed = false;
   bool isGameInitialized = false;
+  int _soldierIdCounter =
+      10000; // Start high to avoid collisions with setup IDs
+
+  int getNextSoldierId() {
+    return _soldierIdCounter++;
+  }
 
   List<Soldier> npcHorde1 = [];
   List<Aravt> npcAravts1 = [];
@@ -139,6 +292,8 @@ class GameState with ChangeNotifier {
   List<Aravt> npcAravts2 = [];
   List<Soldier> garrisonSoldiers = [];
   List<Aravt> garrisonAravts = [];
+  List<List<Soldier>> splinterHordes = [];
+  List<List<Aravt>> splinterAravts = [];
 
   List<InventoryItem> get playerInventory => player?.personalInventory ?? [];
 
@@ -155,14 +310,48 @@ class GameState with ChangeNotifier {
   double _communalIronOre = 0.0;
   double get communalIronOre => _communalIronOre;
 
+  void addCommunalRupees(double amount) {
+    _communalRupees += amount;
+    notifyListeners();
+  }
+
+  void addCommunalScrap(double amount) {
+    _communalScrap += amount;
+    if (amount > 0) _cumulativeScrapScavenged += amount;
+    notifyListeners();
+  }
+
   double _communalWood = 50.0;
   double get communalWood => _communalWood;
 
   double _communalScrap = 50.0;
   double get communalScrap => _communalScrap;
 
-  int _communalArrows = 100;
+  int _communalArrows = 1500; // Deprecated
   int get communalArrows => _communalArrows;
+
+  int _communalShortArrows = 1000;
+  int get communalShortArrows => _communalShortArrows;
+
+  int _communalLongArrows = 500;
+  int get communalLongArrows => _communalLongArrows;
+
+  double _communalRupees = 0.0;
+  double get communalRupees => _communalRupees;
+
+  // --- CUMULATIVE PRODUCTION (For Industry Reports) ---
+  double _cumulativeMeatGathered = 0.0;
+  double get cumulativeMeatGathered => _cumulativeMeatGathered;
+  double _cumulativeWoodGathered = 0.0;
+  double get cumulativeWoodGathered => _cumulativeWoodGathered;
+  double _cumulativeIronMined = 0.0;
+  double get cumulativeIronMined => _cumulativeIronMined;
+  double _cumulativeScrapScavenged = 0.0;
+  double get cumulativeScrapScavenged => _cumulativeScrapScavenged;
+  int _cumulativeShortArrowsFletched = 0;
+  int get cumulativeShortArrowsFletched => _cumulativeShortArrowsFletched;
+  int _cumulativeLongArrowsFletched = 0;
+  int get cumulativeLongArrowsFletched => _cumulativeLongArrowsFletched;
 
   // Communal Stash for individual items (pelts, etc.)
   List<InventoryItem> communalStash = [];
@@ -205,9 +394,10 @@ class GameState with ChangeNotifier {
   // --- CULINARY NEWS ---
   List<CulinaryNews> culinaryNews = [];
 
-  @protected
+  // --- PERSISTENT UI STATE ---
+  Map<String, Map<String, double>> campLayout = {}; // Building Name -> {x, y}
+
   CombatSimulator? currentCombat;
-  @protected
   ActiveCombatState? activeCombat;
   final Random _random = Random();
 
@@ -216,8 +406,10 @@ class GameState with ChangeNotifier {
 
   @protected
   ActiveCombatState? pendingCombat;
+  ActiveCombatState? get pendingCombatState => pendingCombat;
   @protected
   CombatReport? lastCombatReport;
+  CombatReport? get latestCombatReport => lastCombatReport;
 
   double combatSpeedMultiplier = 1.0;
   bool isCombatPaused = true;
@@ -260,6 +452,25 @@ class GameState with ChangeNotifier {
 
   void setAutoSaveEnabled(bool value) {
     autoSaveEnabled = value;
+    notifyListeners();
+  }
+
+  void triggerUpdate() {
+    notifyListeners();
+  }
+
+  void addTrainingReport(TrainingReport report) {
+    trainingReports.add(report);
+    notifyListeners();
+  }
+
+  void addShepherdingReport(ShepherdingReport report) {
+    shepherdingReports.add(report);
+    notifyListeners();
+  }
+
+  void addFletchingReport(FletchingReport report) {
+    fletchingReports.add(report);
     notifyListeners();
   }
 
@@ -309,7 +520,8 @@ class GameState with ChangeNotifier {
     total += _communalWood * 0.5;
     total += _communalIronOre * 1.0;
     total += _communalScrap * 1.0;
-    total += _communalArrows * 0.5;
+    total += _communalShortArrows * 0.5;
+    total += _communalLongArrows * 0.7; // Long arrows slightly more valuable
     total += _communalMeat * 2.0;
     total += _communalRice * 1.0;
     total += _communalMilk * 1.5;
@@ -388,92 +600,108 @@ class GameState with ChangeNotifier {
     }
   }
 
-  int getBadgeCountForTab(String tabName) {
-    if (viewedReportTabs.contains(tabName)) return 0;
+  //  Notification Badge Tracking
+  //  Map of Tab Name -> Unread Count
+  Map<String, int> unreadReportCounts = {};
 
-    int count = 0;
-    for (var event in eventLog) {
-      if (_getTabNameForCategory(event.category) == tabName &&
-          (event.severity == EventSeverity.high ||
-              event.severity == EventSeverity.critical)) {
-        count++;
-      }
-    }
-    // Special case for Games tab
-    if (tabName == "Games" &&
-        tournamentHistory.isNotEmpty &&
-        !viewedReportTabs.contains("Games")) {
-      count++;
-    }
-    return count;
+  //  Legacy set for migration (will be ignored/cleared)
+  Set<String> _legacyViewedReportTabs = {};
+
+  int getBadgeCountForFoodSubTab(String subTab) {
+    // For specific sub-tabs, we might need granular tracking or just rely on main tab?
+    // User only asked for general badges but implemented sub-tab logic exists.
+    // Simplifying: If main Food tab is read, these should be 0.
+    // If not, we might need to query the event log OR just return the main Food count if we can't distinguish?
+    // But wait, the original logic filtered by sub-tab.
+    // Let's stick to the new reliable counter for main tabs.
+    // For sub-tabs, we can try to filter the "unread" events if we tracked them, but we are only tracking generic counts per tab.
+    // Fallback: If map has count > 0, we can scan the top N events to see which sub-tab they belong to?
+    // Or just simplify and say sub-badges are disabled/cleared for now to fix duplication?
+    // Creating granular counters for sub-tabs effectively:
+    return unreadReportCounts['Food_$subTab'] ?? 0;
+  }
+
+  int getBadgeCountForTab(String tabName) {
+    return unreadReportCounts[tabName] ?? 0;
   }
 
   int getBadgeCountForCommerceSubTab(String subTab) {
-    if (viewedReportTabs.contains('Commerce')) return 0;
+    return unreadReportCounts['Commerce_$subTab'] ?? 0;
+  }
 
-    int count = 0;
-    for (var event in eventLog) {
-      if (event.category == EventCategory.finance &&
-          (event.severity == EventSeverity.high ||
-              event.severity == EventSeverity.critical)) {
-        bool isIndustry = event.message.contains("chopped") ||
-            event.message.contains("mined") ||
-            event.message.contains("scavenged") ||
-            event.message.contains("fletched");
-
-        if (subTab == 'Industry' && isIndustry) count++;
-        if (subTab == 'Finance' && !isIndustry) count++;
-      }
+  bool _isPlayerEvent(GameEvent event) {
+    if (event.relatedSoldierId != null) {
+      return horde.any((s) => s.id == event.relatedSoldierId);
     }
-    return count;
+    if (event.relatedAravtId != null) {
+      return aravts.any((a) => a.id == event.relatedAravtId);
+    }
+    return true; // Keep general events
+  }
+
+  bool isPlayerAravtReport(GameEvent event) {
+    if (turn.turnNumber > 7) return false;
+    if (event.relatedAravtId == null) return false;
+    // Highlight only the player's specific Aravt (Third Aravt)
+    return event.relatedAravtId!.contains("Third") ||
+        event.relatedAravtId!.contains("aravt_3");
   }
 
   int getReportsBadgeCount() {
-    int count = 0;
-    for (var event in eventLog) {
-      if ((event.severity == EventSeverity.high ||
-              event.severity == EventSeverity.critical) &&
-          !viewedReportTabs.contains(_getTabNameForCategory(event.category))) {
-        count++;
-      }
+    // Sum of all generic report tabs
+    int total = 0;
+    // We can just sum values of main tabs
+    final mainTabs = [
+      'Event Log',
+      'Combat',
+      'Health',
+      'Commerce',
+      'Herds',
+      'Food',
+      'Games',
+      'Training',
+      'Diplomacy'
+    ];
+    for (var tab in mainTabs) {
+      total += getBadgeCountForTab(tab);
     }
-    if (tournamentHistory.isNotEmpty && !viewedReportTabs.contains("Games")) {
-      count++;
-    }
-    return count;
+    return total;
   }
 
   int getCampBadgeCount() {
-    return 0; // No longer using badge for trade offers
+    return 0; 
   }
 
-  void markReportTabViewed(String tabName) {
-    viewedReportTabs.add(tabName);
+  void markReportTabViewed(String tabName, {String? subTab}) {
+    if (subTab != null) {
+      unreadReportCounts['${tabName}_$subTab'] = 0;
+      // Also potentially decrease parent tab if we were aggregating?
+      // Since we track independently, just clear specific.
+    } else {
+      unreadReportCounts[tabName] = 0;
+
+      // Clear sub-tabs associated with this main tab if necessary
+      if (tabName == 'Food') {
+        unreadReportCounts['Food_Hunting'] = 0;
+        unreadReportCounts['Food_Fishing'] = 0;
+        unreadReportCounts['Food_Overview'] = 0;
+      } else if (tabName == 'Commerce') {
+        unreadReportCounts['Commerce_Industry'] = 0;
+        unreadReportCounts['Commerce_Finance'] = 0;
+      }
+    }
     notifyListeners();
   }
 
-  // [GEMINI-NEW] Soldier-specific badge tracking
+  //  Soldier-specific badge tracking
   int getBadgeCountForTabAndSoldier(String tabName, int soldierId) {
-    // Check if this soldier's tab has been viewed
     String soldierTabKey = '${tabName}_soldier_$soldierId';
-    if (viewedReportTabs.contains(soldierTabKey)) return 0;
-
-    int count = 0;
-    for (var event in eventLog) {
-      // Only count events related to this soldier
-      if (event.relatedSoldierId == soldierId &&
-          _getTabNameForCategory(event.category) == tabName &&
-          (event.severity == EventSeverity.high ||
-              event.severity == EventSeverity.critical)) {
-        count++;
-      }
-    }
-    return count;
+    return unreadReportCounts[soldierTabKey] ?? 0;
   }
 
   void markReportTabViewedForSoldier(String tabName, int soldierId) {
     String soldierTabKey = '${tabName}_soldier_$soldierId';
-    viewedReportTabs.add(soldierTabKey);
+    unreadReportCounts[soldierTabKey] = 0;
     notifyListeners();
   }
 
@@ -494,6 +722,10 @@ class GameState with ChangeNotifier {
       case EventCategory.herds:
       case EventCategory.horses:
         return 'Herds';
+      case EventCategory.diplomacy:
+        return 'Diplomacy';
+      case EventCategory.training:
+        return 'Training';
       default:
         return 'Event Log';
     }
@@ -518,6 +750,7 @@ class GameState with ChangeNotifier {
   }
 
   void addTournamentResult(TournamentResult result) {
+    print("DEBUG: Tournament result added: ${result.name}");
     tournamentHistory.add(result);
     upcomingTournaments.removeWhere((future) =>
         future.date.year == result.date.year &&
@@ -542,7 +775,12 @@ class GameState with ChangeNotifier {
     notifyListeners();
   }
 
-  // [GEMINI-NEW] Add Resource Report
+  void addPillageReport(PillageReport report) {
+    pillageReports.add(report);
+    notifyListeners();
+  }
+
+  //  Add Resource Report
   void addResourceReport(ResourceReport report) {
     resourceReports.add(report);
     notifyListeners();
@@ -551,21 +789,19 @@ class GameState with ChangeNotifier {
   // --- RESOURCE MANAGEMENT METHODS ---
   void addCommunalMeat(double amount) {
     _communalMeat += amount;
+    if (amount > 0) _cumulativeMeatGathered += amount;
     notifyListeners();
   }
 
   void addCommunalIronOre(double amount) {
     _communalIronOre += amount;
+    if (amount > 0) _cumulativeIronMined += amount;
     notifyListeners();
   }
 
   void addCommunalWood(double amount) {
     _communalWood += amount;
-    notifyListeners();
-  }
-
-  void addCommunalScrap(double amount) {
-    _communalScrap += amount;
+    if (amount > 0) _cumulativeWoodGathered += amount;
     notifyListeners();
   }
 
@@ -574,8 +810,14 @@ class GameState with ChangeNotifier {
     notifyListeners();
   }
 
-  void addCommunalArrows(int amount) {
-    _communalArrows += amount;
+  void addCommunalArrows(int amount, {bool isLong = false}) {
+    if (isLong) {
+      _communalLongArrows += amount;
+      if (amount > 0) _cumulativeLongArrowsFletched += amount;
+    } else {
+      _communalShortArrows += amount;
+      if (amount > 0) _cumulativeShortArrowsFletched += amount;
+    }
     notifyListeners();
   }
 
@@ -633,14 +875,27 @@ class GameState with ChangeNotifier {
       relatedSoldierId: soldierId,
       relatedAravtId: aravtId,
     );
+
+    // Deduplication: Don't log the exact same message for the same soldier on the same day
+    if (eventLog.isNotEmpty) {
+      final lastEvent = eventLog.first;
+      if (lastEvent.message == newEvent.message &&
+          lastEvent.relatedSoldierId == newEvent.relatedSoldierId &&
+          lastEvent.date.year == newEvent.date.year &&
+          lastEvent.date.month == newEvent.date.month &&
+          lastEvent.date.day == newEvent.date.day) {
+        return; // Skip duplicate
+      }
+    }
+
     eventLog.insert(0, newEvent);
     if (eventLog.length > 1000) {
       eventLog.removeLast();
     }
 
-    // [GEMINI-FIX] If this is a critical event, remove the tab from viewed list
+
     // so the badge reappears (e.g., tournament completion after viewing Games tab)
-    if (severity == EventSeverity.critical) {
+    if (severity == EventSeverity.critical || severity == EventSeverity.high) {
       final tabName = _getTabNameForCategory(category);
       viewedReportTabs.remove(tabName);
     }
@@ -707,23 +962,242 @@ class GameState with ChangeNotifier {
   }
 
   void assignAravtToPoi(
-      Aravt aravt, PointOfInterest poi, AravtAssignment assignment) {
+      Aravt aravt, PointOfInterest poi, AravtAssignment assignment,
+      {String? option}) {
+    String? finalOption = option;
+
+    if (assignment == AravtAssignment.Train && finalOption == null) {
+      final captain = findSoldierById(aravt.captainId);
+      if (captain != null) {
+        int skillType = TrainingService.getTrainingSkillType(captain);
+        finalOption = TrainingService.getTrainingName(skillType);
+      }
+    }
+
+    // Recover cargo and horses if cancelling a Trade task
+    if (aravt.task is TradeTask) {
+      final tradeTask = aravt.task as TradeTask;
+      communalStash.addAll(tradeTask.cargo);
+      _communalHerd.addAll(tradeTask.horses); // Return horses to herd
+      
+      // Recover resources
+      tradeTask.resources.forEach((key, amount) {
+        switch (key) {
+          case 'scrap':
+            addCommunalScrap(amount);
+            break;
+          case 'rupees':
+            addCommunalRupees(amount);
+            break;
+          case 'wood':
+            _communalWood += amount;
+            break;
+          case 'iron':
+            _communalIronOre += amount;
+            break;
+          case 'meat':
+            _communalMeat += amount;
+            break;
+          case 'rice':
+            _communalRice += amount;
+            break;
+          case 'short_arrows':
+            _communalShortArrows += amount.toInt();
+            break;
+          case 'long_arrows':
+            _communalLongArrows += amount.toInt();
+            break;
+        }
+      });
+
+      print(
+          "Recovered cargo, horses, and resources from cancelled Trade task for ${aravt.id}");
+    }
+
     clearAravtAssignment(aravt);
 
     if (!poi.assignedAravtIds.contains(aravt.id)) {
       poi.assignedAravtIds.add(aravt.id);
     }
 
-    aravt.task = AssignedTask(
-      poiId: poi.id,
-      assignment: assignment,
-      durationInSeconds: 3600,
-      startTime: currentDate != null
-          ? DateTime(currentDate!.year, currentDate!.month, currentDate!.day)
-          : DateTime.now(),
-    );
+    // Check for travel requirement
+    bool needsTravel = false;
+    double travelSeconds = 0;
+    if (aravt.hexCoords != null &&
+        poi.position != null &&
+        aravt.hexCoords != poi.position) {
+      int distance = aravt.hexCoords!.distanceTo(poi.position!);
+      if (distance > 0) {
+        needsTravel = true;
+        travelSeconds = distance * 86400.0; // 1 day per tile
+      }
+    }
 
-    print("Assigned ${aravt.id} to ${poi.name} for ${assignment.name}");
+    // Create tasks based on type
+    if (assignment == AravtAssignment.Trade) {
+      final cargo = <InventoryItem>[];
+      final horses = <Mount>[];
+
+      if (finalOption != null) {
+        try {
+          final Map<String, dynamic> data = jsonDecode(finalOption);
+
+          // Process Cargo
+          final ids = List<String>.from(data['cargoItemIds'] ?? []);
+          for (var id in ids) {
+            final index = communalStash.indexWhere((i) => i.id == id);
+            if (index != -1) {
+              cargo.add(communalStash.removeAt(index));
+            }
+          }
+
+          // Process Horses
+          final horseIds = List<String>.from(data['horseIds'] ?? []);
+          for (var id in horseIds) {
+            final index = _communalHerd.indexWhere((h) => h.id == id);
+            if (index != -1) {
+              horses.add(_communalHerd.removeAt(index));
+            }
+          }
+        } catch (e) {
+          print("Error parsing Trade option: $e");
+        }
+      }
+
+      final movingTask = MovingTask(
+        destination: GameLocation(id: poi.id, type: LocationType.poi),
+        durationInSeconds: travelSeconds,
+        startTime: currentDate != null
+            ? DateTime(currentDate!.year, currentDate!.month, currentDate!.day)
+            : DateTime.now(),
+        option: finalOption,
+      );
+
+      final resources = <String, double>{};
+      if (finalOption != null) {
+        try {
+          final Map<String, dynamic> data = jsonDecode(finalOption);
+          final resMap = Map<String, dynamic>.from(data['resources'] ?? {});
+          resMap.forEach((key, val) {
+            final amount = (val as num).toDouble();
+            if (amount > 0) {
+              resources[key] = amount;
+              // Deduct from communal
+              switch (key) {
+                case 'scrap':
+                  removeCommunalScrap(amount);
+                  break;
+                case 'rupees':
+                  _communalRupees =
+                      (_communalRupees - amount).clamp(0.0, double.infinity);
+                  break;
+                case 'wood':
+                  _communalWood =
+                      (_communalWood - amount).clamp(0.0, double.infinity);
+                  break;
+                case 'iron':
+                  _communalIronOre =
+                      (_communalIronOre - amount).clamp(0.0, double.infinity);
+                  break;
+                case 'meat':
+                  _communalMeat =
+                      (_communalMeat - amount).clamp(0.0, double.infinity);
+                  break;
+                case 'rice':
+                  _communalRice =
+                      (_communalRice - amount).clamp(0.0, double.infinity);
+                  break;
+                case 'short_arrows':
+                  _communalShortArrows =
+                      (_communalShortArrows - amount.toInt()).clamp(0, 999999);
+                  break;
+                case 'long_arrows':
+                  _communalLongArrows =
+                      (_communalLongArrows - amount.toInt()).clamp(0, 999999);
+                  break;
+              }
+            }
+          });
+        } catch (e) {
+          print("Error parsing Trade resources: $e");
+        }
+      }
+
+      aravt.task = TradeTask(
+        targetPoiId: poi.id,
+        cargo: cargo,
+        horses: horses,
+        resources: resources,
+        movement: movingTask,
+      );
+      print(
+          "Assigned ${aravt.id} to Trade at ${poi.name} with ${cargo.length} items and ${horses.length} horses");
+    } else if (assignment == AravtAssignment.Emissary) {
+      final terms = <DiplomaticTerm>[];
+      if (finalOption != null) {
+        try {
+          final Map<String, dynamic> data = jsonDecode(finalOption);
+          final termNames = List<String>.from(data['terms'] ?? []);
+          for (var name in termNames) {
+            try {
+              terms
+                  .add(DiplomaticTerm.values.firstWhere((e) => e.name == name));
+            } catch (_) {}
+          }
+        } catch (e) {
+          print("Error parsing Emissary option: $e");
+        }
+      }
+
+      final movingTask = MovingTask(
+        destination: GameLocation(id: poi.id, type: LocationType.poi),
+        durationInSeconds: travelSeconds,
+        startTime: currentDate != null
+            ? DateTime(currentDate!.year, currentDate!.month, currentDate!.day)
+            : DateTime.now(),
+        option: finalOption,
+      );
+
+      aravt.task = EmissaryTask(
+        targetPoiId: poi.id,
+        terms: terms,
+        movement: movingTask,
+      );
+      print(
+          "Assigned ${aravt.id} to Emissary at ${poi.name} with ${terms.length} terms");
+    } else {
+      if (needsTravel) {
+        aravt.task = MovingTask(
+          destination: GameLocation(id: poi.id, type: LocationType.poi),
+          durationInSeconds: travelSeconds,
+          startTime: currentDate != null
+              ? DateTime(
+                  currentDate!.year, currentDate!.month, currentDate!.day)
+              : DateTime.now(),
+          followUpAssignment: assignment,
+          followUpPoiId: poi.id,
+          option: finalOption,
+        );
+        print(
+            "Assigned ${aravt.id} to travel to ${poi.name} for ${assignment.name} (Distance: ${travelSeconds / 86400} days)");
+      } else {
+        aravt.task = AssignedTask(
+          poiId: poi.id,
+          assignment: assignment,
+          option: finalOption,
+          durationInSeconds: 3600,
+          startTime: currentDate != null
+              ? DateTime(
+                  currentDate!.year, currentDate!.month, currentDate!.day)
+              : DateTime.now(),
+        );
+        print("Assigned ${aravt.id} to ${poi.name} for ${assignment.name}");
+      }
+    }
+
+    // Also set persistent assignment option if possible, or just rely on task renewal
+    aravt.persistentAssignment = assignment;
+
     logEvent(
       "${aravt.id} assigned to ${poi.name} (${assignment.name}).",
       category: EventCategory.general,
@@ -767,7 +1241,7 @@ class GameState with ChangeNotifier {
       garrisonSoldiers = initialStateContainer.garrisonSoldiers;
       garrisonAravts = initialStateContainer.garrisonAravts;
 
-      // [GEMINI-FIX] Copy Communal Resources & Herds
+
       communalCattle = initialStateContainer.communalCattle;
       _communalHerd = initialStateContainer.communalHerd;
       _communalMeat = initialStateContainer.communalMeat;
@@ -823,7 +1297,7 @@ class GameState with ChangeNotifier {
         ),
       ];
 
-      // [GEMINI-FIX] Log critical event for Downsizing Tournament to trigger badge
+
       logEvent(
         "The Great Downsizing Tournament has been announced! You have 7 days to prepare. The weakest Aravt will be exiled.",
         category: EventCategory.games,
@@ -834,7 +1308,7 @@ class GameState with ChangeNotifier {
         "The horde gathers on the steppe. A new story begins.",
         category: EventCategory.general,
         severity: EventSeverity
-            .normal, // [GEMINI-FIX] Don't count toward badge (no Event Log tab)
+            .normal,
       );
 
       print("[GameState Provider] New game created successfully.");
@@ -961,7 +1435,7 @@ class GameState with ChangeNotifier {
     if (soldier.isPlayer) return;
 
     soldier.isExpelled = true;
-
+    print("DEBUG: Expelling soldier ${soldier.name} (ID: ${soldier.id})");
     logEvent(
       "${soldier.name} has been expelled from the horde!",
       category: EventCategory.general,
@@ -990,6 +1464,13 @@ class GameState with ChangeNotifier {
 
     print(
         "${soldier.name} has been permanently removed from the horde (Executed).");
+    notifyListeners();
+  }
+
+  //  Public method to remove dead soldier without execution logic
+  void removeDeadSoldier(Soldier soldier) {
+    if (soldier.isPlayer) return;
+    _removeSoldierFromHorde(soldier);
     notifyListeners();
   }
 
@@ -1039,6 +1520,7 @@ class GameState with ChangeNotifier {
       if (data != null && data.containsKey('gameState')) {
         _clearAllState();
         _fromJson(data['gameState']);
+        _validateAndFixHordeHierarchy();
         logEvent("Game Loaded: ${player?.name}",
             category: EventCategory.system, severity: EventSeverity.high);
         setLoading(false);
@@ -1053,6 +1535,119 @@ class GameState with ChangeNotifier {
       setLoading(false);
       return false;
     }
+  }
+
+  void _validateAndFixHordeHierarchy() {
+    print("Validating Horde Hierarchy...");
+    for (var aravt in aravts) {
+      // 1. Check if captain exists and is valid
+      final captainIndex = horde.indexWhere((s) => s.id == aravt.captainId);
+      bool captainNeedsReplacement = false;
+
+      if (captainIndex == -1) {
+        print("Aravt ${aravt.id} has invalid captain ID ${aravt.captainId}.");
+        captainNeedsReplacement = true;
+        // Try to move them back? Or pick new?
+        // Let's pick new for safety, or move them if they are 'floating'.
+        captainNeedsReplacement = true;
+      }
+
+      if (captainNeedsReplacement) {
+        // Find best candidate
+        final members = horde
+            .where((s) =>
+                aravt.soldierIds.contains(s.id) &&
+                s.status == SoldierStatus.alive &&
+                !s.isImprisoned &&
+                !s.isExpelled)
+            .toList();
+
+        if (members.isNotEmpty) {
+          // Sort by Leadership
+          members.sort((a, b) => b.leadership.compareTo(a.leadership));
+          final newCaptain = members.first;
+          aravt.captainId = newCaptain.id;
+          newCaptain.role = SoldierRole.aravtCaptain;
+          print("Appointed ${newCaptain.name} as new captain of ${aravt.id}.");
+          logEvent(
+              "Hierarchy Restored: ${newCaptain.name} is now captain of ${aravt.id}.",
+              category: EventCategory.system,
+              severity: EventSeverity.low);
+        } else {
+          print("Aravt ${aravt.id} has no valid members for captaincy.");
+          // Could disband? For now just warning.
+        }
+      }
+    }
+  }
+
+  // --- PROMOTION SYSTEM ---
+
+  bool canPromoteToCaptain(Soldier soldier) {
+    if (soldier.role == SoldierRole.hordeLeader) return false;
+    if (soldier.status != SoldierStatus.alive) return false;
+    if (soldier.isImprisoned) return false;
+    // Current captain can be promoted to new aravt? Maybe, but usually they just stay.
+    return true;
+  }
+
+  bool canPromoteToGeneral(Soldier soldier) {
+    if (soldier.role != SoldierRole.aravtCaptain) return false;
+    if (aravts.length <= 10) return false;
+    return true;
+  }
+
+  void promoteSoldierToCaptain(Soldier soldier) {
+    if (!canPromoteToCaptain(soldier)) return;
+
+    // 1. Generate new Aravt ID
+    int nextNum = 1;
+    while (aravts.any((a) => a.id == 'Aravt $nextNum')) {
+      nextNum++;
+    }
+    final newAravtId = 'Aravt $nextNum';
+
+    // 2. Create new Aravt
+    final newAravt = Aravt(
+      id: newAravtId,
+      captainId: soldier.id,
+      soldierIds: [],
+      currentLocationType: LocationType.poi,
+      currentLocationId: findAravtById(soldier.aravt)?.currentLocationId ??
+          "DEFAULT_CAMP_POI_ID",
+      hexCoords:
+          findAravtById(soldier.aravt)?.hexCoords ?? const HexCoordinates(0, 0),
+    );
+
+    aravts.add(newAravt);
+
+    // 3. Transfer Soldier
+    transferSoldier(soldier, newAravt);
+
+    // 4. Update Role (transferSoldier handles this if captainId matches, but let's be sure)
+    soldier.role = SoldierRole.aravtCaptain;
+    newAravt.captainId = soldier.id; // Ensure sync
+
+    logEvent(
+      "${soldier.name} has been promoted to Captain of the newly formed $newAravtId!",
+      category: EventCategory.general,
+      severity: EventSeverity.high,
+      soldierId: soldier.id,
+    );
+    notifyListeners();
+  }
+
+  void promoteToGeneral(Soldier soldier) {
+    if (!canPromoteToGeneral(soldier)) return;
+
+    soldier.role = SoldierRole.general;
+    logEvent(
+      "${soldier.name} has been promoted to General!",
+      category: EventCategory.general,
+      severity: EventSeverity.critical,
+      soldierId: soldier.id,
+    );
+    notifyListeners();
   }
 
   Future<List<SaveFileInfo>> getSaveFiles() {
@@ -1107,7 +1702,7 @@ class GameState with ChangeNotifier {
     isPlayerHordeAutomated = true;
     huntingReports = [];
     fishingReports = [];
-    // [GEMINI-NEW] Clear resource reports
+    //  Clear resource reports
     resourceReports = [];
     _communalMeat = 100.0;
     _communalRice = 0.0;
@@ -1294,7 +1889,9 @@ class GameState with ChangeNotifier {
       ...horde,
       ...npcHorde1,
       ...npcHorde2,
-      ...garrisonSoldiers
+      ...garrisonSoldiers,
+      ...activeCombat!.playerSoldiers,
+      ...activeCombat!.opponentSoldiers
     ];
 
     currentCombat!.startCombat(activeCombat!.playerAravts,
@@ -1611,7 +2208,7 @@ class GameState with ChangeNotifier {
       'isPlayerHordeAutomated': isPlayerHordeAutomated,
       'huntingReports': huntingReports.map((r) => r.toJson()).toList(),
       'fishingReports': fishingReports.map((r) => r.toJson()).toList(),
-      // [GEMINI-NEW] Save resource reports
+      //  Save resource reports
       'resourceReports': resourceReports.map((r) => r.toJson()).toList(),
       'viewedReportTabs': viewedReportTabs.toList(),
       'tutorialCompleted': tutorialCompleted,
@@ -1619,8 +2216,8 @@ class GameState with ChangeNotifier {
       'tutorialDismissalCount': tutorialDismissalCount,
       'tutorialStepIndex': tutorialStepIndex,
       'tutorialCaptainId':
-          tutorialCaptainId, // [GEMINI-NEW] Persist tutorial captain
-      // [GEMINI-NEW] Food management
+          tutorialCaptainId, //  Persist tutorial captain
+      //  Food management
       'communalMilk': _communalMilk,
       'communalCheese': _communalCheese,
       'communalGrain': _communalGrain,
@@ -1628,16 +2225,18 @@ class GameState with ChangeNotifier {
       'butcheringRate': butcheringRate,
       'allowAlcohol': allowAlcohol,
       'vegetarianDiet': vegetarianDiet,
-      // [GEMINI-NEW] Finance tracking
+      //  Finance tracking
       'tradeReports': tradeReports.map((r) => r.toJson()).toList(),
       'wealthEvents': wealthEvents.map((e) => e.toJson()).toList(),
-      // [GEMINI-NEW] Industry parameters
+      //  Industry parameters
       'fabricationTargets':
           fabricationTargets.map((key, value) => MapEntry(key, value.toJson())),
       'materialFlowHistory':
           materialFlowHistory.map((e) => e.toJson()).toList(),
-      // [GEMINI-NEW] Culinary news
+      //  Culinary news
       'culinaryNews': culinaryNews.map((n) => n.toJson()).toList(),
+      'campLayout': campLayout,
+      'pillageReports': pillageReports.map((r) => r.toJson()).toList(),
     };
   }
 
@@ -1770,7 +2369,7 @@ class GameState with ChangeNotifier {
           .map((r) => FishingTripReport.fromJson(r))
           .toList();
     }
-    // [GEMINI-NEW] Load resource reports
+    //  Load resource reports
     if (json['resourceReports'] != null) {
       resourceReports = (json['resourceReports'] as List)
           .map((r) => ResourceReport.fromJson(r))
@@ -1787,9 +2386,9 @@ class GameState with ChangeNotifier {
     tutorialDismissalCount = json['tutorialDismissalCount'] ?? 0;
     tutorialStepIndex = json['tutorialStepIndex'] ?? 0;
     tutorialCaptainId =
-        json['tutorialCaptainId']; // [GEMINI-NEW] Load tutorial captain
+        json['tutorialCaptainId']; //  Load tutorial captain
 
-    // [GEMINI-NEW] Food management
+    //  Food management
     _communalMilk = (json['communalMilk'] as num?)?.toDouble() ?? 0.0;
     _communalCheese = (json['communalCheese'] as num?)?.toDouble() ?? 0.0;
     _communalGrain = (json['communalGrain'] as num?)?.toDouble() ?? 0.0;
@@ -1798,7 +2397,7 @@ class GameState with ChangeNotifier {
     allowAlcohol = json['allowAlcohol'] ?? true;
     vegetarianDiet = json['vegetarianDiet'] ?? false;
 
-    // [GEMINI-NEW] Finance tracking
+    //  Finance tracking
     tradeReports = (json['tradeReports'] as List? ?? [])
         .map((r) => TradeReport.fromJson(r))
         .toList();
@@ -1806,7 +2405,7 @@ class GameState with ChangeNotifier {
         .map((e) => WealthEvent.fromJson(e))
         .toList();
 
-    // [GEMINI-NEW] Industry parameters
+    //  Industry parameters
     fabricationTargets = (json['fabricationTargets'] as Map<String, dynamic>? ??
             {})
         .map((key, value) => MapEntry(key, FabricationTarget.fromJson(value)));
@@ -1814,9 +2413,12 @@ class GameState with ChangeNotifier {
         .map((e) => MaterialFlowEntry.fromJson(e))
         .toList();
 
-    // [GEMINI-NEW] Culinary news
+    //  Culinary news
     culinaryNews = (json['culinaryNews'] as List? ?? [])
         .map((n) => CulinaryNews.fromJson(n))
+        .toList();
+    pillageReports = (json['pillageReports'] as List? ?? [])
+        .map((r) => PillageReport.fromJson(r))
         .toList();
 
     _isLoading = false;
@@ -1825,5 +2427,41 @@ class GameState with ChangeNotifier {
     activeCombat = null;
     pendingCombat = null;
     lastCombatReport = null;
+  }
+
+  void assignAravtToArea(Aravt aravt, String areaId, AravtAssignment assignment,
+      {String? option}) {
+    // 1. Validate Location
+    final area = worldMap[areaId];
+    if (area == null) {
+      print("Error: Area $areaId not found.");
+      return;
+    }
+
+    // 2. Check if Aravt is at the location
+    if (aravt.hexCoords != area.coordinates) {
+      // Create Moving Task
+      int distance = aravt.hexCoords?.distanceTo(area.coordinates) ?? 1;
+      double travelSeconds = distance * 86400.0;
+
+      aravt.task = MovingTask(
+        destination: GameLocation.area(areaId),
+        durationInSeconds: travelSeconds,
+        startTime: gameDate.toDateTime(),
+        followUpAssignment: assignment,
+        followUpAreaId: areaId,
+        option: option,
+      );
+    } else {
+      // Assign immediately
+      aravt.task = AssignedTask(
+        areaId: areaId,
+        assignment: assignment,
+        durationInSeconds: 86400.0 * 30, // Default long duration
+        startTime: gameDate.toDateTime(),
+        option: option,
+      );
+    }
+    notifyListeners();
   }
 }

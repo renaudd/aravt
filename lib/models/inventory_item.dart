@@ -1,4 +1,16 @@
-import 'dart:convert';
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // --- Core Item Model ---
 
@@ -17,7 +29,7 @@ class InventoryItem {
   final int spriteIndex;
   final EquipmentSlot? equippableSlot;
   final String
-      origin; // [GEMINI-NEW] Origin of the item (e.g., "Mongol", "Chinese")
+      origin;
 
   InventoryItem({
     required this.id,
@@ -32,7 +44,7 @@ class InventoryItem {
     this.iconAssetPath = 'assets/images/items/unknown_item.png',
     this.spriteIndex = 0,
     this.equippableSlot,
-    this.origin = 'Unknown', // [GEMINI-NEW] Default origin
+    this.origin = 'Unknown', // Default origin
   });
 
   Map<String, dynamic> toJson() => {
@@ -49,7 +61,7 @@ class InventoryItem {
         'iconAssetPath': iconAssetPath,
         'spriteIndex': spriteIndex,
         'equippableSlot': equippableSlot?.name,
-        'origin': origin, // [GEMINI-NEW]
+        'origin': origin,
       };
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) {
@@ -84,7 +96,7 @@ class InventoryItem {
           iconAssetPath: json['iconAssetPath'] ?? '',
           spriteIndex: json['spriteIndex'] ?? 0,
           equippableSlot: equipmentSlotFromName(json['equippableSlot']),
-          origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+          origin: json['origin'] ?? 'Unknown',
         );
     }
   }
@@ -179,7 +191,7 @@ class Equipment extends InventoryItem {
     required super.iconAssetPath,
     required super.spriteIndex,
     required EquipmentSlot slot,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.condition = 100.0,
     this.maxCondition = 100.0,
   }) : super(equippableSlot: slot);
@@ -217,7 +229,7 @@ class Weapon extends Equipment {
     required super.slot,
     required super.condition,
     required super.maxCondition,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     required this.damageType,
     this.baseDamage = 0.0,
     this.effectiveRange = 0.0,
@@ -254,7 +266,7 @@ class Weapon extends Equipment {
       baseDamage: (json['baseDamage'] as num).toDouble(),
 
       effectiveRange: (json['effectiveRange'] as num).toDouble(),
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }
@@ -278,7 +290,7 @@ class Armor extends Equipment {
     required super.slot,
     required super.condition,
     required super.maxCondition,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.deflectValue = 0.0,
     this.damageReductionValue = 0.0,
   });
@@ -312,7 +324,7 @@ class Armor extends Equipment {
       deflectValue: (json['deflectValue'] as num).toDouble(),
 
       damageReductionValue: (json['damageReductionValue'] as num).toDouble(),
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }
@@ -336,7 +348,7 @@ class Shield extends Equipment {
     super.slot = EquipmentSlot.shield,
     required super.condition,
     required super.maxCondition,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.deflectValue = 0.0,
     this.blockChance = 0.0,
   });
@@ -374,7 +386,7 @@ class Shield extends Equipment {
       deflectValue: (json['deflectValue'] as num).toDouble(),
 
       blockChance: (json['blockChance'] as num).toDouble(),
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }
@@ -397,7 +409,7 @@ class Relic extends Equipment {
     required super.slot,
     required super.condition,
     required super.maxCondition,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.bonusDescription = '',
   }) : assert(slot == EquipmentSlot.ring || slot == EquipmentSlot.necklace);
 
@@ -428,7 +440,7 @@ class Relic extends Equipment {
       maxCondition: (json['maxCondition'] as num).toDouble(),
 
       bonusDescription: json['bonusDescription'] ?? '',
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }
@@ -456,7 +468,7 @@ class Mount extends Equipment {
     super.slot = EquipmentSlot.mount,
     required super.condition,
     required super.maxCondition,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.health = 7,
     this.temperament = 5,
     this.speed = 5,
@@ -503,7 +515,7 @@ class Mount extends Equipment {
       bonding: json['bonding'] ?? 0,
 
       exhaustion: json['exhaustion'] ?? 0,
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }
@@ -522,7 +534,7 @@ class Consumable extends InventoryItem {
     required super.weight,
     required super.iconAssetPath,
     required super.spriteIndex,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.effect = '',
   }) : super(equippableSlot: null);
 
@@ -548,7 +560,7 @@ class Consumable extends InventoryItem {
       iconAssetPath: json['iconAssetPath'] ?? '',
       spriteIndex: json['spriteIndex'] ?? 0,
       effect: json['effect'] ?? '',
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }
@@ -569,7 +581,7 @@ class Ammunition extends InventoryItem {
     required super.quality,
     required super.iconAssetPath,
     required super.spriteIndex,
-    super.origin = 'Unknown', // [GEMINI-NEW]
+    super.origin = 'Unknown',
     this.damageBonus = 0.0,
     this.specialEffect = '',
   }) : super(equippableSlot: null);
@@ -600,7 +612,7 @@ class Ammunition extends InventoryItem {
       damageBonus: (json['damageBonus'] as num).toDouble(),
 
       specialEffect: json['specialEffect'] ?? '',
-      origin: json['origin'] ?? 'Unknown', // [GEMINI-NEW]
+      origin: json['origin'] ?? 'Unknown',
     );
   }
 }

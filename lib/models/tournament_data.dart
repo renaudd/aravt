@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:aravt/models/horde_data.dart';
 import 'game_date.dart';
 
@@ -52,7 +66,8 @@ class ActiveTournament {
   final GameDate startDate;
   final List<TournamentEventType> events;
   final List<Aravt> participatingAravts;
-  int currentDay; // 1 to 4
+  int currentDay; // 1 to duration
+  final int duration; // Total days
   Map<int, List<EventResult>> dailyResults; // Day -> Results
   Map<String, int> currentStandings; // AravtId -> Score
   Map<int, String> dailyReports; // Day -> Formatted Report Text
@@ -63,6 +78,7 @@ class ActiveTournament {
     required this.events,
     required this.participatingAravts,
     this.currentDay = 1,
+    this.duration = 4,
     Map<int, List<EventResult>>? dailyResults,
     Map<String, int>? currentStandings,
     Map<int, String>? dailyReports,
@@ -77,6 +93,7 @@ class ActiveTournament {
         'participatingAravts':
             participatingAravts.map((a) => a.toJson()).toList(),
         'currentDay': currentDay,
+        'duration': duration,
         'dailyResults': dailyResults.map((k, v) =>
             MapEntry(k.toString(), v.map((e) => e.toJson()).toList())),
         'currentStandings': currentStandings,
@@ -94,6 +111,7 @@ class ActiveTournament {
           .map((a) => Aravt.fromJson(a))
           .toList(),
       currentDay: json['currentDay'],
+      duration: json['duration'] ?? 4,
       dailyResults: (json['dailyResults'] as Map<String, dynamic>).map(
         (k, v) => MapEntry(
           int.parse(k),
@@ -116,6 +134,7 @@ class TournamentResult {
   final Map<TournamentEventType, EventResult> eventResults;
   final Map<String, int> finalAravtStandings;
   final String? winnerAravtId;
+  final Map<int, String> dailyReports; //  Store detailed reports
 
   TournamentResult({
     required this.name,
@@ -123,6 +142,7 @@ class TournamentResult {
     required this.eventResults,
     required this.finalAravtStandings,
     this.winnerAravtId,
+    this.dailyReports = const {},
   });
 
   Map<String, dynamic> toJson() => {
@@ -132,6 +152,8 @@ class TournamentResult {
             eventResults.map((k, v) => MapEntry(k.name, v.toJson())),
         'finalAravtStandings': finalAravtStandings,
         'winnerAravtId': winnerAravtId,
+        'dailyReports': dailyReports
+            .map((k, v) => MapEntry(k.toString(), v)),
       };
 
   factory TournamentResult.fromJson(Map<String, dynamic> json) {
@@ -146,6 +168,10 @@ class TournamentResult {
       finalAravtStandings:
           Map<String, int>.from(json['finalAravtStandings'] ?? {}),
       winnerAravtId: json['winnerAravtId'],
+      dailyReports: (json['dailyReports'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(int.parse(k), v as String),
+          ) ??
+          {},
     );
   }
 }
@@ -188,7 +214,7 @@ class ScoreBasedEventResult extends EventResult {
       );
 }
 
-// [GEMINI-NEW] Race Result Entry to hold horse names
+//  Race Result Entry to hold horse names
 class RaceResultEntry {
   final int soldierId;
   final String horseName;
@@ -208,7 +234,7 @@ class RaceResultEntry {
       );
 }
 
-// [GEMINI-UPDATED] RaceEventResult uses new entry list
+
 class RaceEventResult extends EventResult {
   final List<RaceResultEntry> entries;
   // We still keep rankings (list of soldier IDs) for easy point calculation
@@ -262,20 +288,30 @@ class WrestlingRound {
 class WrestlingEventResult extends EventResult {
   final List<WrestlingRound> rounds;
   final List<int> rankings;
-  WrestlingEventResult({required this.rounds, required this.rankings});
+  final List<int> firstRoundLoserIds; //  Track losers for -5 pts
+
+  WrestlingEventResult({
+    required this.rounds,
+    required this.rankings,
+    this.firstRoundLoserIds = const [],
+  });
 
   @override
   Map<String, dynamic> toJson() => {
         '__type': 'WrestlingEventResult',
         'rounds': rounds.map((r) => r.toJson()).toList(),
         'rankings': rankings,
+        'firstRoundLoserIds': firstRoundLoserIds,
       };
   factory WrestlingEventResult.fromJson(Map<String, dynamic> json) =>
       WrestlingEventResult(
-          rounds: (json['rounds'] as List)
-              .map((r) => WrestlingRound.fromJson(r))
-              .toList(),
-          rankings: List<int>.from(json['rankings']));
+        rounds: (json['rounds'] as List)
+            .map((r) => WrestlingRound.fromJson(r))
+            .toList(),
+        rankings: List<int>.from(json['rankings']),
+        firstRoundLoserIds:
+            List<int>.from(json['firstRoundLoserIds'] ?? []),
+      );
 }
 
 class BuzkashiMatch {

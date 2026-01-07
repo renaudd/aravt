@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // services/save_load_service.dart
 import 'dart:io';
 import 'dart:convert';
@@ -40,7 +54,8 @@ class SaveLoadService {
   }
 
   /// Writes the provided game state JSON to a specific file.
-  Future<void> writeSaveFile(String fileName, Map<String, dynamic> saveData) async {
+  Future<void> writeSaveFile(
+      String fileName, Map<String, dynamic> saveData) async {
     try {
       final file = await _getSaveFile(fileName);
       final jsonString = json.encode(saveData);
@@ -72,7 +87,7 @@ class SaveLoadService {
   /// This will overwrite the oldest save if all 10 slots are full.
   Future<String> getNextAvailableSaveSlot() async {
     final List<SaveFileInfo> saves = await getSaveFileList();
-    
+
     // 1. If there's an empty slot, use it.
     for (int i = 0; i < _maxSaveSlots; i++) {
       final fileName = '$_saveFileNamePrefix$i$_saveFileExtension';
@@ -83,12 +98,12 @@ class SaveLoadService {
 
     // 2. If all slots are full, find the *oldest* save and return its name.
     if (saves.isNotEmpty) {
-      saves.sort((a, b) => a.fileTimestamp.compareTo(b.fileTimestamp)); // Oldest first
+      saves.sort(
+          (a, b) => a.fileTimestamp.compareTo(b.fileTimestamp)); // Oldest first
       return saves.first.fullFileName;
     }
 
     // 3. Fallback, should never happen if maxSaveSlots > 0
-    // --- THIS IS THE CORRECTED LINE ---
     return '${_saveFileNamePrefix}0$_saveFileExtension';
   }
 
@@ -104,22 +119,22 @@ class SaveLoadService {
     }
 
     final List<FileSystemEntity> entities = await dir.list().toList();
-    
+
     for (final entity in entities) {
-      if (entity is File && 
-          entity.path.endsWith(_saveFileExtension) && 
+      if (entity is File &&
+          entity.path.endsWith(_saveFileExtension) &&
           entity.path.contains(_saveFileNamePrefix)) {
-            
         final String fileName = entity.uri.pathSegments.last;
         try {
           final jsonString = await entity.readAsString();
           final Map<String, dynamic> data = json.decode(jsonString);
-          
+
           if (data.containsKey('meta')) {
             final Map<String, dynamic> meta = data['meta'];
             // Add the file's own info to the metadata map
             meta['fullFileName'] = fileName;
-            meta['fileTimestamp'] = (await entity.lastModified()).toIso8601String();
+            meta['fileTimestamp'] =
+                (await entity.lastModified()).toIso8601String();
 
             saveFiles.add(SaveFileInfo.fromJson(meta));
           }
@@ -128,10 +143,9 @@ class SaveLoadService {
         }
       }
     }
-    
+
     // Sort by timestamp, newest first
     saveFiles.sort((a, b) => b.fileTimestamp.compareTo(a.fileTimestamp));
     return saveFiles;
   }
 }
-

@@ -1,3 +1,18 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// lib/services/tournament_service.dart
 import 'dart:math';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/horde_data.dart';
@@ -6,8 +21,8 @@ import 'package:aravt/models/game_date.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/game_data/item_templates.dart'; // For horse names
-import 'package:aravt/models/combat_models.dart'; // For SoldierStatus
-import 'package:aravt/models/game_event.dart'; // [GEMINI-FIX] Added for EventCategory/Severity
+import 'package:aravt/models/game_event.dart';
+import 'package:aravt/models/justification_event.dart';
 
 class TournamentService {
   final Random _random = Random();
@@ -33,6 +48,23 @@ class TournamentService {
       currentStandings: {for (var a in participatingAravts) a.id: 0},
     );
 
+
+    for (var aravt in participatingAravts) {
+      if (aravt.task != null) {
+        print("Cancelling task for Aravt ${aravt.id} due to tournament.");
+        aravt.task = null;
+      }
+      aravt.persistentAssignment = null;
+      aravt.persistentAssignmentLocationId = null;
+
+      // Teleport to player camp (or just ensure they are "here")
+      // This prevents "traveling" status during tournament
+      final playerCamp = gameState.findPoiByIdWorld('camp-player');
+      if (playerCamp != null && playerCamp.position != null) {
+        aravt.hexCoords = playerCamp.position;
+      }
+    }
+
     gameState.logEvent(
       "The $name has begun! Day 1 events are starting.",
       category: EventCategory.games,
@@ -44,28 +76,40 @@ class TournamentService {
     final active = gameState.activeTournament;
     if (active == null) return null;
 
-    print("Processing Tournament Day ${active.currentDay}...");
+    print(
+        "TOURNAMENT DEBUG: Processing Day ${active.currentDay} of ${active.duration}.");
+
+    // Check if tournament is over
+    if (active.currentDay > active.duration) {
+      print("TOURNAMENT DEBUG: Tournament duration exceeded. Concluding.");
+      return _concludeTournament(gameState);
+    }
 
     // Define Schedule
     List<TournamentEventType> todaysEvents = [];
     switch (active.currentDay) {
       case 1:
-        if (active.events.contains(TournamentEventType.archery))
+        if (active.events.contains(TournamentEventType.archery)) {
           todaysEvents.add(TournamentEventType.archery);
-        if (active.events.contains(TournamentEventType.horseArchery))
-          todaysEvents.add(TournamentEventType.horseArchery);
+        }
         break;
       case 2:
-        if (active.events.contains(TournamentEventType.wrestling))
-          todaysEvents.add(TournamentEventType.wrestling);
+        if (active.events.contains(TournamentEventType.horseArchery)) {
+          todaysEvents.add(TournamentEventType.horseArchery);
+        }
         break;
       case 3:
-        if (active.events.contains(TournamentEventType.horseRace))
+        if (active.events.contains(TournamentEventType.wrestling)) {
+          todaysEvents.add(TournamentEventType.wrestling);
+        }
+        if (active.events.contains(TournamentEventType.horseRace)) {
           todaysEvents.add(TournamentEventType.horseRace);
+        }
         break;
       case 4:
-        if (active.events.contains(TournamentEventType.buzkashi))
+        if (active.events.contains(TournamentEventType.buzkashi)) {
           todaysEvents.add(TournamentEventType.buzkashi);
+        }
         break;
     }
 
@@ -103,7 +147,7 @@ class TournamentService {
     // Generate Detailed Daily Report
     final StringBuffer report = StringBuffer();
     report.writeln(
-        "=== DAY ${active.currentDay} OF ${active.name.toUpperCase()} ===\n");
+        "=== DAY ${active.currentDay} OF ${active.duration} OF ${active.name.toUpperCase()} ===\n");
 
     int eventIndex = 0;
     for (final result in dayResults) {
@@ -132,14 +176,14 @@ class TournamentService {
 
     // Log as Critical Event (for immediate visibility)
     gameState.logEvent(
-      report.toString(),
+      "Day ${active.currentDay} of ${active.name} is complete. Check the Games Tab for details.",
       category: EventCategory.games,
-      severity: EventSeverity.critical,
+      severity: EventSeverity.normal,
     );
 
     // Advance Day or Finish
     active.currentDay++;
-    if (active.currentDay > 4) {
+    if (active.currentDay > active.duration) {
       return _concludeTournament(gameState);
     }
 
@@ -162,53 +206,20 @@ class TournamentService {
     Map<TournamentEventType, EventResult> allResults = {};
     active.dailyResults.forEach((day, results) {
       for (var result in results) {
-        // Identify type based on result class
-        // TournamentEventType type; // [GEMINI-FIX] Removed unused variable
         if (result is ScoreBasedEventResult) {
-          // Need to distinguish Archery vs Horse Archery.
-          // This is tricky with current structure.
-          // Simplification: We assume order or check content.
-          // Better: Pass type with result or store map in ActiveTournament differently.
-          // For now, let's infer or just use a generic mapping if possible.
-          // Actually, ActiveTournament stores List<EventResult>.
-          // Let's just map them back.
-          // HACK: We'll just use the type from the event generation.
-          // But here we lost the mapping.
-          // FIX: Let's change dailyResults to Map<TournamentEventType, EventResult> in ActiveTournament?
-          // No, dailyResults is Map<int, List<EventResult>>.
-          // Let's just iterate active.events and find matching results?
-          // Or simpler: Just return what we have.
+          if (active.events.contains(TournamentEventType.archery) &&
+              !allResults.containsKey(TournamentEventType.archery)) {
+            allResults[TournamentEventType.archery] = result;
+          } else {
+            allResults[TournamentEventType.horseArchery] = result;
+          }
+        } else if (result is RaceEventResult) {
+          allResults[TournamentEventType.horseRace] = result;
+        } else if (result is WrestlingEventResult) {
+          allResults[TournamentEventType.wrestling] = result;
+        } else if (result is BuzkashiEventResult) {
+          allResults[TournamentEventType.buzkashi] = result;
         }
-      }
-    });
-
-    // RE-IMPLEMENTATION FIX:
-    // To properly map results, we should store them with their type in ActiveTournament.
-    // But for now, let's just reconstruct the map from dailyResults assuming we know what ran.
-
-    // Actually, let's just return the final result using the data we have.
-    // We need to map TournamentEventType -> EventResult.
-    // We can iterate through dailyResults and try to match.
-
-    active.dailyResults.values.expand((i) => i).forEach((r) {
-      if (r is ScoreBasedEventResult) {
-        // Could be Archery or Horse Archery.
-        // If scores are around 300, likely Archery. If around 150, Horse Archery.
-        // Archery max 300. Horse Archery max 150.
-        // This is weak.
-        // Let's just assign to Archery for now if ambiguous, or check active.events.
-        if (active.events.contains(TournamentEventType.archery) &&
-            !allResults.containsKey(TournamentEventType.archery)) {
-          allResults[TournamentEventType.archery] = r;
-        } else {
-          allResults[TournamentEventType.horseArchery] = r;
-        }
-      } else if (r is RaceEventResult) {
-        allResults[TournamentEventType.horseRace] = r;
-      } else if (r is WrestlingEventResult) {
-        allResults[TournamentEventType.wrestling] = r;
-      } else if (r is BuzkashiEventResult) {
-        allResults[TournamentEventType.buzkashi] = r;
       }
     });
 
@@ -218,10 +229,87 @@ class TournamentService {
       eventResults: allResults,
       finalAravtStandings: active.currentStandings,
       winnerAravtId: winnerId,
+      dailyReports: active.dailyReports,
     );
 
     gameState.activeTournament = null; // Clear active state
+    _distributeRewards(result, gameState);
+    _updateChampions(result, gameState);
     return result;
+  }
+
+  void _updateChampions(TournamentResult result, GameState gameState) {
+    // Update champions based on event results
+    result.eventResults.forEach((type, eventResult) {
+      if (type == TournamentEventType.archery ||
+          type == TournamentEventType.horseArchery ||
+          type == TournamentEventType.horseRace ||
+          type == TournamentEventType.wrestling) {
+        int? winnerId;
+        if (eventResult is ScoreBasedEventResult &&
+            eventResult.rankings.isNotEmpty) {
+          winnerId = eventResult.rankings.first;
+        } else if (eventResult is RaceEventResult &&
+            eventResult.rankings.isNotEmpty) {
+          winnerId = eventResult.rankings.first;
+        } else if (eventResult is WrestlingEventResult &&
+            eventResult.rankings.isNotEmpty) {
+          winnerId = eventResult.rankings.first;
+        }
+
+        if (winnerId != null) {
+          gameState.currentChampions[type] = winnerId;
+          final soldier = gameState.findSoldierById(winnerId);
+          if (soldier != null) {
+            gameState.logEvent(
+                "${soldier.name} is now the ${type.name.replaceAll(RegExp(r'(?<!^)(?=[A-Z])'), ' ')} Champion!",
+                category: EventCategory.games,
+                severity: EventSeverity.high,
+                soldierId: soldier.id);
+          }
+        }
+      }
+    });
+  }
+
+  void _distributeRewards(TournamentResult result, GameState gameState) {
+    if (result.winnerAravtId == null) return;
+
+    final winnerAravt = gameState.findAravtById(result.winnerAravtId!);
+    if (winnerAravt == null) return;
+
+    // 1. Give Horses to Winner Aravt members
+    // For now, let's assume we have a pool of horses from expelled soldiers,
+    // but since we don't track that pool yet, we'll just create new horses.
+    // In a future update, we can track the "Horde Pool".
+    for (var soldierId in winnerAravt.soldierIds) {
+      final soldier = gameState.findSoldierById(soldierId);
+      if (soldier != null) {
+        final horse =
+            ItemDatabase.createItemInstance('mnt_horse', forcedQuality: 'Good');
+        if (horse != null) {
+          soldier.personalInventory.add(horse);
+          gameState.logEvent(
+              "${soldier.name} received a fine horse named ${horse.name} as a tournament reward!",
+              category: EventCategory.games,
+              soldierId: soldier.id);
+        }
+      }
+    }
+
+    // 2. Give a special gift to the Captain of the winning Aravt
+    final captain = gameState.findSoldierById(winnerAravt.captainId);
+    if (captain != null) {
+      final gift = ItemDatabase.createItemInstance('rel_ring',
+          origin: 'Tournament Reward');
+      if (gift != null) {
+        captain.personalInventory.add(gift);
+        gameState.logEvent(
+            "${captain.name} received a golden ring for leading the winning Aravt!",
+            category: EventCategory.games,
+            soldierId: captain.id);
+      }
+    }
   }
 
   void _updateStandings(Map<String, int> standings, EventResult result,
@@ -230,29 +318,164 @@ class TournamentService {
       standings[aravtId] = (standings[aravtId] ?? 0) + points;
     }
 
-    const Map<int, int> individualPoints = {0: 50, 1: 30, 2: 20, 3: 15, 4: 10};
-    const Map<int, int> teamPoints = {0: 100, 1: 60, 2: 40, 3: 20};
+    if (result is ScoreBasedEventResult) {
+      // Archery or Horse Archery
+      final bool isHorseArchery = type == TournamentEventType.horseArchery;
+      for (int i = 0; i < result.rankings.length; i++) {
+        final soldier = _findSoldierAnywhere(result.rankings[i], gameState);
+        if (soldier == null) continue;
 
-    if (result is ScoreBasedEventResult ||
-        result is RaceEventResult ||
-        result is WrestlingEventResult) {
-      List<int> rankings = (result is ScoreBasedEventResult)
-          ? result.rankings
-          : (result is RaceEventResult)
-              ? result.rankings
-              : (result as WrestlingEventResult).rankings;
+        int points = 0;
+        if (isHorseArchery) {
+          // Horse Archery Scoring
+          if (i == 0)
+            points = 80;
+          else if (i == 1)
+            points = 40;
+          else if (i == 2)
+            points = 25;
+          else if (i == 3)
+            points = 15;
+          else if (i == 4)
+            points = 10;
+          else if (i >= result.rankings.length - 3)
+            points = -10;
+          else if (i >= result.rankings.length - 7) points = -5;
+        } else {
+          // Archery Scoring
+          if (i == 0)
+            points = 70;
+          else if (i == 1)
+            points = 35;
+          else if (i == 2)
+            points = 20;
+          else if (i == 3)
+            points = 10;
+          else if (i == 4)
+            points = 5;
+          else if (i >= result.rankings.length - 3)
+            points = -10;
+          else if (i >= result.rankings.length - 7) points = -5;
+        }
+        award(soldier.aravt, points);
 
-      for (int i = 0; i < min(rankings.length, 5); i++) {
-        int points = individualPoints[i] ?? 5;
-        final soldier = _findSoldierAnywhere(rankings[i], gameState);
+        //  Add justifications for top/bottom performers
+        if (i < 3) {
+          // Praise
+          double magnitude = 3.0 - i; // 3.0 for 1st, 2.0 for 2nd, 1.0 for 3rd
+          soldier.pendingJustifications.add(JustificationEvent(
+            type: JustificationType.praise,
+            description:
+                "Placed ${i + 1}${_getOrdinal(i + 1)} in the ${isHorseArchery ? 'Horse Archery' : 'Archery'} event.",
+            magnitude: magnitude,
+            expiryTurn: gameState.turn.turnNumber + 5,
+          ));
+        } else if (result.rankings.length > 5 &&
+            i >= result.rankings.length - 3) {
+          // Scold (only if more than 5 participants)
+          double magnitude = 1.0; // Standard scold
+          soldier.pendingJustifications.add(JustificationEvent(
+            type: JustificationType.scold,
+            description:
+                "Placed ${i == result.rankings.length - 1 ? 'last' : 'near last'} in the ${isHorseArchery ? 'Horse Archery' : 'Archery'} event.",
+            magnitude: magnitude,
+            expiryTurn: gameState.turn.turnNumber + 5,
+          ));
+        }
+      }
+    } else if (result is RaceEventResult) {
+      for (int i = 0; i < result.rankings.length; i++) {
+        final soldier = _findSoldierAnywhere(result.rankings[i], gameState);
+        if (soldier == null) continue;
+
+        int points = 0;
+        if (i == 0)
+          points = 40;
+        else if (i == 1)
+          points = 35;
+        else if (i == 2)
+          points = 20;
+        else if (i == 3)
+          points = 10;
+        else if (i == 4)
+          points = 5;
+        else if (i >= result.rankings.length - 3)
+          points = -10;
+        else if (i >= result.rankings.length - 7) points = -5;
+        award(soldier.aravt, points);
+
+        //  Add justifications
+        if (i < 3) {
+          soldier.pendingJustifications.add(JustificationEvent(
+            type: JustificationType.praise,
+            description:
+                "Placed ${i + 1}${_getOrdinal(i + 1)} in the Horse Race.",
+            magnitude: 3.0 - i,
+            expiryTurn: gameState.turn.turnNumber + 5,
+          ));
+        } else if (result.rankings.length > 5 &&
+            i >= result.rankings.length - 3) {
+          soldier.pendingJustifications.add(JustificationEvent(
+            type: JustificationType.scold,
+            description:
+                "Placed ${i == result.rankings.length - 1 ? 'last' : 'near last'} in the Horse Race.",
+            magnitude: 1.0,
+            expiryTurn: gameState.turn.turnNumber + 5,
+          ));
+        }
+      }
+    } else if (result is WrestlingEventResult) {
+      // 1st, 2nd, 3rd
+      for (int i = 0; i < min(result.rankings.length, 3); i++) {
+        final soldier = _findSoldierAnywhere(result.rankings[i], gameState);
+        if (soldier == null) continue;
+        int points = 0;
+        if (i == 0)
+          points = 50;
+        else if (i == 1)
+          points = 25;
+        else if (i == 2) points = 10;
+        award(soldier.aravt, points);
+
+        //  Add justifications
+        soldier.pendingJustifications.add(JustificationEvent(
+          type: JustificationType.praise,
+          description: "Placed ${i + 1}${_getOrdinal(i + 1)} in Wrestling.",
+          magnitude: 3.0 - i,
+          expiryTurn: gameState.turn.turnNumber + 5,
+        ));
+      }
+      // First round losers: -5 points
+      for (final soldierId in result.firstRoundLoserIds) {
+        final soldier = _findSoldierAnywhere(soldierId, gameState);
         if (soldier != null) {
-          award(soldier.aravt, points);
+          award(soldier.aravt, -5);
         }
       }
     } else if (result is BuzkashiEventResult) {
-      for (int i = 0; i < min(result.rankings.length, 4); i++) {
-        award(result.rankings[i], teamPoints[i] ?? 10);
+      for (int i = 0; i < min(result.rankings.length, 3); i++) {
+        int points = 0;
+        if (i == 0)
+          points = 90;
+        else if (i == 1)
+          points = 30;
+        else if (i == 2) points = 15;
+        award(result.rankings[i], points);
       }
+    }
+  }
+
+  String _getOrdinal(int n) {
+    if (n >= 11 && n <= 13) return 'th';
+    switch (n % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
     }
   }
 
@@ -265,6 +488,10 @@ class TournamentService {
       case TournamentEventType.archery:
         report.writeln("ARCHERY COMPETITION\n");
         if (result is ScoreBasedEventResult) {
+          // Header
+          report.writeln("Rank | Soldier | Aravt | Score | Points");
+          report.writeln("-" * 60);
+
           for (int i = 0; i < result.rankings.length; i++) {
             final soldier = _findSoldierAnywhere(result.rankings[i], gameState);
             if (soldier == null) continue;
@@ -272,19 +499,43 @@ class TournamentService {
             final aravt = gameState.findAravtById(soldier.aravt);
             final aravtName = aravt?.id ?? soldier.aravt;
             final score = result.scores[soldier.id] ?? 0;
-            final points = _getIndividualPoints(i);
 
-            report.writeln("${i + 1}. ${soldier.name} ($aravtName)");
-            report.writeln("   Score: $score/300 points");
-            report.writeln("   Tournament Points: $points");
-            report.writeln("");
+            // Calculate points
+            int points = 0;
+            if (i == 0)
+              points = 70;
+            else if (i == 1)
+              points = 35;
+            else if (i == 2)
+              points = 20;
+            else if (i == 3)
+              points = 10;
+            else if (i == 4)
+              points = 5;
+            else if (i >= result.rankings.length - 3)
+              points = -10;
+            else if (i >= result.rankings.length - 7) points = -5;
+
+            final rankStr = "${i + 1}.";
+            final nameStr = soldier.name;
+            final aravtStr = aravtName;
+            final scoreStr = score.toString();
+            final pointsStr = points.toString();
+
+            report.writeln(
+                "$rankStr | $nameStr | $aravtStr | $scoreStr | $pointsStr");
           }
+          report.writeln("");
         }
         break;
 
       case TournamentEventType.horseRace:
         report.writeln("HORSE RACE\n");
         if (result is RaceEventResult) {
+          // Header
+          report.writeln("Rank | Horse | Soldier | Aravt | Time | Points");
+          report.writeln("-" * 75);
+
           for (int i = 0; i < result.rankings.length; i++) {
             final soldier = _findSoldierAnywhere(result.rankings[i], gameState);
             if (soldier == null) continue;
@@ -295,38 +546,66 @@ class TournamentService {
                     soldierId: -1, horseName: 'Unknown', time: 9999));
             final aravt = gameState.findAravtById(soldier.aravt);
             final aravtName = aravt?.id ?? soldier.aravt;
-            final points = _getIndividualPoints(i);
+
+            // Calculate points
+            int points = 0;
+            if (i == 0)
+              points = 40;
+            else if (i == 1)
+              points = 35;
+            else if (i == 2)
+              points = 20;
+            else if (i == 3)
+              points = 10;
+            else if (i == 4)
+              points = 5;
+            else if (i >= result.rankings.length - 3)
+              points = -10;
+            else if (i >= result.rankings.length - 7) points = -5;
 
             int minutes = (entry.time / 60).floor();
             double seconds = entry.time % 60;
             String timeText =
                 "$minutes:${seconds.toStringAsFixed(2).padLeft(5, '0')}";
 
+            final rankStr = "${i + 1}.";
+            final horseStr = entry.horseName;
+            final nameStr = soldier.name;
+            final aravtStr = aravtName;
+            final timeStr = timeText;
+            final pointsStr = points.toString();
+
             report.writeln(
-                "${i + 1}. ${entry.horseName} - ${soldier.name} ($aravtName)");
-            report.writeln("   Time: $timeText");
-            report.writeln("   Tournament Points: $points");
-            report.writeln("");
+                "$rankStr | $horseStr | $nameStr | $aravtStr | $timeStr | $pointsStr");
           }
+          report.writeln("");
         }
         break;
 
       case TournamentEventType.wrestling:
         report.writeln("WRESTLING TOURNAMENT\n");
         if (result is WrestlingEventResult) {
+          // Tree-like representation for Wrestling
+          report.writeln("Tournament Bracket:");
           for (final round in result.rounds) {
-            report.writeln("${round.name}:");
+            report.writeln("\n--- ${round.name} ---");
             for (final match in round.matches) {
               final s1 = _findSoldierAnywhere(match.soldier1Id, gameState);
               final s2 = _findSoldierAnywhere(match.soldier2Id, gameState);
               final winner = _findSoldierAnywhere(match.winnerId, gameState);
 
-              report.writeln(
-                  "  ${s1?.name ?? 'Unknown'} vs ${s2?.name ?? 'Unknown'}");
-              report.writeln("  Winner: ${winner?.name ?? 'Unknown'}");
+              final s1Name = s1?.name ?? 'Unknown';
+              final s2Name = s2?.name ?? 'Unknown';
+              final winnerName = winner?.name ?? 'Unknown';
+
+              // Visual bracket representation
+              report.writeln("  $s1Name  ──┐");
+              report.writeln("              ├──> $winnerName");
+              report.writeln("  $s2Name  ──┘");
+              report.writeln("");
             }
-            report.writeln("");
           }
+          report.writeln("\n");
 
           report.writeln("Final Rankings:");
           for (int i = 0; i < result.rankings.length; i++) {
@@ -335,7 +614,15 @@ class TournamentService {
 
             final aravt = gameState.findAravtById(soldier.aravt);
             final aravtName = aravt?.id ?? soldier.aravt;
-            final points = _getIndividualPoints(i);
+
+            // Calculate points for report
+            int points = 0;
+            if (i == 0)
+              points = 50;
+            else if (i == 1)
+              points = 25;
+            else if (i == 2) points = 10;
+            // First round losers not listed in rankings, but handled in text if needed.
 
             report.writeln(
                 "${i + 1}. ${soldier.name} ($aravtName) - $points points");
@@ -346,6 +633,11 @@ class TournamentService {
       case TournamentEventType.horseArchery:
         report.writeln("HORSE ARCHERY COMPETITION\n");
         if (result is ScoreBasedEventResult) {
+          // Header
+          report.writeln(
+              "Rank | Soldier | Horse | Aravt | Score | Time | Points");
+          report.writeln("-" * 80);
+
           for (int i = 0; i < result.rankings.length; i++) {
             final soldier = _findSoldierAnywhere(result.rankings[i], gameState);
             if (soldier == null) continue;
@@ -355,7 +647,7 @@ class TournamentService {
             try {
               final horseItem = soldier.equippedItems.values
                   .firstWhere((i) => i.templateId == 'mnt_horse');
-              horseName = horseItem.name ?? "Horse";
+              horseName = horseItem.name;
             } catch (e) {
               // No horse equipped
             }
@@ -363,22 +655,51 @@ class TournamentService {
             final aravt = gameState.findAravtById(soldier.aravt);
             final aravtName = aravt?.id ?? soldier.aravt;
             final score = result.scores[soldier.id] ?? 0;
-            final points = _getIndividualPoints(i);
+
+            // Calculate points
+            int points = 0;
+            if (i == 0)
+              points = 80;
+            else if (i == 1)
+              points = 40;
+            else if (i == 2)
+              points = 25;
+            else if (i == 3)
+              points = 15;
+            else if (i == 4)
+              points = 10;
+            else if (i >= result.rankings.length - 3)
+              points = -10;
+            else if (i >= result.rankings.length - 7) points = -5;
+
+            // Flavor completion time (not tracked in logic, but requested for report)
+            // Base time 60s + random variance based on score (higher score = slightly faster usually, but let's just randomize)
+            double time =
+                60.0 + (100 - score / 1.5) + (_random.nextDouble() * 10);
+            String timeStr = "${time.toStringAsFixed(1)}s";
+
+            final rankStr = "${i + 1}.";
+            final nameStr = soldier.name;
+            final horseStr = horseName;
+            final aravtStr = aravtName;
+            final scoreStr = score.toString();
+            final timeStrCol = timeStr;
+            final pointsStr = points.toString();
 
             report.writeln(
-                "${i + 1}. ${soldier.name} on $horseName ($aravtName)");
-            report.writeln("   Composite Score: $score points");
-            report.writeln("   Tournament Points: $points");
-            report.writeln("");
+                "$rankStr | $nameStr | $horseStr | $aravtStr | $scoreStr | $timeStrCol | $pointsStr");
           }
+          report.writeln("");
         }
         break;
 
       case TournamentEventType.buzkashi:
         report.writeln("BUZKASHI TOURNAMENT\n");
         if (result is BuzkashiEventResult) {
+          // Tree-like representation for Buzkashi
+          report.writeln("Tournament Bracket:");
           for (final round in result.rounds) {
-            report.writeln("${round.name}:");
+            report.writeln("\n--- ${round.name} ---");
             for (final match in round.matches) {
               final aravt1 = gameState.findAravtById(match.aravt1Id);
               final aravt2 = gameState.findAravtById(match.aravt2Id);
@@ -392,29 +713,38 @@ class TournamentService {
                   captain1 != null ? "${captain1.name}'s Team" : match.aravt1Id;
               final team2Name =
                   captain2 != null ? "${captain2.name}'s Team" : match.aravt2Id;
+              final winnerName =
+                  match.winnerId == match.aravt1Id ? team1Name : team2Name;
 
-              report.writeln(
-                  "  $team1Name (${match.score1}) vs $team2Name (${match.score2})");
-              report.writeln(
-                  "  Winner: ${match.winnerId == match.aravt1Id ? team1Name : team2Name}");
+              // Visual bracket representation
+              report.writeln("  $team1Name (${match.score1})  ──┐");
+              report
+                  .writeln("                                ├──> $winnerName");
+              report.writeln("  $team2Name (${match.score2})  ──┘");
+              report.writeln("");
 
               if (match.goalScorers.isNotEmpty) {
-                report.write("  Scorers: ");
                 final scorerNames = match.goalScorers.entries.map((e) {
                   final scorer = _findSoldierAnywhere(e.key, gameState);
                   return "${scorer?.firstName ?? 'Unknown'} (${e.value})";
                 }).join(", ");
-                report.writeln(scorerNames);
+                report.writeln("      Scorers: $scorerNames");
               }
             }
-            report.writeln("");
           }
+          report.writeln("\n");
 
           report.writeln("Final Rankings:");
           for (int i = 0; i < result.rankings.length; i++) {
             final aravt = gameState.findAravtById(result.rankings[i]);
             final teamName = aravt?.id ?? result.rankings[i];
-            final points = _getTeamPoints(i);
+
+            int points = 0;
+            if (i == 0)
+              points = 90;
+            else if (i == 1)
+              points = 30;
+            else if (i == 2) points = 15;
 
             report.writeln("${i + 1}. $teamName - $points points");
           }
@@ -423,16 +753,6 @@ class TournamentService {
     }
 
     return report.toString();
-  }
-
-  int _getIndividualPoints(int rank) {
-    const Map<int, int> points = {0: 50, 1: 30, 2: 20, 3: 15, 4: 10};
-    return points[rank] ?? 5;
-  }
-
-  int _getTeamPoints(int rank) {
-    const Map<int, int> points = {0: 100, 1: 60, 2: 40, 3: 20};
-    return points[rank] ?? 10;
   }
 
   // --- HELPER: Find soldier across ALL lists to avoid "Unknown" ---
@@ -466,12 +786,24 @@ class TournamentService {
         }
       }
     }
+    // Sort participants: Captains first, then by name
+    participants.sort((a, b) {
+      if (a.role == SoldierRole.aravtCaptain &&
+          b.role != SoldierRole.aravtCaptain) {
+        return -1;
+      }
+      if (a.role != SoldierRole.aravtCaptain &&
+          b.role == SoldierRole.aravtCaptain) {
+        return 1;
+      }
+      return a.name.compareTo(b.name);
+    });
     return participants;
   }
 
   // --- INDIVIDUAL EVENTS ---
 
-  // [GEMINI-UPDATED] Archery: 30 arrows, 0-10 points each to reduce ties
+
   ScoreBasedEventResult _runArchery(List<Aravt> aravts, GameState gameState) {
     final Map<int, int> scores = {};
     final List<Soldier> participants = _getAllSoldiers(aravts, gameState);
@@ -505,7 +837,7 @@ class TournamentService {
     return ScoreBasedEventResult(scores: scores, rankings: rankings);
   }
 
-  // [GEMINI-UPDATED] Horse Race: Names horses, uses new entry model
+
   RaceEventResult _runHorseRace(List<Aravt> aravts, GameState gameState) {
     final List<RaceResultEntry> entries = [];
     final List<Soldier> participants = _getAllSoldiers(aravts, gameState);
@@ -523,13 +855,13 @@ class TournamentService {
       String horseName = "On Foot";
 
       if (horseItem != null) {
-        // [GEMINI-NEW] Name nameless horses if they have generic names
+        //  Name nameless horses if they have generic names
         if (horseItem.name == 'Steppe Horse' ||
             horseItem.name.contains('Quality Steppe Horse')) {
           // Generate a new name.
           // Note: In a real persistent system, we'd update the item itself.
           // For this tournament simulation, we'll just use it for the report.
-          // [GEMINI-FIX] Use PUBLIC method now
+
           horseName = ItemDatabase.getRandomHorseName();
         } else {
           horseName = horseItem.name;
@@ -537,8 +869,8 @@ class TournamentService {
 
         // Cast to Mount to get actual speed if possible, else estimate
         if (horseItem is Mount) {
-          horseSpeed = (horseItem as Mount).speed.toDouble() +
-              3.0; // Base speed + mount stat
+          horseSpeed =
+              horseItem.speed.toDouble() + 3.0; // Base speed + mount stat
         } else {
           horseSpeed = 8.0 + _random.nextDouble() * 2.0;
         }
@@ -578,13 +910,15 @@ class TournamentService {
             (soldier.horsemanship * 3.0) +
             (_random.nextInt(40) - 20);
 
-        if (hitChance > 85)
+        if (hitChance > 85) {
           totalScore += 10;
-        else if (hitChance > 65)
+        } else if (hitChance > 65) {
           totalScore += 7;
-        else if (hitChance > 45)
+        } else if (hitChance > 45) {
           totalScore += 4;
-        else if (hitChance > 25) totalScore += 1;
+        } else if (hitChance > 25) {
+          totalScore += 1;
+        }
       }
       scores[soldier.id] = totalScore;
     }
@@ -638,7 +972,20 @@ class TournamentService {
     List<int> rankings = [];
     if (currentRoundSoldiers.isNotEmpty) rankings.add(currentRoundSoldiers[0]);
 
-    return WrestlingEventResult(rounds: rounds, rankings: rankings);
+    // Track first round losers (from Round 1 matches)
+    List<int> firstRoundLosers = [];
+    if (rounds.isNotEmpty) {
+      for (final match in rounds[0].matches) {
+        firstRoundLosers.add(match.winnerId == match.soldier1Id
+            ? match.soldier2Id
+            : match.soldier1Id);
+      }
+    }
+
+    return WrestlingEventResult(
+        rounds: rounds,
+        rankings: rankings,
+        firstRoundLoserIds: firstRoundLosers);
   }
 
   BuzkashiEventResult _runBuzkashi(List<Aravt> aravts, GameState gameState) {

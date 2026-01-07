@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // models/interaction_models.dart
 
 /// Type of interaction performed by the player.
@@ -9,14 +23,14 @@ enum InteractionType {
   gift,
 }
 
-// --- NEW: Helper function ---
+
 InteractionType _interactionTypeFromName(String? name) {
   for (final value in InteractionType.values) {
     if (value.name == name) return value;
   }
   return InteractionType.inquire;
 }
-// --- END NEW ---
+
 
 /// Represents a single entry in a soldier's interaction log.
 class InteractionLogEntry {
@@ -34,7 +48,7 @@ class InteractionLogEntry {
     this.informationRevealed = '',
   });
 
-  // --- NEW: JSON Serialization ---
+
   Map<String, dynamic> toJson() => {
         'dateString': dateString,
         'type': type.name,
@@ -52,7 +66,7 @@ class InteractionLogEntry {
       informationRevealed: json['informationRevealed'] ?? '',
     );
   }
-  // --- END NEW ---
+
 }
 
 /// Used to log a soldier's significant positive or negative actions.
@@ -69,7 +83,7 @@ class PerformanceEvent {
     this.magnitude = 1.0,
   });
 
-  // --- NEW: JSON Serialization ---
+
   Map<String, dynamic> toJson() => {
         'turnNumber': turnNumber,
         'description': description,
@@ -85,7 +99,7 @@ class PerformanceEvent {
       magnitude: json['magnitude'] ?? 1.0,
     );
   }
-  // --- END NEW ---
+
 }
 
 /// Represents a piece of information a soldier wants to tell the player.
@@ -102,7 +116,7 @@ class QueuedListenItem {
     this.urgency = 1.0,
   });
 
-  // --- NEW: JSON Serialization ---
+
   Map<String, dynamic> toJson() => {
         'message': message,
         'eventId': eventId,
@@ -118,7 +132,7 @@ class QueuedListenItem {
       urgency: json['urgency'] ?? 1.0,
     );
   }
-  // --- END NEW ---
+
 }
 
 /// The result bundle returned from the InteractionService after processing.

@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -324,19 +338,34 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
         totalValueRaw: gameState.communalScrap * 0.1,
       ));
     }
-    if (gameState.communalArrows > 0) {
+    if (gameState.communalShortArrows > 0) {
       double val = 0.5;
       entries.add(_LedgerEntry(
         icon: const Icon(Icons.arrow_upward, color: Colors.white70, size: 24),
-        name: "Arrows (Standard)",
-        quantity: '${gameState.communalArrows}',
-        weight: (gameState.communalArrows * 0.05).toStringAsFixed(1),
+        name: "Short Arrows",
+        quantity: '${gameState.communalShortArrows}',
+        weight: (gameState.communalShortArrows * 0.05).toStringAsFixed(1),
         rupeeValue: val.toStringAsFixed(1),
         scrapValue: '0',
         quality: 'Standard',
         origin: 'Crafted',
         type: 'Ammo',
-        totalValueRaw: gameState.communalArrows * val,
+        totalValueRaw: gameState.communalShortArrows * val,
+      ));
+    }
+    if (gameState.communalLongArrows > 0) {
+      double val = 0.7;
+      entries.add(_LedgerEntry(
+        icon: const Icon(Icons.arrow_upward, color: Colors.white70, size: 24),
+        name: "Long Arrows",
+        quantity: '${gameState.communalLongArrows}',
+        weight: (gameState.communalLongArrows * 0.08).toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Standard',
+        origin: 'Crafted',
+        type: 'Ammo',
+        totalValueRaw: gameState.communalLongArrows * val,
       ));
     }
 

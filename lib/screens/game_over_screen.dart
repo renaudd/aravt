@@ -1,8 +1,21 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
-import '../models/combat_models.dart';
 import '../models/soldier_data.dart';
 
 class GameOverScreen extends StatelessWidget {
@@ -113,8 +126,8 @@ class GameOverScreen extends StatelessWidget {
                       ),
                       onPressed: () {
                         // Pop everything until we are back at the Main Menu
-                        Navigator.of(context)
-                            .popUntil(ModalRoute.withName('/mainMenu'));
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/mainMenu', (route) => false);
                       },
                       child: Text("RETURN TO MAIN MENU",
                           style: GoogleFonts.cinzel(

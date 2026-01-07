@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/widgets/aravt_map_icon.dart
 
 import 'dart:async';
@@ -118,19 +132,17 @@ class _AravtIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()..filterQuality = FilterQuality.low;
-    final int frame =
-        (animationValue * _AravtMapIconState.frameCount).floor() %
-            _AravtMapIconState.frameCount;
+    final int frame = (animationValue * _AravtMapIconState.frameCount).floor() %
+        _AravtMapIconState.frameCount;
 
-    final double srcLeft =
-        (frame * _AravtMapIconState.frameWidth).toDouble();
+    final double srcLeft = (frame * _AravtMapIconState.frameWidth).toDouble();
     final Rect srcRect = Rect.fromLTWH(
       srcLeft,
       0,
       _AravtMapIconState.frameWidth.toDouble(),
       _AravtMapIconState.frameHeight.toDouble(),
     );
-    
+
     // Draw centered in the widget's Size
     final Rect dstRect = Rect.fromCenter(
       center: Offset(size.width / 2, size.height / 2),
@@ -144,7 +156,6 @@ class _AravtIconPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _AravtIconPainter oldDelegate) {
     return oldDelegate.animationValue != animationValue ||
-           oldDelegate.spritesheet != spritesheet;
+        oldDelegate.spritesheet != spritesheet;
   }
 }
-

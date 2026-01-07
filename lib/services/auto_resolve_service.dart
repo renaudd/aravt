@@ -1,24 +1,33 @@
-// services/auto_resolve_service.dart
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+// services/auto_resolve_service.dart
 
 import 'dart:math';
 
-
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/combat_report.dart';
-import 'package:aravt/models/game_date.dart';
 import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
-
 
 /// This service probabilistically resolves a combat encounter
 /// without running the full turn-by-turn simulation.
 /// Used for NPC vs. NPC battles.
 class AutoResolveService {
   final Random _random = Random();
-
 
   /// Resolves a combat and returns a generated CombatReport.
   CombatReport resolveCombat({
@@ -30,28 +39,23 @@ class AutoResolveService {
   }) {
     print("Auto-Resolving Combat...");
 
-
     // 1. Get the full list of participants
     final List<Soldier> attackers =
         _getSoldiersFromAravts(attackerAravts, allAttackerSoldiers);
     final List<Soldier> defenders =
         _getSoldiersFromAravts(defenderAravts, allDefenderSoldiers);
 
-
     // 2. Calculate combat strength for each side
     double attackerStrength = _calculateCombatStrength(attackers);
     double defenderStrength = _calculateCombatStrength(defenders);
-
 
     // 3. Determine Winner
     attackerStrength *= (0.8 + _random.nextDouble() * 0.4); // 80% - 120%
     defenderStrength *= (0.8 + _random.nextDouble() * 0.4); // 80% - 120%
 
-
     bool attackerWon = attackerStrength > defenderStrength;
     CombatResult result =
         attackerWon ? CombatResult.playerVictory : CombatResult.playerDefeat;
-
 
     // 4. Calculate casualty *counts*
     int attackerKilledCount = 0;
@@ -59,7 +63,6 @@ class AutoResolveService {
     int defenderKilledCount = 0;
     int defenderWoundedCount = 0;
     List<Soldier> captives = [];
-
 
     if (attackerWon) {
       // Attacker wins, defenders suffer more
@@ -69,8 +72,8 @@ class AutoResolveService {
       defenderWoundedCount =
           (defenders.length * (_random.nextDouble() * 0.4 + 0.2))
               .round(); // 20-60% wounded
-      attackerKilledCount =
-          (attackers.length * (_random.nextDouble() * 0.1)).round(); // 0-10% killed
+      attackerKilledCount = (attackers.length * (_random.nextDouble() * 0.1))
+          .round(); // 0-10% killed
       attackerWoundedCount =
           (attackers.length * (_random.nextDouble() * 0.2 + 0.1))
               .round(); // 10-30% wounded
@@ -82,25 +85,25 @@ class AutoResolveService {
       attackerWoundedCount =
           (attackers.length * (_random.nextDouble() * 0.4 + 0.2))
               .round(); // 20-60% wounded
-      defenderKilledCount =
-          (defenders.length * (_random.nextDouble() * 0.1)).round(); // 0-10% killed
+      defenderKilledCount = (defenders.length * (_random.nextDouble() * 0.1))
+          .round(); // 0-10% killed
       defenderWoundedCount =
           (defenders.length * (_random.nextDouble() * 0.2 + 0.1))
               .round(); // 10-30% wounded
     }
-    
+
     // Clamp counts to not exceed total soldiers
     attackerKilledCount = attackerKilledCount.clamp(0, attackers.length);
-    attackerWoundedCount = (attackerWoundedCount).clamp(0, attackers.length - attackerKilledCount);
+    attackerWoundedCount =
+        (attackerWoundedCount).clamp(0, attackers.length - attackerKilledCount);
     defenderKilledCount = defenderKilledCount.clamp(0, defenders.length);
-    defenderWoundedCount = (defenderWoundedCount).clamp(0, defenders.length - defenderKilledCount);
-
+    defenderWoundedCount =
+        (defenderWoundedCount).clamp(0, defenders.length - defenderKilledCount);
 
     // 5. Apply status and create casualty lists
     // Shuffle lists to randomize who is a casualty
     attackers.shuffle(_random);
     defenders.shuffle(_random);
-
 
     final List<Soldier> attackerCasualtiesKilled = [];
     final List<Soldier> attackerCasualtiesWounded = [];
@@ -108,7 +111,6 @@ class AutoResolveService {
     final List<Soldier> defenderCasualtiesWounded = [];
     final List<Soldier> livingAttackers = [];
     final List<Soldier> livingDefenders = [];
-
 
     // Process Attackers
     for (int i = 0; i < attackers.length; i++) {
@@ -125,7 +127,6 @@ class AutoResolveService {
         livingAttackers.add(s);
       }
     }
-
 
     // Process Defenders
     for (int i = 0; i < defenders.length; i++) {
@@ -147,7 +148,6 @@ class AutoResolveService {
       }
     }
 
-
     // 6. Probabilistically assign casualties to victors
     final List<Soldier> allAttackerCasualties = [
       ...attackerCasualtiesKilled,
@@ -158,12 +158,10 @@ class AutoResolveService {
       ...defenderCasualtiesWounded
     ];
 
-
-    final Map<int, List<Soldier>> attackerDefeatMap = _assignCasualties(
-        livingAttackers, allDefenderCasualties);
-    final Map<int, List<Soldier>> defenderDefeatMap = _assignCasualties(
-        livingDefenders, allAttackerCasualties);
-
+    final Map<int, List<Soldier>> attackerDefeatMap =
+        _assignCasualties(livingAttackers, allDefenderCasualties);
+    final Map<int, List<Soldier>> defenderDefeatMap =
+        _assignCasualties(livingDefenders, allAttackerCasualties);
 
     // 7. Generate simplified report summaries
     List<CombatReportSoldierSummary> attackerSummaries = attackers.map((s) {
@@ -176,7 +174,6 @@ class AutoResolveService {
       );
     }).toList();
 
-
     List<CombatReportSoldierSummary> defenderSummaries = defenders.map((s) {
       return CombatReportSoldierSummary(
         originalSoldier: s,
@@ -187,14 +184,12 @@ class AutoResolveService {
       );
     }).toList();
 
-
     // 8. Generate Loot Report
     // This is now handled by the new LootDistributionService
     // We create an empty report here, as the loot service will
     // modify soldier inventories directly.
     LootReport lootObtained = LootReport.empty();
     LootReport lootLost = LootReport.empty();
-
 
     // 9. Create the final report
     final CombatReport report = CombatReport(
@@ -208,7 +203,6 @@ class AutoResolveService {
       captives: captives,
     );
 
-
     // 10. Add report to game log
     gameState.addCombatReport(report);
     gameState.logEvent(
@@ -218,10 +212,8 @@ class AutoResolveService {
       severity: EventSeverity.high,
     );
 
-
     return report;
   }
-
 
   /// Probabilistically assigns a list of casualties to a list of victors.
   Map<int, List<Soldier>> _assignCasualties(
@@ -231,7 +223,6 @@ class AutoResolveService {
       return defeatMap;
     }
 
-
     // Calculate total strength of the victors
     double totalVictorStrength = 0;
     final Map<int, double> victorStrengths = {};
@@ -240,7 +231,6 @@ class AutoResolveService {
       victorStrengths[victor.id] = strength;
       totalVictorStrength += strength;
     }
-
 
     if (totalVictorStrength == 0) {
       // Fallback: assign randomly if total strength is zero
@@ -254,12 +244,10 @@ class AutoResolveService {
       return defeatMap;
     }
 
-
     // Assign each casualty based on weighted probability
     for (final casualty in casualties) {
       double roll = _random.nextDouble() * totalVictorStrength;
       double cumulativeStrength = 0;
-
 
       for (final victor in victors) {
         cumulativeStrength += victorStrengths[victor.id]!;
@@ -275,11 +263,9 @@ class AutoResolveService {
     return defeatMap;
   }
 
-
   /// Calculates the total combat strength of a list of soldiers.
   double _calculateCombatStrength(List<Soldier> soldiers) {
     if (soldiers.isEmpty) return 0;
-
 
     double totalStrength = 0;
     for (final soldier in soldiers) {
@@ -294,25 +280,21 @@ class AutoResolveService {
               soldier.experience) /
           8.0;
 
-
       // Bonus/Penalty for health and exhaustion
       double healthModifier =
           (soldier.bodyHealthCurrent / soldier.bodyHealthMax);
-      double exhaustionModifier =
-          1.0 - (soldier.exhaustion / 10.0 * 0.5); // 50% penalty at max exhaustion
-
+      double exhaustionModifier = 1.0 -
+          (soldier.exhaustion / 10.0 * 0.5); // 50% penalty at max exhaustion
 
       // TODO: Add equipment bonus
       // double equipmentBonus = _calculateEquipmentBonus(soldier.equippedItems);
       // soldierStrength += equipmentBonus;
 
-
-      totalStrength +=
-          (soldierStrength * healthModifier * exhaustionModifier).clamp(0.1, double.maxFinite); // Ensure non-zero strength
+      totalStrength += (soldierStrength * healthModifier * exhaustionModifier)
+          .clamp(0.1, double.maxFinite); // Ensure non-zero strength
     }
     return totalStrength;
   }
-
 
   /// Helper to get all soldiers from a list of aravts.
   List<Soldier> _getSoldiersFromAravts(
@@ -324,13 +306,14 @@ class AutoResolveService {
           // Find the soldier *instance* from the main horde list
           soldiers.add(horde.firstWhere((s) => s.id == soldierId));
         } catch (e) {
-          print("Warning: Soldier $soldierId in aravt ${aravt.id} not found in horde.");
+          print(
+              "Warning: Soldier $soldierId in aravt ${aravt.id} not found in horde.");
         }
       }
     }
     // Return only soldiers who are not already killed, captured, etc.
-    return soldiers.where((s) => s.status == SoldierStatus.alive && !s.isImprisoned).toList();
+    return soldiers
+        .where((s) => s.status == SoldierStatus.alive && !s.isImprisoned)
+        .toList();
   }
 }
-
-

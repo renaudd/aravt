@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +25,10 @@ import 'package:aravt/models/herd_data.dart';
 import 'package:aravt/models/resource_report.dart';
 import 'package:aravt/models/trade_report.dart';
 import 'package:aravt/models/culinary_news.dart';
+import 'package:aravt/models/fletching_report.dart';
 import 'package:aravt/screens/soldier_profile_screen.dart';
+import 'package:aravt/widgets/notification_badge.dart';
+import '../screens/post_combat_report_screen.dart';
 import 'dart:math' as math;
 
 // --- HELPER CLASSES & WIDGETS ---
@@ -180,7 +197,7 @@ class EventLogTab extends StatelessWidget {
         return false; // Hide unknown events in non-omniscient mode
       }
 
-      // [GEMINI-NEW] Filter out NPC-only activities from global reports
+      //  Filter out NPC-only activities from global reports
       // Keep events that are:
       // 1. Related to player's soldiers
       // 2. Related to player's aravts
@@ -207,10 +224,11 @@ class EventLogTab extends StatelessWidget {
       }
 
       // For events without specific relations, show general/travel/diplomacy categories
-      // as they might be world events relevant to the player
-      if (event.category == EventCategory.general ||
-          event.category == EventCategory.travel ||
-          event.category == EventCategory.diplomacy) {
+      // as they might be world events relevant to the player, BUT ONLY IF isPlayerKnown is true
+      if (event.isPlayerKnown &&
+          (event.category == EventCategory.general ||
+              event.category == EventCategory.travel ||
+              event.category == EventCategory.diplomacy)) {
         return true;
       }
 
@@ -229,9 +247,19 @@ class EventLogTab extends StatelessWidget {
         itemCount: events.length,
         itemBuilder: (context, index) {
           final event = events[index];
+          final isPlayerAravt = gameState.isPlayerAravtReport(event);
           return Card(
-            color: Colors.black.withOpacity(0.6),
+            color: isPlayerAravt
+                ? Colors.amber.withOpacity(0.2)
+                : Colors.black.withOpacity(0.6),
             margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            borderOnForeground: true,
+            shape: isPlayerAravt
+                ? RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.amber, width: 1),
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                : null,
             child: ListTile(
               leading: Icon(_getIconForEvent(event.category),
                   color: _getColorForSeverity(event.severity)),
@@ -314,8 +342,18 @@ class CombatReportTab extends StatelessWidget {
         itemBuilder: (context, index) {
           final report = reversedReports[index];
           return Card(
-            color: Colors.black.withOpacity(0.6),
-            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            color: Colors.black.withOpacity(0.5),
+            margin: const EdgeInsets.only(bottom: 8.0),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        PostCombatReportScreen(report: report),
+                  ),
+                );
+              },
             child: ListTile(
               leading: Icon(_getIconForReport(report.result),
                   color: _getColorForReport(report.result), size: 40),
@@ -330,6 +368,7 @@ class CombatReportTab extends StatelessWidget {
                 "${report.date.toString()}\n${report.playerInitialCount} soldiers vs ${report.enemyInitialCount} enemies",
                 style: const TextStyle(color: Colors.white70),
               ),
+            ),
             ),
           );
         },
@@ -462,7 +501,7 @@ class HealthReportTab extends StatelessWidget {
   }
 }
 
-// [GEMINI-UPDATED] Renamed FinanceReportTab to CommerceReportTab
+
 // Merges Finance (Treasury) and Industry (Materials)
 class CommerceReportTab extends StatefulWidget {
   final bool isOmniscient;
@@ -522,7 +561,11 @@ class _CommerceReportTabState extends State<CommerceReportTab> {
     final isSelected = _selectedIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedIndex = index),
+        onTap: () {
+          setState(() => _selectedIndex = index);
+          final gameState = context.read<GameState>();
+          gameState.markReportTabViewed('Commerce', subTab: label);
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12.0),
           decoration: BoxDecoration(
@@ -542,6 +585,12 @@ class _CommerceReportTabState extends State<CommerceReportTab> {
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
                   )),
+              const SizedBox(width: 4),
+              NotificationBadge(
+                count: context
+                    .watch<GameState>()
+                    .getBadgeCountForCommerceSubTab(label),
+              ),
             ],
           ),
         ),
@@ -597,6 +646,7 @@ class _FinanceViewState extends State<_FinanceView> {
         _buildWealthEvents(gameState),
         const SizedBox(height: 20),
         _buildTradeReports(gameState),
+        _buildPillageReports(gameState),
         const SizedBox(height: 80), // Bottom padding
       ],
     );
@@ -775,6 +825,58 @@ class _FinanceViewState extends State<_FinanceView> {
     );
   }
 
+  Widget _buildPillageReports(GameState gameState) {
+    if (gameState.pillageReports.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        _buildSectionHeader("Pillage Reports"),
+        ...gameState.pillageReports.reversed.map((report) {
+          return Card(
+            color: Colors.black.withOpacity(0.6),
+            child: ExpansionTile(
+              leading: const Icon(Icons.gavel, color: Colors.amber),
+              title: Text(
+                "Pillaged ${report.locationName}",
+                style: GoogleFonts.cinzel(color: Colors.white),
+              ),
+              subtitle: Text(
+                "${report.date.toIso8601String().substring(0, 10)} - Total Value: ${report.totalValue.toStringAsFixed(0)} §",
+                style: const TextStyle(color: Colors.white70),
+              ),
+              children: [
+                ListTile(
+                  title: const Text("Scrap Pillaged",
+                      style: TextStyle(color: Colors.white70)),
+                  trailing: Text("${report.scrapPillaged.toStringAsFixed(0)} §",
+                      style: const TextStyle(color: Colors.amber)),
+                ),
+                if (report.animalsTaken > 0)
+                  ListTile(
+                    title: const Text("Animals Taken",
+                        style: TextStyle(color: Colors.white70)),
+                    trailing: Text("${report.animalsTaken}",
+                        style: const TextStyle(color: Colors.amber)),
+                  ),
+                if (report.prisonersTaken > 0)
+                  ListTile(
+                    title: const Text("Prisoners Taken",
+                        style: TextStyle(color: Colors.white70)),
+                    trailing: Text("${report.prisonersTaken}",
+                        style: const TextStyle(color: Colors.amber)),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
   Widget _buildTradeReports(GameState gameState) {
     final reports = gameState.tradeReports.reversed.take(10).toList();
 
@@ -892,7 +994,9 @@ class _IndustryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
-    final reports = gameState.resourceReports.reversed.take(20).toList();
+    final resourceReports = gameState.resourceReports
+        .where((r) => gameState.aravts.any((a) => a.id == r.aravtId))
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -903,15 +1007,27 @@ class _IndustryView extends StatelessWidget {
         _buildMaterialFlowSummary(gameState),
         const Divider(color: Colors.white24, height: 40),
         _buildSectionHeader("Production Log"),
-        if (reports.isEmpty)
+        if (resourceReports.isEmpty && gameState.fletchingReports.isEmpty)
           const Center(
               child: Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Text("No industry reports filed yet.",
-                style: TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: Colors.white54)),
           ))
-        else
-          ...reports.map((r) => _buildResourceReportCard(r, context)),
+        else ...[
+          ...(() {
+            final list = [
+              ...resourceReports.map((r) =>
+                  MapEntry(r.turn, _buildResourceReportCard(r, context))),
+              ...gameState.fletchingReports
+                  .where((r) => gameState.aravts.any((a) => a.id == r.aravtId))
+                  .map((r) =>
+                      MapEntry(r.turn, _buildFletchingReportCard(r, context)))
+            ];
+            list.sort((a, b) => b.key.compareTo(a.key));
+            return list.map((e) => e.value).take(20).toList();
+          })(),
+        ],
         const SizedBox(height: 80),
       ],
     );
@@ -920,14 +1036,14 @@ class _IndustryView extends StatelessWidget {
   Widget _buildStockpiles(GameState gameState, BuildContext context) {
     final List<_LedgerEntry> entries = [];
 
-    if (gameState.communalWood > 0) {
+    if (gameState.cumulativeWoodGathered > 0) {
       double val = 0.5; // Base value per kg
-      double total = gameState.communalWood * val;
+      double total = gameState.cumulativeWoodGathered * val;
       entries.add(_LedgerEntry(
         icon: Icons.forest,
-        name: 'Wood',
-        quantity: gameState.communalWood.toStringAsFixed(0),
-        weight: gameState.communalWood.toStringAsFixed(0),
+        name: 'Wood Gathered',
+        quantity: gameState.cumulativeWoodGathered.toStringAsFixed(0),
+        weight: gameState.cumulativeWoodGathered.toStringAsFixed(0),
         rupeeValue: val.toStringAsFixed(1),
         scrapValue: '0',
         quality: 'Normal',
@@ -936,14 +1052,14 @@ class _IndustryView extends StatelessWidget {
         totalValueRaw: total,
       ));
     }
-    if (gameState.communalIronOre > 0) {
+    if (gameState.cumulativeIronMined > 0) {
       double val = 2.0;
-      double total = gameState.communalIronOre * val;
+      double total = gameState.cumulativeIronMined * val;
       entries.add(_LedgerEntry(
         icon: Icons.landscape,
-        name: 'Iron Ore',
-        quantity: gameState.communalIronOre.toStringAsFixed(0),
-        weight: gameState.communalIronOre.toStringAsFixed(0),
+        name: 'Iron Ore Mined',
+        quantity: gameState.cumulativeIronMined.toStringAsFixed(0),
+        weight: gameState.cumulativeIronMined.toStringAsFixed(0),
         rupeeValue: val.toStringAsFixed(1),
         scrapValue: '0',
         quality: 'Raw',
@@ -952,14 +1068,14 @@ class _IndustryView extends StatelessWidget {
         totalValueRaw: total,
       ));
     }
-    if (gameState.communalScrap > 0) {
+    if (gameState.cumulativeScrapScavenged > 0) {
       double val = 1.0; // Nominal value
-      double total = gameState.communalScrap * val;
+      double total = gameState.cumulativeScrapScavenged * val;
       entries.add(_LedgerEntry(
         icon: Icons.build,
-        name: 'Scrap',
-        quantity: gameState.communalScrap.toStringAsFixed(0),
-        weight: (gameState.communalScrap * 0.5).toStringAsFixed(1),
+        name: 'Scrap Scavenged',
+        quantity: gameState.cumulativeScrapScavenged.toStringAsFixed(0),
+        weight: (gameState.cumulativeScrapScavenged * 0.5).toStringAsFixed(1),
         rupeeValue: val.toStringAsFixed(1),
         scrapValue: '1.0',
         quality: 'Mixed',
@@ -968,14 +1084,32 @@ class _IndustryView extends StatelessWidget {
         totalValueRaw: total,
       ));
     }
-    if (gameState.communalArrows > 0) {
-      double val = 0.2;
-      double total = gameState.communalArrows * val;
+    if (gameState.cumulativeShortArrowsFletched > 0) {
+      double val = 0.5;
+      double total = gameState.cumulativeShortArrowsFletched * val;
       entries.add(_LedgerEntry(
         icon: Icons.arrow_upward,
-        name: 'Arrows',
-        quantity: '${gameState.communalArrows}',
-        weight: (gameState.communalArrows * 0.05).toStringAsFixed(1),
+        name: 'Short Arrows Fletched',
+        quantity: '${gameState.cumulativeShortArrowsFletched}',
+        weight:
+            (gameState.cumulativeShortArrowsFletched * 0.05).toStringAsFixed(1),
+        rupeeValue: val.toStringAsFixed(1),
+        scrapValue: '0',
+        quality: 'Standard',
+        origin: 'Crafted',
+        type: 'Ammo',
+        totalValueRaw: total,
+      ));
+    }
+    if (gameState.cumulativeLongArrowsFletched > 0) {
+      double val = 0.7;
+      double total = gameState.cumulativeLongArrowsFletched * val;
+      entries.add(_LedgerEntry(
+        icon: Icons.arrow_upward,
+        name: 'Long Arrows Fletched',
+        quantity: '${gameState.cumulativeLongArrowsFletched}',
+        weight:
+            (gameState.cumulativeLongArrowsFletched * 0.08).toStringAsFixed(1),
         rupeeValue: val.toStringAsFixed(1),
         scrapValue: '0',
         quality: 'Standard',
@@ -992,7 +1126,7 @@ class _IndustryView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Industrial Ledger",
+            Text("Production Output",
                 style: GoogleFonts.cinzel(
                     color: Colors.amber, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -1143,6 +1277,59 @@ class _IndustryView extends StatelessWidget {
     );
   }
 
+  Widget _buildFletchingReportCard(
+      FletchingReport report, BuildContext context) {
+    return Card(
+      color: Colors.black.withOpacity(0.6),
+      child: ExpansionTile(
+        leading: const Icon(Icons.arrow_upward, color: Colors.amber),
+        title: Text("${report.aravtName}: Fletching",
+            style: GoogleFonts.cinzel(color: Colors.white)),
+        subtitle: Text(
+            "${report.date.toShortString()}\nTotal: ${report.totalArrowsCrafted} ${report.isLongArrows ? 'long' : 'short'} arrows",
+            style: const TextStyle(color: Colors.white70)),
+        children: [
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+                "Consumed: ${report.totalWoodConsumed.toStringAsFixed(1)}kg wood, ${report.totalScrapConsumed.toStringAsFixed(0)} scrap",
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          ),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: ListView(
+              shrinkWrap: true,
+              children: report.individualResults.map((res) {
+                return InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SoldierProfileScreen(soldierId: res.soldierId),
+                      ),
+                    );
+                  },
+                  child: ListTile(
+                    dense: true,
+                    title: Text(res.soldierName,
+                        style: const TextStyle(
+                            color: Colors.amber, fontWeight: FontWeight.bold)),
+                    trailing: Text(
+                      "${res.arrowsCrafted} arrows",
+                      style: const TextStyle(
+                          color: Colors.white70, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   IconData _getIconForResourceType(ResourceType type) {
     switch (type) {
       case ResourceType.wood:
@@ -1194,7 +1381,7 @@ Widget _buildResourceTile(IconData icon, String label, String value) {
   );
 }
 
-// [GEMINI-UPDATED] Merged Horses into HerdsReportTab
+
 class HerdsReportTab extends StatelessWidget {
   final int? soldierId;
   const HerdsReportTab({super.key, this.soldierId});
@@ -1279,17 +1466,24 @@ class HerdsReportTab extends StatelessWidget {
                   Text(
                     cattle.lastGrazedTurn == gameState.turn.turnNumber
                         ? "Status: Grazed Today"
-                        : (cattle.lastGrazedTurn ==
-                                gameState.turn.turnNumber - 1
-                            ? "Status: Needs Grazing Soon"
-                            : "Status: STARVING"),
+                        : (gameState.turn.turnNumber - cattle.lastGrazedTurn < 3
+                            ? "Status: Satisfied"
+                            : (gameState.turn.turnNumber -
+                                        cattle.lastGrazedTurn <
+                                    7
+                                ? "Status: Needs Grazing Soon"
+                                : "Status: STARVING")),
                     style: TextStyle(
                       color: cattle.lastGrazedTurn == gameState.turn.turnNumber
                           ? Colors.green
-                          : (cattle.lastGrazedTurn ==
-                                  gameState.turn.turnNumber - 1
-                              ? Colors.yellow
-                              : Colors.red),
+                          : (gameState.turn.turnNumber - cattle.lastGrazedTurn <
+                                  3
+                              ? Colors.green[300]
+                              : (gameState.turn.turnNumber -
+                                          cattle.lastGrazedTurn <
+                                      7
+                                  ? Colors.yellow
+                                  : Colors.red)),
                       fontWeight: FontWeight.bold,
                     ),
                   )
@@ -1298,7 +1492,7 @@ class HerdsReportTab extends StatelessWidget {
             ),
           ),
 
-          // [GEMINI-NEW] Herd Ledger
+          //  Herd Ledger
           const SizedBox(height: 20),
           _buildSectionHeader("Herd Ledger"),
           Card(
@@ -1308,6 +1502,87 @@ class HerdsReportTab extends StatelessWidget {
               child: _buildHerdLedger(cattle.animals, context),
             ),
           ),
+
+          //  Shepherding Reports
+          const SizedBox(height: 20),
+          _buildSectionHeader("Shepherding Log"),
+          if (gameState.shepherdingReports.isEmpty)
+            Card(
+              color: Colors.black.withOpacity(0.5),
+              child: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text("No shepherding reports yet.",
+                    style: TextStyle(color: Colors.white54)),
+              ),
+            )
+          else
+            ...gameState.shepherdingReports.reversed
+                .where((report) =>
+                    soldierId == null ||
+                    report.individualResults
+                        .any((res) => res.soldierId == soldierId))
+                .map((report) {
+              return Card(
+                color: Colors.black.withOpacity(0.6),
+                child: ExpansionTile(
+                  leading: const Icon(Icons.pets, color: Colors.amber),
+                  title: Text(
+                      "${report.aravtName} shepherded ${report.totalAnimals} animals",
+                      style: GoogleFonts.cinzel(color: Colors.white)),
+                  subtitle: Text(
+                      "${report.date.toShortString()} - Milk: ${report.milkProduced.toStringAsFixed(1)} L",
+                      style: const TextStyle(color: Colors.white70)),
+                  children: [
+                    if (report.events.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: report.events
+                              .map((e) => Text("• $e",
+                                  style:
+                                      const TextStyle(color: Colors.redAccent)))
+                              .toList(),
+                        ),
+                      ),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: report.individualResults.map((res) {
+                          return InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => SoldierProfileScreen(
+                                      soldierId: res.soldierId),
+                                ),
+                              );
+                            },
+                            child: ListTile(
+                              dense: true,
+                              title: Text(res.soldierName,
+                                  style: const TextStyle(
+                                      color: Colors.amber,
+                                      fontWeight: FontWeight.bold)),
+                              subtitle: Text(res.eventDescription,
+                                  style:
+                                      const TextStyle(color: Colors.white70)),
+                              trailing: Text(
+                                "Rating: ${res.performanceRating.toStringAsFixed(1)}",
+                                style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    )
+                  ],
+                ),
+              );
+            }).toList(),
         ],
       ),
     );
@@ -1347,8 +1622,8 @@ class HerdsReportTab extends StatelessWidget {
         name: name,
         quantity: '1',
         weight: weight,
-        rupeeValue: val.toStringAsFixed(0),
-        scrapValue: '0',
+        rupeeValue: '0',
+        scrapValue: val.toStringAsFixed(0),
         quality: animal.health > 0.9
             ? 'Prime'
             : (animal.health > 0.5 ? 'Good' : 'Poor'),
@@ -1390,6 +1665,15 @@ class _FoodReportTabState extends State<FoodReportTab>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        final gameState = context.read<GameState>();
+        String subTab = 'Overview';
+        if (_tabController.index == 1) subTab = 'Fishing';
+        if (_tabController.index == 2) subTab = 'Hunting';
+        gameState.markReportTabViewed('Food', subTab: subTab);
+      }
+    });
   }
 
   @override
@@ -1403,16 +1687,22 @@ class _FoodReportTabState extends State<FoodReportTab>
     return Column(
       children: [
         Container(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black54,
           child: TabBar(
             controller: _tabController,
             indicatorColor: Colors.amber,
-            labelColor: Colors.amber,
-            unselectedLabelColor: Colors.white54,
-            tabs: const [
-              Tab(text: 'Overview'),
-              Tab(text: 'Fishing'),
-              Tab(text: 'Hunting'),
+            tabs: [
+              _buildSubTab('Overview', 0),
+              _buildSubTab(
+                  'Fishing',
+                  context
+                      .watch<GameState>()
+                      .getBadgeCountForFoodSubTab('Fishing')),
+              _buildSubTab(
+                  'Hunting',
+                  context
+                      .watch<GameState>()
+                      .getBadgeCountForFoodSubTab('Hunting')),
             ],
           ),
         ),
@@ -1427,6 +1717,19 @@ class _FoodReportTabState extends State<FoodReportTab>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSubTab(String text, int badgeCount) {
+    return Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(text),
+          const SizedBox(width: 4),
+          NotificationBadge(count: badgeCount),
+        ],
+      ),
     );
   }
 }
@@ -1636,7 +1939,7 @@ class HuntingReportTab extends StatelessWidget {
             return r.individualResults.any((res) => res.soldierId == soldierId);
           }
 
-          // [GEMINI-NEW] Global reports: filter out NPC-only hunts
+          //  Global reports: filter out NPC-only hunts
           // Check if any participant is from player's horde
           for (var res in r.individualResults) {
             final soldier = gameState.findSoldierById(res.soldierId);
@@ -1817,6 +2120,10 @@ class GamesReportTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(8.0).copyWith(bottom: 80.0),
         children: [
+          if (gameState.activeTournament != null) ...[
+            _buildActiveTournamentCard(gameState.activeTournament!),
+            const Divider(color: Colors.white24, height: 30),
+          ],
           if (upcoming.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1864,6 +2171,129 @@ class GamesReportTab extends StatelessWidget {
     );
   }
 
+  Widget _buildActiveTournamentCard(ActiveTournament active) {
+    return Card(
+      color: Colors.teal[900]!.withOpacity(0.7),
+      child: ExpansionTile(
+        leading:
+            const Icon(Icons.play_circle_filled, color: Colors.greenAccent),
+        title: Text(active.name,
+            style: GoogleFonts.cinzel(
+                color: Colors.white, fontWeight: FontWeight.bold)),
+        subtitle: Text("Day ${active.currentDay} of ${active.duration}",
+            style: const TextStyle(
+                color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Current Standings:",
+                    style: GoogleFonts.cinzel(
+                        color: Colors.white70, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...active.currentStandings.entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key,
+                            style: const TextStyle(color: Colors.white70)),
+                        Text("${entry.value} pts",
+                            style: const TextStyle(color: Colors.amber)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 16),
+                Text("Tournament Events:",
+                    style: GoogleFonts.cinzel(
+                        color: Colors.white70, fontWeight: FontWeight.bold)),
+                ...List.generate(active.duration, (index) {
+                  int day = index + 1;
+                  List<TournamentEventType> dayEvents = [];
+                  // Define Schedule (Must match TournamentService)
+                  if (day == 1) dayEvents.add(TournamentEventType.archery);
+                  if (day == 2) dayEvents.add(TournamentEventType.horseArchery);
+                  if (day == 3) {
+                    dayEvents.add(TournamentEventType.wrestling);
+                    dayEvents.add(TournamentEventType.horseRace);
+                  }
+                  if (day == 4) dayEvents.add(TournamentEventType.buzkashi);
+
+                  // Filter by what's actually in this tournament
+                  dayEvents = dayEvents
+                      .where((e) => active.events.contains(e))
+                      .toList();
+
+                  if (dayEvents.isEmpty) return const SizedBox.shrink();
+
+                  bool isPast = day < active.currentDay;
+                  bool isCurrent = day == active.currentDay;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: dayEvents.map((event) {
+                        return Row(
+                          children: [
+                            Icon(_getEventIcon(event),
+                                color: isCurrent
+                                    ? Colors.greenAccent
+                                    : (isPast
+                                        ? Colors.white24
+                                        : Colors.white54),
+                                size: 16),
+                            const SizedBox(width: 8),
+                            Text("Day $day: ${_getEventName(event)}",
+                                style: TextStyle(
+                                    color: isCurrent
+                                        ? Colors.greenAccent
+                                        : (isPast
+                                            ? Colors.white24
+                                            : Colors.white70),
+                                    fontWeight: isCurrent
+                                        ? FontWeight.bold
+                                        : FontWeight.normal)),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 16),
+                Text("Daily Reports:",
+                    style: GoogleFonts.cinzel(
+                        color: Colors.white70, fontWeight: FontWeight.bold)),
+                ...active.dailyReports.entries.map((entry) {
+                  final isLatest = entry.key == active.currentDay - 1;
+                  return ExpansionTile(
+                    initiallyExpanded: isLatest,
+                    title: Text("Day ${entry.key}",
+                        style: const TextStyle(color: Colors.amber)),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(entry.value,
+                            style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontFamily: 'Courier')), // Monospace fallback
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFutureTournamentCard(FutureTournament future) {
     return Card(
       color: Colors.black.withOpacity(0.7),
@@ -1873,7 +2303,10 @@ class GamesReportTab extends StatelessWidget {
         title: Text(future.name,
             style: GoogleFonts.cinzel(
                 color: Colors.white, fontWeight: FontWeight.bold)),
-        subtitle: Text(future.date.toShortString(),
+        subtitle: Text(
+            future.name.contains("Downsizing")
+                ? "05/01/1140"
+                : future.date.toShortString(),
             style: const TextStyle(color: Colors.white70)),
         children: [
           Padding(
@@ -1947,6 +2380,14 @@ class GamesReportTab extends StatelessWidget {
             return _buildEventDetailTile(
                 context, entry.key, entry.value, gameState);
           }),
+          if (result.dailyReports.isNotEmpty) ...[
+            _buildSectionHeader("Daily Reports"),
+            ...result.dailyReports.entries.map((entry) {
+              final isLatest =
+                  entry.key == result.dailyReports.keys.reduce(math.max);
+              return _buildParsedReport(entry.key, entry.value, isLatest);
+            }),
+          ],
         ],
       ),
     );
@@ -2040,6 +2481,142 @@ class GamesReportTab extends StatelessWidget {
                 Text(timeText, style: const TextStyle(color: Colors.white70)),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildParsedReport(int day, String reportText, bool isLatest) {
+    // Try to parse the report text into structured data for DataTable
+    final lines = reportText.split('\n');
+    List<Widget> children = [];
+
+    // Check if it's a column-based report (Archery, Horse Archery, Horse Race)
+    bool isColumnar =
+        reportText.contains("Rank") && reportText.contains("Aravt");
+
+    if (isColumnar) {
+      // Parse columns
+      List<String> headers = [];
+      List<List<String>> rows = [];
+      bool inTable = false;
+
+      for (var line in lines) {
+        if (line.trim().isEmpty) {
+          if (inTable && headers.isNotEmpty && rows.isNotEmpty) {
+            // End of table, render it and reset
+            children.add(_buildDataTable(headers, rows));
+            headers = [];
+            rows = [];
+            inTable = false;
+          }
+          continue;
+        }
+
+        if (line.startsWith("Rank") && line.contains("Aravt")) {
+          // Header line
+          // Header line
+          if (line.contains('|')) {
+            headers = line.split('|').map((e) => e.trim()).toList();
+          } else {
+            headers =
+                line.split(RegExp(r'\s{2,}')).map((e) => e.trim()).toList();
+          }
+          inTable = true;
+          continue;
+        }
+
+        if (inTable && line.startsWith("-")) {
+          // Skip separator line
+          continue;
+        }
+
+        if (inTable && RegExp(r'^\d+\.').hasMatch(line)) {
+          // Row line
+          // Row line
+          List<String> parts;
+          if (line.contains('|')) {
+            parts = line.split('|').map((e) => e.trim()).toList();
+          } else {
+            parts = line.split(RegExp(r'\s{2,}')).map((e) => e.trim()).toList();
+          }
+
+          if (parts.length >= headers.length) {
+            rows.add(parts.take(headers.length).toList());
+          } else {
+            // Pad with empty strings if too few columns
+            while (parts.length < headers.length) {
+              parts.add("");
+            }
+            rows.add(parts);
+          }
+          continue;
+        }
+
+        // Non-table line, just add as text
+        if (inTable && headers.isNotEmpty && rows.isNotEmpty) {
+          children.add(_buildDataTable(headers, rows));
+          headers = [];
+          rows = [];
+          inTable = false;
+        }
+        children.add(Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Text(line,
+              style: GoogleFonts.cinzel(
+                  color: Colors.amber, fontWeight: FontWeight.bold)),
+        ));
+      }
+      if (inTable && headers.isNotEmpty && rows.isNotEmpty) {
+        children.add(_buildDataTable(headers, rows));
+      }
+    } else {
+      // Fallback to text for Wrestling/Buzkashi
+      children.add(Text(reportText,
+          style: const TextStyle(
+              color: Colors.white70, fontSize: 12, fontFamily: 'Courier')));
+    }
+
+    return ExpansionTile(
+      initiallyExpanded: isLatest,
+      title: Text("Day $day", style: const TextStyle(color: Colors.amber)),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDataTable(List<String> headers, List<List<String>> rows) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 12,
+        horizontalMargin: 4,
+        headingRowHeight: 30,
+        dataRowMinHeight: 24,
+        dataRowMaxHeight: 36,
+        columns: headers
+            .map((h) => DataColumn(
+                label: Text(h,
+                    style: const TextStyle(
+                        color: Colors.amber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold))))
+            .toList(),
+        rows: rows
+            .map((row) => DataRow(
+                cells: row
+                    .take(headers.length)
+                    .map((c) => DataCell(Text(c,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11))))
+                    .toList()))
+            .toList(),
       ),
     );
   }

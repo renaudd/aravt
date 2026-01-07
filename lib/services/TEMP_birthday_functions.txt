@@ -4,7 +4,7 @@ import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/assignment_data.dart'; // For AravtDuty enum
-import 'package:aravt/models/game_date.dart'; // [GEMINI-NEW] For birthday calculations
+import 'package:aravt/models/game_date.dart'; //  For birthday calculations
 
 enum _InteractionTier { extraSuccess, success, lessSuccessful, unsuccessful }
 
@@ -42,7 +42,6 @@ class InteractionService {
     final log = InteractionLogEntry(
       dateString: gameState.gameDate.toShortString(),
       type: InteractionType.inquire,
-      // [GEMINI-FIX] Put dialogue directly here for cleaner log display
       interactionSummary: dialogue,
       outcomeSummary: "",
       informationRevealed: "",
@@ -60,7 +59,7 @@ class InteractionService {
 
   // ... [REST OF FILE CONTENT REMAINS THE SAME] ...
   
-  // [GEMINI-NEW] Birthday Revelation Topics
+  //  Birthday Revelation Topics
   
   static String _topicOwnBirthday(Soldier speaker, GameState gameState) {
     final currentDate = gameState.gameDate;

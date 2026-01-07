@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // widgets/item_sprite_widget.dart
 
 import 'package:flutter/material.dart';
@@ -29,7 +43,7 @@ const Map<EquipmentSlot, IconData> _placeholderIconMap = {
 class ItemSpriteWidget extends StatefulWidget {
   final InventoryItem item;
   final Size size;
-  // --- NEW: BoxFit property ---
+
   final BoxFit fit;
 
   const ItemSpriteWidget({
@@ -47,7 +61,7 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
   ui.Image? _spritesheetImage;
   Rect? _spriteRect;
   bool _isLoading = true;
-  // --- NEW: Store sprite dimensions ---
+
   Size _spriteSourceSize = Size(64, 64); // Default, will be updated
 
   @override
@@ -66,7 +80,7 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
     }
   }
 
-  // --- NEW: Caching Image Loader (Moved from service to fix error) ---
+
   /// This cache is now local to the widget's state to avoid service-level errors.
   /// A better solution would be a proper singleton service, but this will work.
   static final Map<String, ui.Image> _imageCache = {};
@@ -87,7 +101,7 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
       rethrow;
     }
   }
-  // --- END NEW ---
+
 
   Future<void> _loadSpriteData() async {
     if (!mounted) return;
@@ -101,38 +115,40 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _spritesheetImage = null;
+          _spriteRect = null;
         });
       }
       return;
     }
-    
-    // --- FIX: Use correct property names ---
+
+
     _spriteSourceSize = Size(
-      spriteInfo.spriteWidth.toDouble(), 
-      spriteInfo.spriteHeight.toDouble()
-    );
-    // --- END FIX ---
+        spriteInfo.spriteWidth.toDouble(), spriteInfo.spriteHeight.toDouble());
+
 
     final int spriteIndex = SpriteService.getSpriteIndexForQuality(
         widget.item.itemType, widget.item.quality);
-    
-    final rect = SpriteService.calculateSpriteRect(
-        widget.item.itemType, spriteIndex); 
-        
+
+    final rect =
+        SpriteService.calculateSpriteRect(widget.item.itemType, spriteIndex);
+
     if (rect == null) {
       print("Warning: Could not calculate sprite rect for ${widget.item.name}");
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _spritesheetImage = null;
+          _spriteRect = null;
         });
       }
       return;
     }
 
     try {
-      // --- FIX: Use the local _loadSpritesheet method ---
+
       final ui.Image image = await _loadSpritesheet(spriteInfo.assetPath);
-      // --- END FIX ---
+
 
       if (mounted) {
         setState(() {
@@ -146,6 +162,8 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _spritesheetImage = null;
+          _spriteRect = null;
         });
       }
     }
@@ -180,7 +198,7 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
       );
     }
 
-    // --- MODIFIED: Use new aspect-ratio-aware painter ---
+
     return SizedBox(
       width: widget.size.width,
       height: widget.size.height,
@@ -190,11 +208,11 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
           srcRect: _spriteRect!,
           fit: widget.fit,
           // Pass the sprite's native size
-          spriteSourceSize: _spriteSourceSize, 
+          spriteSourceSize: _spriteSourceSize,
         ),
       ),
     );
-    // --- END MODIFIED ---
+
   }
 }
 
@@ -202,10 +220,10 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
 class SpritePainter extends CustomPainter {
   final ui.Image image;
   final Rect srcRect; // The source rectangle (from the spritesheet)
-  // --- NEW: Aspect ratio properties ---
+
   final BoxFit fit;
   final Size spriteSourceSize;
-  // --- END NEW ---
+
 
   SpritePainter({
     required this.image,
@@ -216,22 +234,22 @@ class SpritePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // --- MODIFIED: Calculate aspect ratio ---
+
     // This applies BoxFit.contain or BoxFit.cover, preserving aspect ratio
     final FittedSizes fittedSizes = applyBoxFit(fit, spriteSourceSize, size);
-    final Rect dstRect = Alignment.center.inscribe(fittedSizes.destination, Rect.fromLTWH(0, 0, size.width, size.height));
-    // --- END MODIFIED ---
-    
+    final Rect dstRect = Alignment.center.inscribe(
+        fittedSizes.destination, Rect.fromLTWH(0, 0, size.width, size.height));
+
+
     // Draw the specified part of the image onto the canvas
     canvas.drawImageRect(image, srcRect, dstRect, Paint());
   }
 
   @override
   bool shouldRepaint(covariant SpritePainter oldDelegate) {
-    return oldDelegate.image != image || 
-           oldDelegate.srcRect != srcRect ||
-           oldDelegate.fit != fit ||
-           oldDelegate.spriteSourceSize != spriteSourceSize;
+    return oldDelegate.image != image ||
+        oldDelegate.srcRect != srcRect ||
+        oldDelegate.fit != fit ||
+        oldDelegate.spriteSourceSize != spriteSourceSize;
   }
 }
-

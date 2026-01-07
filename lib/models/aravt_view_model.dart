@@ -1,9 +1,20 @@
-import 'package:aravt/models/area_data.dart';
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:aravt/models/assignment_data.dart';
 import 'package:aravt/models/horde_data.dart';
-import 'package:aravt/models/location_data.dart'; // --- NEW: Import ---
-import 'package:aravt/models/settlement_data.dart'; // --- NEW: Import ---
-import 'package:aravt/models/soldier_data.dart';
+import 'package:aravt/models/location_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:flutter/material.dart'; // For Icons
 
@@ -30,11 +41,10 @@ class AravtViewModel {
   /// The number of soldiers in the Aravt.
   int get soldierCount => aravt.soldierIds.length;
 
-  /// --- UPDATED: Gets the name of the Aravt's current physical location ---
+  /// The current location name of the Aravt.
   String get currentLocationName {
     if (aravt.currentLocationType == LocationType.poi) {
-      final poi =
-          gameState.currentArea?.findPoiById(aravt.currentLocationId);
+      final poi = gameState.currentArea?.findPoiById(aravt.currentLocationId);
       return poi?.name ?? 'Unknown Area';
     } else if (aravt.currentLocationType == LocationType.settlement) {
       final settlement = gameState.findSettlementById(aravt.currentLocationId);
@@ -43,7 +53,7 @@ class AravtViewModel {
     return 'Lost';
   }
 
-  /// --- UPDATED: Gets the display name for the current task/assignment ---
+  /// The display name of the current task.
   String get taskDisplayName {
     final task = aravt.task;
     if (task is MovingTask) {
@@ -57,7 +67,7 @@ class AravtViewModel {
     return 'Resting';
   }
 
-  /// --- UPDATED: Gets the name of the task's target location, if any ---
+  /// The target location name of the current task, if any.
   String? get taskLocationName {
     final task = aravt.task;
     if (task is MovingTask) {
@@ -70,14 +80,14 @@ class AravtViewModel {
     if (task is AssignedTask) {
       final String? poiId = task.poiId;
       if (poiId != null) {
-      return gameState.currentArea?.findPoiById(poiId)?.name;
+        return gameState.currentArea?.findPoiById(poiId)?.name;
       }
     }
     // Resting or other tasks have no separate target location
     return null;
   }
 
-  /// --- UPDATED: Gets the icon for the current task ---
+  /// Detailed status description for UI.
   IconData get taskIcon {
     final task = aravt.task;
     if (task is MovingTask) {
@@ -89,7 +99,7 @@ class AravtViewModel {
     return Icons.bed; // Resting
   }
 
-  /// --- NEW: Gets a simple description string for the UI ---
+  /// Detailed status description for UI.
   String get statusDescription {
     final task = aravt.task;
     if (task is MovingTask) {
@@ -103,12 +113,12 @@ class AravtViewModel {
     return 'Resting at $currentLocationName';
   }
 
-  /// --- NEW: Returns true if the Aravt is not Resting ---
+  /// Whether the Aravt is currently busy.
   bool get isBusy {
     return aravt.task != null;
   }
 
-  /// --- UPDATED: Calculates task progress percentage ---
+  /// Task progress 0.0 to 1.0.
   /// This now works for both MovingTask and AssignedTask.
   double get taskProgressPercent {
     final task = aravt.task;
@@ -123,17 +133,17 @@ class AravtViewModel {
 
     final double elapsed =
         _currentTime.difference(task.startTime).inSeconds.toDouble();
-    
+
     // Clamp between 0.0 and 1.0
     return (elapsed / duration).clamp(0.0, 1.0);
   }
 
-  /// --- NEW: Helper to get a progress string, e.g., "45% Complete" ---
+  /// Task progress formatted as string.
   String get taskProgressString {
     return '${(taskProgressPercent * 100).toStringAsFixed(0)}% Complete';
   }
 
-  /// --- NEW: Returns true if the aravt is currently moving ---
+  /// Whether the Aravt is moving.
   bool get isMoving {
     return aravt.task is MovingTask;
   }
@@ -159,4 +169,3 @@ class AravtViewModel {
     }
   }
 }
-

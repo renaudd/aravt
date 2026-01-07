@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/main.dart
 import 'dart:io'; //For exit(0) on desktop
 import 'package:flutter/foundation.dart' show kIsWeb; // For platform check
@@ -15,8 +29,8 @@ import 'package:aravt/screens/load_game_screen.dart';
 import 'package:aravt/screens/save_game_screen.dart';
 import 'package:aravt/screens/new_game_screen.dart';
 import 'package:aravt/screens/world_map_screen.dart';
+import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'package:aravt/screens/camp_screen.dart';
-
 import 'package:aravt/screens/global_reports_screen.dart';
 import 'package:aravt/screens/global_inventory_screen.dart';
 import 'package:aravt/screens/settings_screen.dart';
@@ -26,8 +40,9 @@ import 'package:aravt/screens/post_combat_report_screen.dart';
 import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/widgets/tutorial_overlay_widget.dart';
 import 'package:aravt/widgets/narrative_overlay_widget.dart';
-
 import 'package:window_manager/window_manager.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Required or window_manager
@@ -73,7 +88,7 @@ class AravtGame extends StatefulWidget {
 class _AravtGameState extends State<AravtGame> {
   CombatFlowState? _previousCombatState;
   bool _wasGameOver = false;
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -99,43 +114,51 @@ class _AravtGameState extends State<AravtGame> {
     final isGameOver = gameState.isGameOver;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final navigator = _navigatorKey.currentState;
+      if (_isNavigating) return;
+      final navigator = navigatorKey.currentState;
       if (navigator == null) return;
 
-      // --- HANDLE GAME OVER ---
-      if (isGameOver && !_wasGameOver) {
-        _wasGameOver = true;
-        // Push game over and remove everything but main menu to prevent going back
-        navigator.pushNamedAndRemoveUntil(
-            '/gameOver', ModalRoute.withName('/mainMenu'));
-        return; // Prioritize Game Over over combat navigation
-      }
-      // Reset flag if a new game started
-      if (!isGameOver && _wasGameOver) {
-        _wasGameOver = false;
-      }
+      _isNavigating = true;
+      try {
+        // --- HANDLE GAME OVER ---
+        if (isGameOver) {
+          if (!_wasGameOver) {
+            _wasGameOver = true;
+            // Push game over and remove everything but main menu to prevent going back
+            navigator.pushNamedAndRemoveUntil(
+                '/gameOver', ModalRoute.withName('/mainMenu'));
+          }
+          return; // Prioritize Game Over over combat navigation
+        }
+        // Reset flag if a new game started
+        if (!isGameOver && _wasGameOver) {
+          _wasGameOver = false;
+        }
 
-      // --- HANDLE COMBAT FLOW ---
-      if (currentCombatState == _previousCombatState) return;
+        // --- HANDLE COMBAT FLOW ---
+        if (currentCombatState == _previousCombatState) return;
 
-      if (currentCombatState == CombatFlowState.preCombat &&
-          _previousCombatState != CombatFlowState.preCombat) {
-        navigator.pushNamed('/preCombat');
-      } else if (currentCombatState == CombatFlowState.inCombat &&
-          _previousCombatState == CombatFlowState.preCombat) {
-        navigator.popAndPushNamed('/combat');
-      } else if (currentCombatState == CombatFlowState.postCombat &&
-          _previousCombatState == CombatFlowState.inCombat) {
-        navigator.popAndPushNamed('/postCombat');
-      } else if (currentCombatState == CombatFlowState.none &&
-          _previousCombatState == CombatFlowState.postCombat) {
-        navigator.pop();
-      } else if (currentCombatState == CombatFlowState.none &&
-          _previousCombatState == CombatFlowState.preCombat) {
-        navigator.pop(); // Player fled/avoided from Pre-Combat
+        if (currentCombatState == CombatFlowState.preCombat &&
+            _previousCombatState != CombatFlowState.preCombat) {
+          navigator.pushNamed('/preCombat');
+        } else if (currentCombatState == CombatFlowState.inCombat &&
+            _previousCombatState == CombatFlowState.preCombat) {
+          navigator.popAndPushNamed('/combat');
+        } else if (currentCombatState == CombatFlowState.postCombat &&
+            _previousCombatState == CombatFlowState.inCombat) {
+          navigator.popAndPushNamed('/postCombat');
+        } else if (currentCombatState == CombatFlowState.none &&
+            _previousCombatState == CombatFlowState.postCombat) {
+          navigator.pop();
+        } else if (currentCombatState == CombatFlowState.none &&
+            _previousCombatState == CombatFlowState.preCombat) {
+          navigator.pop(); // Player fled/avoided from Pre-Combat
+        }
+
+        _previousCombatState = currentCombatState;
+      } finally {
+        _isNavigating = false;
       }
-
-      _previousCombatState = currentCombatState;
     });
   }
 
@@ -143,7 +166,7 @@ class _AravtGameState extends State<AravtGame> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Aravt',
-      navigatorKey: _navigatorKey,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: const Color(0xFFE0D5C1), // Parchment-ish
@@ -185,6 +208,10 @@ class _AravtGameState extends State<AravtGame> {
         '/world': (context) => const WorldMapScreen(),
         '/reports': (context) => const GlobalReportsScreen(),
         '/inventory': (context) => const GlobalInventoryScreen(),
+        '/soldier_profile': (context) {
+          final soldierId = ModalRoute.of(context)!.settings.arguments as int;
+          return SoldierProfileScreen(soldierId: soldierId);
+        },
         // --- COMBAT ROUTES ---
         '/combat': (context) => const CombatScreen(),
         '/preCombat': (context) => const PreCombatScreen(),

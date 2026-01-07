@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // services/triage_service.dart
 // import 'dart:math'; // Removed (Unused)
 import 'package:aravt/models/soldier_data.dart';
@@ -22,8 +36,8 @@ class TriageService {
         final Soldier? soldier =
             gameState.findSoldierById(summary.originalSoldier.id);
         if (soldier != null && soldier.injuries.isNotEmpty) {
-          patients
-              .add(TriageCase(soldier: soldier, initialInjuries: soldier.injuries));
+          patients.add(
+              TriageCase(soldier: soldier, initialInjuries: soldier.injuries));
         }
       }
     }
@@ -37,7 +51,7 @@ class TriageService {
     // 2. Gather Surgeons (Player horde only)
     final List<SurgeonWorkload> surgeons = [];
 
-    // --- FIX 1: Changed 'gameState.playerHorde.soldiers' to 'gameState.horde' ---
+
     for (final soldier in gameState.horde) {
       if (soldier.status == SoldierStatus.alive && // Must be alive
           soldier.specialSkills.contains(SpecialSkill.surgeon)) {
@@ -199,7 +213,8 @@ class TriageService {
             p.status == TriageStatus.Waiting ||
             p.status == TriageStatus.Stabilized)
         .toList();
-    availablePatients.sort((a, b) => b.priorityScore.compareTo(a.priorityScore));
+    availablePatients
+        .sort((a, b) => b.priorityScore.compareTo(a.priorityScore));
 
     if (availablePatients.isEmpty) return;
 
@@ -218,11 +233,11 @@ class TriageService {
   /// Calculates the priority for every patient in the queue.
   void _recalculateAllPriorities(
       List<TriageCase> patients, GameState gameState) {
-    // --- FIX 2: Changed 'gameState.playerAravts' to 'gameState.aravts' ---
+
     final Set<int> captainIds =
         gameState.aravts.map((a) => a.captainId).toSet();
 
-    // --- FIX 3: Changed 'gameState.playerHordeData?.leaderId' to 'gameState.player?.id' ---
+
     final int leaderId = gameState.player?.id ?? -1;
 
     for (final patient in patients) {
@@ -242,8 +257,7 @@ class TriageService {
         score += patient.totalSeverity * 10;
         // Then prioritize low health
         score += (100 -
-            patient.soldier
-                .bodyHealthCurrent); // Assuming 100 is a rough max
+            patient.soldier.bodyHealthCurrent); // Assuming 100 is a rough max
 
         patient.priorityScore = score;
       }
@@ -265,7 +279,8 @@ class TriageService {
       injuryToTreat = bleeds.first;
     } else {
       // No bleeds, treat most severe
-      patient.untreatedInjuries.sort((a, b) => b.severity.compareTo(a.severity));
+      patient.untreatedInjuries
+          .sort((a, b) => b.severity.compareTo(a.severity));
       injuryToTreat = patient.untreatedInjuries.first;
     }
 
@@ -285,12 +300,12 @@ class TriageService {
   }
 
   /// Completes a finished operation.
-  void _completeSurgery(GameState gameState, SurgeonWorkload surgeon,
-      List<TriageCase> patients) {
+  void _completeSurgery(
+      GameState gameState, SurgeonWorkload surgeon, List<TriageCase> patients) {
     final TriageCase patient = surgeon.currentPatient!;
-    
+
     // --- Removed Unused Variables ---
-    
+
     final Injury originalInjury;
     // Find the injury that was being treated
     if (patient.untreatedInjuries.any((i) => i.bleedingRate > 0)) {
@@ -353,7 +368,8 @@ class TriageService {
           severity: EventSeverity.normal,
           soldierId: patient.soldier.id);
     } else {
-      patient.status = TriageStatus.Stabilized; // No more bleeding, but needs ops
+      patient.status =
+          TriageStatus.Stabilized; // No more bleeding, but needs ops
       gameState.logEvent(
           "${patient.soldier.name} is stabilized, but requires further operations.",
           category: EventCategory.health,
@@ -396,11 +412,11 @@ class TriageService {
     double equipmentModifier = 1.0; // TODO: Check inventory
     double settingModifier = 1.2; // 20% penalty for field surgery
 
-    int finalHours = (baseHours * skillModifier * equipmentModifier * settingModifier)
-        .round()
-        .clamp(1, 16); // Min 1 hour, max 16 for a single op
+    int finalHours =
+        (baseHours * skillModifier * equipmentModifier * settingModifier)
+            .round()
+            .clamp(1, 16); // Min 1 hour, max 16 for a single op
 
     return finalHours;
   }
 }
-

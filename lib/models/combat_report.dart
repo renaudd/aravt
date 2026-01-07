@@ -1,33 +1,75 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // models/combat_report.dart
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/game_date.dart';
+import 'package:aravt/models/inventory_item.dart';
+
+class LootEntry {
+  final int soldierId;
+  final String soldierName;
+  final InventoryItem item;
+
+  const LootEntry({
+    required this.soldierId,
+    required this.soldierName,
+    required this.item,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'soldierId': soldierId,
+        'soldierName': soldierName,
+        'item': item.toJson(),
+      };
+
+  factory LootEntry.fromJson(Map<String, dynamic> json) {
+    return LootEntry(
+      soldierId: json['soldierId'],
+      soldierName: json['soldierName'],
+      item: InventoryItem.fromJson(json['item']),
+    );
+  }
+}
 
 class LootReport {
   final int currency;
-  final Map<String, int> items; // Key: itemID, Value: quantity
+  final List<LootEntry> entries;
 
   const LootReport({
     this.currency = 0,
-    this.items = const {},
+    this.entries = const [],
   });
 
-  bool get isEmpty => currency == 0 && items.isEmpty;
+  bool get isEmpty => currency == 0 && entries.isEmpty;
   bool get isNotEmpty => !isEmpty;
 
   factory LootReport.empty() => const LootReport();
 
   Map<String, dynamic> toJson() => {
         'currency': currency,
-        'items': items,
+        'entries': entries.map((e) => e.toJson()).toList(),
       };
 
   factory LootReport.fromJson(Map<String, dynamic> json) {
     return LootReport(
       currency: json['currency'] ?? 0,
-      items: (json['items'] as Map<String, dynamic>?)
-              ?.map((key, value) => MapEntry(key, value as int)) ??
-          const {},
+      entries: (json['entries'] as List?)
+              ?.map((e) => LootEntry.fromJson(e))
+              .toList() ??
+          const [],
     );
   }
 }
@@ -42,7 +84,7 @@ class CombatReport {
   final LootReport lootLost;
 
   final List<Soldier> captives;
-  // [GEMINI-NEW] Turn number for highlighting
+  // Turn number for highlighting
   final int turn;
 
   CombatReport({
@@ -116,12 +158,7 @@ class CombatReportSoldierSummary {
   final SoldierStatus finalStatus;
   final List<Injury> injuriesSustained;
   final bool wasUnconscious;
-
-  // --- MODIFIED: This is the fix for Issue #1 ---
-  // The old getter was checking the status of soldiers whose status
-  // hadn't been updated yet. If they are in this list, they are a kill.
   int get kills => defeatedSoldiers.length;
-  // --- END MODIFIED ---
 
   const CombatReportSoldierSummary({
     required this.originalSoldier,

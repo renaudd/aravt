@@ -1,9 +1,22 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/models/area_data.dart
 
 import 'package:aravt/models/assignment_data.dart';
 import 'package:flutter/material.dart'; // For IconData
 import 'package:uuid/uuid.dart'; // For generating unique IDs
-import 'dart:math';
 
 // ... (AreaType enum is unchanged) ...
 enum AreaType {
@@ -36,15 +49,13 @@ class PointOfInterest {
 
   final HexCoordinates position;
   final List<AravtAssignment> availableAssignments;
-  
-  // --- UPDATED FOR FOG OF WAR ---
-  bool isDiscovered; 
 
-  // --- NEW FOR DESTRUCTIBLE POIS (Your Request) ---
+  bool isDiscovered;
+  bool hasTriggeredDiscoveryCombat;
+
   final int? maxResources; // e.g., 1000 wood
-  int? currentResources;   // e.g., 450 wood remaining
-  final bool isSeasonal;      // True for hunting, fishing, grazing
-  // --- END NEW ---
+  int? currentResources; // e.g., 450 wood remaining
+  final bool isSeasonal; // True for hunting, fishing, grazing
 
   PointOfInterest({
     String? id,
@@ -58,13 +69,13 @@ class PointOfInterest {
     required this.position,
     List<AravtAssignment>? availableAssignments,
     this.isDiscovered = false, // Default to hidden for Fog of War
-    // --- NEW: Add to constructor ---
+    this.hasTriggeredDiscoveryCombat = false, // Default to false
     this.maxResources,
     this.currentResources,
     this.isSeasonal = false,
-  }) : this.id = id ?? const Uuid().v4(),
-       this.assignedAravtIds = assignedAravtIds ?? [],
-       this.availableAssignments = availableAssignments ?? [];
+  })  : this.id = id ?? const Uuid().v4(),
+        this.assignedAravtIds = assignedAravtIds ?? [],
+        this.availableAssignments = availableAssignments ?? [];
 
   factory PointOfInterest.fromJson(Map<String, dynamic> json) {
     return PointOfInterest(
@@ -72,7 +83,7 @@ class PointOfInterest {
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       type: PoiType.values.firstWhere(
-            (e) => e.toString() == 'PoiType.${json['type']}',
+        (e) => e.toString() == 'PoiType.${json['type']}',
         orElse: () => PoiType.resourceNode,
       ),
       assignedAravtIds: List<String>.from(json['assignedAravtIds'] ?? []),
@@ -86,13 +97,13 @@ class PointOfInterest {
                 orElse: () => AravtAssignment.Rest,
               ))
           .toList(),
-      // --- UPDATED: Load new fields ---
       // Default to true so old saves don't break
-      isDiscovered: json['isDiscovered'] as bool? ?? true, 
+      isDiscovered: json['isDiscovered'] as bool? ?? true,
+      hasTriggeredDiscoveryCombat:
+          json['hasTriggeredDiscoveryCombat'] as bool? ?? false,
       maxResources: json['maxResources'] as int?,
       currentResources: json['currentResources'] as int?,
       isSeasonal: json['isSeasonal'] as bool? ?? false,
-      // --- END UPDATED ---
     );
   }
 
@@ -106,12 +117,11 @@ class PointOfInterest {
       'iconCodePoint': icon?.codePoint,
       'position': position.toJson(),
       'availableAssignments': availableAssignments.map((e) => e.name).toList(),
-      // --- UPDATED: Save new fields ---
       'isDiscovered': isDiscovered,
+      'hasTriggeredDiscoveryCombat': hasTriggeredDiscoveryCombat,
       'maxResources': maxResources,
       'currentResources': currentResources,
       'isSeasonal': isSeasonal,
-      // --- END UPDATED ---
     };
   }
 
@@ -122,14 +132,12 @@ class PointOfInterest {
     PoiType? type,
     List<String>? assignedAravtIds,
     IconData? icon,
-    // --- NEW: Add relativeX and relativeY ---
     double? relativeX,
     double? relativeY,
-    // --- END NEW ---
     HexCoordinates? position,
     List<AravtAssignment>? availableAssignments,
     bool? isDiscovered,
-    // --- NEW: Add to copyWith ---
+    bool? hasTriggeredDiscoveryCombat,
     int? maxResources,
     int? currentResources,
     bool? isSeasonal,
@@ -141,14 +149,14 @@ class PointOfInterest {
       type: type ?? this.type,
       assignedAravtIds: assignedAravtIds ?? List.from(this.assignedAravtIds),
       icon: icon ?? this.icon,
-      // --- NEW: Pass them to the constructor ---
       relativeX: relativeX ?? this.relativeX,
       relativeY: relativeY ?? this.relativeY,
-      // --- END NEW ---
       position: position ?? this.position,
-      availableAssignments: availableAssignments ?? List.from(this.availableAssignments),
+      availableAssignments:
+          availableAssignments ?? List.from(this.availableAssignments),
       isDiscovered: isDiscovered ?? this.isDiscovered,
-      // --- NEW ---
+      hasTriggeredDiscoveryCombat:
+          hasTriggeredDiscoveryCombat ?? this.hasTriggeredDiscoveryCombat,
       maxResources: maxResources ?? this.maxResources,
       currentResources: currentResources ?? this.currentResources,
       isSeasonal: isSeasonal ?? this.isSeasonal,
@@ -183,23 +191,27 @@ class HexCoordinates {
     HexCoordinates(1, -1),
   ];
   List<HexCoordinates> getNeighbors() {
-    return directions.map((dir) => HexCoordinates(q + dir.q, r + dir.r)).toList();
+    return directions
+        .map((dir) => HexCoordinates(q + dir.q, r + dir.r))
+        .toList();
   }
+
   int get s => -q - r;
   int get length => (q.abs() + r.abs() + s.abs()) ~/ 2;
   int distanceTo(HexCoordinates other) {
     final dq = (q - other.q).abs();
     final dr = (r - other.r).abs();
-    final ds = ((q - other.q) + (r - other.r) + (s - other.s)).abs(); // s component
+    final ds = (s - other.s).abs();
     return (dq + dr + ds) ~/ 2;
   }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is HexCoordinates &&
-              runtimeType == other.runtimeType &&
-              q == other.q &&
-              r == other.r;
+      other is HexCoordinates &&
+          runtimeType == other.runtimeType &&
+          q == other.q &&
+          r == other.r;
   @override
   int get hashCode => q.hashCode ^ r.hashCode;
   @override
@@ -227,7 +239,19 @@ class GameArea {
   String name;
   String description;
   List<PointOfInterest> pointsOfInterest;
-  bool isExplored;
+  // Track exploration per horde
+  Set<String> exploredByHordeIds;
+
+  // Backward compatibility getter/setter for player
+  bool get isExplored => exploredByHordeIds.contains('player_horde');
+  set isExplored(bool value) {
+    if (value) {
+      exploredByHordeIds.add('player_horde');
+    } else {
+      exploredByHordeIds.remove('player_horde');
+    }
+  }
+
   IconData? icon;
   GameArea({
     required this.id,
@@ -236,29 +260,45 @@ class GameArea {
     String? name,
     this.description = '',
     List<PointOfInterest>? pointsOfInterest,
-    this.isExplored = false,
+    bool isExplored = false, // Kept for constructor compatibility
+    Set<String>? exploredByHordeIds,
     this.icon,
     this.terrain = 'Plains',
     this.backgroundImagePath = 'assets/backgrounds/default_bg.jpg',
-  }) : this.name = name ?? _generateDefaultName(type),
-       this.pointsOfInterest = pointsOfInterest ?? [];
+  })  : this.name = name ?? _generateDefaultName(type),
+        this.pointsOfInterest = pointsOfInterest ?? [],
+        this.exploredByHordeIds =
+            exploredByHordeIds ?? (isExplored ? {'player_horde'} : {});
   static String _generateDefaultName(AreaType type) {
     switch (type) {
-      case AreaType.Plains: return "Grassy Plains";
-      case AreaType.Forest: return "Dense Forest";
-      case AreaType.Mountain: return "Rugged Mountain";
-      case AreaType.Lake: return "Crystal Lake";
-      case AreaType.River: return "Winding River";
-      case AreaType.Desert: return "Scorched Desert";
-      case AreaType.Swamp: return "Murky Swamp";
-      case AreaType.Tundra: return "Frozen Tundra";
-      case AreaType.Settlement: return "Settlement";
-      case AreaType.PlayerCamp: return "Player Camp";
-      case AreaType.NpcCamp: return "Nomad Camp";
+      case AreaType.Plains:
+        return "Grassy Plains";
+      case AreaType.Forest:
+        return "Dense Forest";
+      case AreaType.Mountain:
+        return "Rugged Mountain";
+      case AreaType.Lake:
+        return "Crystal Lake";
+      case AreaType.River:
+        return "Winding River";
+      case AreaType.Desert:
+        return "Scorched Desert";
+      case AreaType.Swamp:
+        return "Murky Swamp";
+      case AreaType.Tundra:
+        return "Frozen Tundra";
+      case AreaType.Settlement:
+        return "Settlement";
+      case AreaType.PlayerCamp:
+        return "Player Camp";
+      case AreaType.NpcCamp:
+        return "Nomad Camp";
       case AreaType.Neutral:
-      default: return "Wilderness";
+      default:
+        return "Wilderness";
     }
   }
+
   PointOfInterest? findPoiById(String id) {
     try {
       return pointsOfInterest.firstWhere((poi) => poi.id == id);
@@ -266,12 +306,13 @@ class GameArea {
       return null;
     }
   }
+
   factory GameArea.fromJson(Map<String, dynamic> json) {
     return GameArea(
       id: json['id'] as String,
       coordinates: HexCoordinates.fromJson(json['coordinates']),
       type: AreaType.values.firstWhere(
-            (e) => e.toString() == 'AreaType.${json['type']}',
+        (e) => e.toString() == 'AreaType.${json['type']}',
         orElse: () => AreaType.Neutral,
       ),
       name: json['name'] as String,
@@ -280,11 +321,14 @@ class GameArea {
           .map((e) => PointOfInterest.fromJson(e as Map<String, dynamic>))
           .toList(),
       isExplored: json['isExplored'] as bool? ?? false,
+      exploredByHordeIds:
+          (json['exploredByHordeIds'] as List?)?.cast<String>().toSet(),
       icon: json['iconCodePoint'] != null
           ? IconData(json['iconCodePoint'] as int, fontFamily: 'MaterialIcons')
           : null,
       terrain: json['terrain'] as String? ?? 'Plains',
-      backgroundImagePath: json['backgroundImagePath'] as String? ?? 'assets/backgrounds/default_bg.jpg',
+      backgroundImagePath: json['backgroundImagePath'] as String? ??
+          'assets/backgrounds/default_bg.jpg',
     );
   }
   Map<String, dynamic> toJson() {
@@ -295,12 +339,14 @@ class GameArea {
       'name': name,
       'description': description,
       'pointsOfInterest': pointsOfInterest.map((e) => e.toJson()).toList(),
-      'isExplored': isExplored,
+      'isExplored': isExplored, // Save for backward compatibility
+      'exploredByHordeIds': exploredByHordeIds.toList(),
       'iconCodePoint': icon?.codePoint,
       'terrain': terrain,
       'backgroundImagePath': backgroundImagePath,
     };
   }
+
   GameArea copyWith({
     String? id,
     HexCoordinates? coordinates,
@@ -309,10 +355,21 @@ class GameArea {
     String? description,
     List<PointOfInterest>? pointsOfInterest,
     bool? isExplored,
+    Set<String>? exploredByHordeIds,
     IconData? icon,
     String? terrain,
     String? backgroundImagePath,
   }) {
+    Set<String> newExploredIds =
+        exploredByHordeIds ?? Set.from(this.exploredByHordeIds);
+    if (isExplored != null) {
+      if (isExplored) {
+        newExploredIds.add('player_horde');
+      } else {
+        newExploredIds.remove('player_horde');
+      }
+    }
+
     return GameArea(
       id: id ?? this.id,
       coordinates: coordinates ?? this.coordinates,
@@ -320,11 +377,11 @@ class GameArea {
       name: name ?? this.name,
       description: description ?? this.description,
       pointsOfInterest: pointsOfInterest ?? List.from(this.pointsOfInterest),
-      isExplored: isExplored ?? this.isExplored,
+      // isExplored is handled via newExploredIds
+      exploredByHordeIds: newExploredIds,
       icon: icon ?? this.icon,
       terrain: terrain ?? this.terrain,
       backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
     );
   }
 }
-

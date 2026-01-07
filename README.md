@@ -1,16 +1,29 @@
-# aravt_1
+# Aravt_OSS
 
-A new Flutter project.
+A library for developing turn-based strategy games in Flutter.
 
-## Getting Started
+This library provides art assets, a game engine, and a playable early-stage version of a
+turn-based strategy game set in 12th century Mongolia.
 
-This project is a starting point for a Flutter application.
+![Steppe Combat](screenshots/1%20-%20Steppe%20Combat.png)
 
-A few resources to get you started if this is your first Flutter project:
+![Hidden Attributes](screenshots/2%20-%20Hidden%20Attributes.png)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+![Hexploration](screenshots/4%20-%20Hexploration.png)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Licensing
+
+This software is distributed under the terms of the Apache License (Version 2.0) - see the
+LICENSE file for details. Non-software assets (images, audio, etc.) are licensed under the
+Creative Commons Attribution 4.0 International License. 
+
+## Contributing
+
+If you want to contribute to the project, see details of
+[how we accept contributions](CONTRIBUTING.md).
+
+## Disclaimer
+
+This is not an officially supported Google product. This project is not
+eligible for the [Google Open Source Software Vulnerability Rewards
+Program](https://bughunters.google.com/open-source-security).

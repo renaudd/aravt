@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/screens/post_combat_report_screen.dart
 import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/models/prisoner_action.dart';
@@ -31,7 +45,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
     _showCaptivesTab = widget.report.hasCaptivesToProcess;
 
     _tabController = TabController(
-      length: _showCaptivesTab ? 4 : 3, // 3 or 4 tabs
+      length: _showCaptivesTab ? 5 : 4, // 4 or 5 tabs
       vsync: this,
     );
 
@@ -72,34 +86,35 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
         return;
       }
 
-      // --- MODIFIED: Pass decisions to GameState ---
+
       // This is the fix. We call a new function with our decisions.
       gameState.processCombatReport(widget.report, _captiveDecisions);
-      // --- END MODIFIED ---
 
     } else {
-      // --- MODIFIED: Pass an empty decision map ---
+
       gameState.processCombatReport(widget.report, {});
-      // --- END MODIFIED ---
+
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final IconData appBarIcon =
-        _showCaptivesTab ? Icons.check : Icons.close;
+    final IconData appBarIcon = _showCaptivesTab ? Icons.check : Icons.close;
 
     final List<Widget> tabs = [
-      Tab(icon: Icon(Icons.assessment), text: "Summary"),
-      Tab(icon: Icon(Icons.shield), text: "Player"),
-      Tab(icon: Icon(Icons.sports_kabaddi), text: "Enemy"),
-      if (_showCaptivesTab) Tab(icon: Icon(Icons.gavel), text: "Captives"),
+      const Tab(icon: Icon(Icons.assessment), text: "Summary"),
+      const Tab(icon: Icon(Icons.shield), text: "Player"),
+      const Tab(icon: Icon(Icons.sports_kabaddi), text: "Enemy"),
+      const Tab(icon: Icon(Icons.inventory), text: "Loot"),
+      if (_showCaptivesTab)
+        const Tab(icon: Icon(Icons.gavel), text: "Captives"),
     ];
 
     final List<Widget> tabViews = [
       _buildSummaryTab(context),
       _buildSoldierList(widget.report.playerSoldiers, true),
       _buildSoldierList(widget.report.enemySoldiers, false),
+      _buildLootTab(context),
       if (_showCaptivesTab) _buildCaptiveList(),
     ];
 
@@ -184,7 +199,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
             report.date.toString(),
             style: GoogleFonts.cinzel(fontSize: 18, color: Colors.white70),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +228,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
               ),
             ],
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           _buildLootSection(
             context,
             report.lootObtained,
@@ -239,7 +254,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
     return Column(
       children: [
         Icon(icon, color: color, size: 40),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Text(
           title.toUpperCase(),
           style: GoogleFonts.cinzel(
@@ -250,9 +265,9 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
         ),
         Text(
           "Deployed: $initial",
-          style: TextStyle(color: Colors.white, fontSize: 16),
+          style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Text(
           "Survived: $survived",
           style: TextStyle(color: Colors.green[300], fontSize: 16),
@@ -269,7 +284,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
           "Fled: $fled",
           style: TextStyle(color: Colors.grey[400], fontSize: 16),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Text(
           "Kills Scored: $kills",
           style: TextStyle(color: Colors.amber[300], fontSize: 18),
@@ -284,7 +299,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
     LootReport lost,
   ) {
     if (obtained.isEmpty && lost.isEmpty) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
     return Column(
@@ -297,7 +312,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
             Icons.monetization_on,
             obtained,
           ),
-        if (obtained.isNotEmpty && lost.isNotEmpty) SizedBox(height: 16),
+        if (obtained.isNotEmpty && lost.isNotEmpty) const SizedBox(height: 16),
         if (lost.isNotEmpty)
           _buildLootCard(
             context,
@@ -317,7 +332,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
     IconData icon,
     LootReport loot,
   ) {
-    final itemEntries = loot.items.entries.toList();
+    final itemEntries = loot.entries;
 
     return Container(
       width: double.infinity,
@@ -333,7 +348,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
           Row(
             children: [
               Icon(icon, color: color, size: 28),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 title,
                 style: GoogleFonts.cinzel(
@@ -344,15 +359,15 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
               ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           if (loot.currency > 0)
             Text(
               "Currency: ${loot.currency}",
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           if (itemEntries.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
+            const Padding(
+              padding: EdgeInsets.only(top: 8.0),
               child: Text(
                 "Items:",
                 style: TextStyle(
@@ -362,19 +377,85 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
               ),
             ),
           ...itemEntries.map((entry) {
-            final String itemName = entry.key;
-            final int quantity = entry.value;
+            final String itemName = entry.item.name;
+            final String recipient = entry.soldierName;
 
             return Padding(
               padding: const EdgeInsets.only(left: 8.0, top: 4.0),
               child: Text(
-                "• $itemName (x$quantity)",
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                "• $itemName -> $recipient",
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             );
           }).toList(),
         ],
       ),
+    );
+  }
+
+  Widget _buildLootTab(BuildContext context) {
+    if (widget.report.lootObtained.isEmpty) {
+      return Center(
+        child: Text(
+          "No loot obtained.",
+          style: GoogleFonts.cinzel(color: Colors.white70, fontSize: 18),
+        ),
+      );
+    }
+
+    // Group loot by soldier
+    final Map<int, List<LootEntry>> groupedLoot = {};
+    for (var entry in widget.report.lootObtained.entries) {
+      groupedLoot.putIfAbsent(entry.soldierId, () => []).add(entry);
+    }
+
+    final soldierIds = groupedLoot.keys.toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: soldierIds.length,
+      itemBuilder: (context, index) {
+        final soldierId = soldierIds[index];
+        final entries = groupedLoot[soldierId]!;
+        final soldierName = entries.first.soldierName;
+
+        return Card(
+          color: Colors.black.withOpacity(0.6),
+          margin: const EdgeInsets.only(bottom: 16.0),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  soldierName,
+                  style: GoogleFonts.cinzel(
+                    color: Colors.amber[300],
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Divider(color: Colors.white24),
+                ...entries.map((entry) {
+                  return ListTile(
+                    leading:
+                        const Icon(Icons.inventory_2, color: Colors.white70),
+                    title: Text(
+                      entry.item.name,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      entry.item.description,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -390,9 +471,8 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
       );
     }
 
-    soldiers.sort((a, b) =>
-        _statusSortValue(a.finalStatus)
-            .compareTo(_statusSortValue(b.finalStatus)));
+    soldiers.sort((a, b) => _statusSortValue(a.finalStatus)
+        .compareTo(_statusSortValue(b.finalStatus)));
 
     return ListView.builder(
       itemCount: soldiers.length,
@@ -447,9 +527,6 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
         icon = Icons.check_circle;
         color = Colors.green[300]!;
         break;
-      default:
-        icon = Icons.help;
-        color = Colors.grey;
     }
     return Icon(icon, color: color, size: 36);
   }
@@ -457,10 +534,10 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
   Widget _buildSubtitleColumn(
       CombatReportSoldierSummary summary, bool isPlayer) {
     final statusStyle = GoogleFonts.cinzel(color: Colors.white, fontSize: 14);
-    final injuryStyle =
-        GoogleFonts.cinzel(color: Colors.red[200], fontSize: 12, fontStyle: FontStyle.italic);
-    final killStyle =
-        GoogleFonts.cinzel(color: Colors.green[200], fontSize: 12, fontStyle: FontStyle.italic);
+    final injuryStyle = GoogleFonts.cinzel(
+        color: Colors.red[200], fontSize: 12, fontStyle: FontStyle.italic);
+    final killStyle = GoogleFonts.cinzel(
+        color: Colors.green[200], fontSize: 12, fontStyle: FontStyle.italic);
 
     List<Widget> children = [];
 
@@ -514,10 +591,11 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
 
     // If no injuries and no kills, it's an empty column.
     // We add padding to ensure the ListTile has the correct height.
-    if (children.length == 1 && summary.injuriesSustained.isEmpty && summary.defeatedSoldiers.isEmpty) {
-        children.add(SizedBox(height: 4));
+    if (children.length == 1 &&
+        summary.injuriesSustained.isEmpty &&
+        summary.defeatedSoldiers.isEmpty) {
+      children.add(const SizedBox(height: 4));
     }
-
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +623,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
 
         TextStyle getOptionStyle(Soldier captive, PrisonerAction action) {
           // Stub for future AI logic
-          return TextStyle(color: Colors.white);
+          return const TextStyle(color: Colors.white);
         }
 
         return Card(
@@ -568,7 +646,7 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
                   "Status: Wounded", // TODO: Get more granular status
                   style: TextStyle(color: Colors.yellow[300]),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 SegmentedButton<PrisonerAction>(
                   style: SegmentedButton.styleFrom(
                     backgroundColor: Colors.black.withOpacity(0.3),
@@ -632,9 +710,6 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
         return 3;
       case SoldierStatus.alive:
         return 4;
-      default:
-        return 5;
     }
   }
 }
-

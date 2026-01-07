@@ -1,10 +1,26 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/widgets/persistent_menu_widget.dart';
 import 'package:aravt/widgets/report_tabs.dart';
+import 'package:aravt/widgets/training_report_tab.dart';
 import 'package:aravt/widgets/notification_badge.dart';
+import 'package:aravt/widgets/diplomacy_report_tab.dart';
 
 class GlobalReportsScreen extends StatefulWidget {
   const GlobalReportsScreen({super.key});
@@ -15,11 +31,10 @@ class GlobalReportsScreen extends StatefulWidget {
 
 class _GlobalReportsScreenState extends State<GlobalReportsScreen>
     with SingleTickerProviderStateMixin {
-  final int _tabCount =
-      7; // Reduced from 9 (Fishing/Hunting now sub-tabs of Food)
+  final int _tabCount = 9;
   late TabController _tabController;
 
-  // [GEMINI-UPDATED] Tab names - Fishing/Hunting removed (now sub-tabs of Food)
+  // Tab names
   final List<String> _tabNames = [
     'Event Log',
     'Combat',
@@ -28,6 +43,8 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
     'Herds',
     'Food',
     'Games',
+    'Training',
+    'Diplomacy',
   ];
 
   @override
@@ -35,7 +52,7 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
     super.initState();
     _tabController = TabController(length: _tabCount, vsync: this);
 
-    // [GEMINI-NEW] Listen for tab changes and mark as viewed
+    //  Listen for tab changes and mark as viewed
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         final gameState = context.read<GameState>();
@@ -44,7 +61,7 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
       }
     });
 
-    // [GEMINI-NEW] Mark initial tab as viewed
+    //  Mark initial tab as viewed
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final gameState = context.read<GameState>();
       gameState.markReportTabViewed(_tabNames[0]);
@@ -89,7 +106,7 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: TabBar(
-          controller: _tabController, // [GEMINI-NEW] Use our controller
+          controller: _tabController, //  Use our controller
           isScrollable: true,
           indicatorColor: Colors.amber,
           labelStyle: GoogleFonts.cinzel(fontWeight: FontWeight.bold),
@@ -109,26 +126,29 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
                 gameState.getBadgeCountForTab("Food")),
             _buildTab("Games", Icons.emoji_events_outlined,
                 gameState.getBadgeCountForTab("Games")),
+            _buildTab("Training", Icons.fitness_center,
+                gameState.getBadgeCountForTab("Training")),
+            _buildTab("Diplomacy", Icons.handshake,
+                gameState.getBadgeCountForTab("Diplomacy")),
           ],
         ),
       ),
       body: Stack(
         children: [
           TabBarView(
-            controller: _tabController, // [GEMINI-NEW] Use our controller
+            controller: _tabController, //  Use our controller
             children: [
               EventLogTab(
                   isOmniscient: gameState.isOmniscientMode, soldierId: null),
               const CombatReportTab(soldierId: null),
               const HealthReportTab(soldierId: null),
-              // [GEMINI-UPDATED] New merged Commerce tab
               CommerceReportTab(
                   isOmniscient: gameState.isOmniscientMode, soldierId: null),
-              // [GEMINI-UPDATED] Combined Herds tab
               const HerdsReportTab(soldierId: null),
-              // [GEMINI-UPDATED] Food tab with Fishing/Hunting as sub-tabs
               const FoodReportTab(soldierId: null),
               const GamesReportTab(soldierId: null),
+              const TrainingReportTab(soldierId: null),
+              const DiplomacyReportTab(soldierId: null),
             ],
           ),
           const PersistentMenuWidget(),

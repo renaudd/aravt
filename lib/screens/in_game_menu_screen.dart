@@ -1,8 +1,21 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // screens/in_game_menu_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 // import 'package:provider/provider.dart'; // No longer needed here
-import '../providers/game_state.dart';
 import '../widgets/persistent_menu_widget.dart';
 // import 'dart:io'; // No longer needed here
 // import 'package:flutter/foundation.dart'; // No longer needed here
@@ -17,7 +30,7 @@ class InGameMenuScreen extends StatefulWidget {
 class _InGameMenuScreenState extends State<InGameMenuScreen> {
   // bool _dontAskAgain = false; // Removed as it wasn't fully implemented
 
-Future<void> _showQuitConfirmationDialog(BuildContext context) async {
+  Future<void> _showQuitConfirmationDialog(BuildContext context) async {
     // final gameState = context.read<GameState>(); // Unused
 
     bool? shouldQuit = await showDialog<bool>(
@@ -27,13 +40,14 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
-              title: Text('Quit to Main Menu?', // [GEMINI-FIX] Corrected title
+              title: Text('Quit to Main Menu?',
                   style: GoogleFonts.cinzel(color: Colors.white)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Are you sure you want to quit?\nAny unsaved progress will be lost.', // [GEMINI-FIX] Corrected text
+                  Text(
+                      'Are you sure you want to quit?\nAny unsaved progress will be lost.',
                       style: GoogleFonts.cinzel(color: Colors.white70)),
                   // Removed "Don't ask again" checkbox
                 ],
@@ -45,7 +59,7 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
                   onPressed: () => Navigator.of(dialogContext).pop(false),
                 ),
                 TextButton(
-                  child: Text('Quit', // [GEMINI-FIX] Changed text
+                  child: Text('Quit',
                       style: GoogleFonts.cinzel(color: Colors.redAccent)),
                   onPressed: () => Navigator.of(dialogContext).pop(true),
                 ),
@@ -57,7 +71,7 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
     );
 
     if (shouldQuit == true) {
-      // [GEMINI-FIX] This is the correct behavior you wanted.
+
       // It *only* navigates to the main menu.
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
@@ -65,8 +79,6 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
       }
     }
   }
-
-
 
   Widget _buildMenuButton(String label, VoidCallback onPressed) {
     return Padding(
@@ -94,9 +106,9 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.4),
-      bottomNavigationBar: const PersistentMenuWidget(),
       body: Stack(
         children: [
+          const PersistentMenuWidget(),
           Positioned.fill(
             child: GestureDetector(
               onTap: () => Navigator.of(context).pop(),
@@ -142,7 +154,7 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
                   ),
                   const Divider(color: Colors.white24, height: 20),
                   _buildMenuButton(
-                    'Quit to Main Menu', // [GEMINI-FIX] Corrected button text
+                    'Quit to Main Menu',
                     () => _showQuitConfirmationDialog(context),
                   ),
                 ],
@@ -154,4 +166,3 @@ Future<void> _showQuitConfirmationDialog(BuildContext context) async {
     );
   }
 }
-

@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // screens/soldier_profile_screen.dart
 
 import 'package:aravt/models/inventory_item.dart';
@@ -18,7 +32,7 @@ import 'package:aravt/widgets/profile_tabs/soldier_profile_reports_panel.dart';
 import 'package:aravt/widgets/profile_tabs/soldier_profile_yurt_panel.dart';
 import 'package:aravt/widgets/gifting_dialog.dart';
 import 'package:aravt/widgets/tutorial_highlighter.dart';
-
+import 'package:aravt/services/tutorial_service.dart'; //  Import tutorial service
 const Map<EquipmentSlot, IconData> _placeholderIconMap = {
   EquipmentSlot.helmet: Icons.headset,
   EquipmentSlot.armor: Icons.shield,
@@ -49,34 +63,103 @@ class SoldierProfileScreen extends StatefulWidget {
 }
 
 class _SoldierProfileScreenState extends State<SoldierProfileScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _logScrollController = ScrollController();
-
-  final List<Widget> _tabs = [
-    const Tab(text: 'Profile'),
-    const TutorialHighlighter(
-        highlightKey: 'open_aravt_tab', child: Tab(text: 'Aravt')),
-    const Tab(text: 'Yurt'),
-    const Tab(text: 'Inventory'),
-    const Tab(text: 'Reports'),
-    const Tab(text: 'Relationships'),
-  ];
+  List<Widget> _tabs = [];
+  bool? _wasOmniscient;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    // Initial setup will happen in didChangeDependencies
   }
-
-  List<Soldier> _aravtMembers = [];
-  int _currentIndex = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadAravtMembers();
+
+    final gameState = Provider.of<GameState>(context);
+    final isOmniscient = gameState.isOmniscientMode;
+
+    // Rebuild tabs if omniscient mode changed or first load
+    if (_wasOmniscient != isOmniscient) {
+      _wasOmniscient = isOmniscient;
+      _updateTabs(isOmniscient);
+    }
   }
+
+  void _updateTabs(bool isOmniscient) {
+    _tabs = [
+      const Tooltip(message: 'Profile', child: Tab(icon: Icon(Icons.person))),
+      const TutorialHighlighter(
+          highlightKey: 'open_aravt_tab',
+          child:
+              Tooltip(message: 'Aravt', child: Tab(icon: Icon(Icons.group)))),
+      const Tooltip(message: 'Yurt', child: Tab(icon: Icon(Icons.home))),
+      const Tooltip(
+          message: 'Inventory', child: Tab(icon: Icon(Icons.inventory))),
+      const Tooltip(
+          message: 'Reports', child: Tab(icon: Icon(Icons.assignment))),
+      if (isOmniscient)
+        const Tooltip(
+            message: 'Relationships', child: Tab(icon: Icon(Icons.favorite))),
+    ];
+
+    // Dispose old controller if exists
+    // if (_tabController != null) _tabController.dispose(); // late variable, can't check null easily without flag
+    // Actually, we can just create a new one. But we need to dispose the old one if it was initialized.
+    // Since it's late, we can't check null. But we can check if _wasOmniscient was null (first run).
+    // Wait, initState runs before didChangeDependencies.
+    // I'll initialize it here.
+
+    // Create new controller
+    // If we are recreating, we should try to preserve index if possible, but index might be out of bounds.
+    int newIndex = 0;
+    try {
+      // If controller was already initialized
+      newIndex = _tabController.index;
+      _tabController.dispose();
+    } catch (e) {
+      // Not initialized yet
+    }
+
+    _tabController = TabController(
+        length: _tabs.length,
+        vsync: this,
+        initialIndex: newIndex < _tabs.length ? newIndex : 0);
+    _tabController.addListener(_handleTabSelection);
+
+    // Handle tutorial tab selection (deferred)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tutorial = context.read<TutorialService>();
+      if (tutorial.tutorialTabIndex != null) {
+        if (tutorial.tutorialTabIndex! < _tabs.length) {
+          _tabController.animateTo(tutorial.tutorialTabIndex!);
+        }
+        tutorial.resetTutorialNavigation();
+      }
+    });
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) return;
+    if (_tabController.index == 1) {
+      // Aravt tab
+      try {
+        final tutorial = Provider.of<TutorialService>(context, listen: false);
+        final gameState = Provider.of<GameState>(context, listen: false);
+        tutorial.advanceIfHighlighted(context, gameState, 'open_aravt_tab');
+      } catch (e) {
+        // Ignore if tutorial service not available or context unmounted
+      }
+    }
+  }
+
+  List<Soldier> _aravtMembers = [];
+  int _currentIndex = 0;
 
   void _loadAravtMembers() {
     final gameState = Provider.of<GameState>(context, listen: false);
@@ -91,7 +174,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
         _aravtMembers.sort((a, b) {
           if (a.role == SoldierRole.aravtCaptain) return -1;
           if (b.role == SoldierRole.aravtCaptain) return 1;
-          return a.name.compareTo(b.name);
+          return a.id.compareTo(b.id);
         });
         _currentIndex = _aravtMembers.indexWhere((s) => s.id == soldier.id);
       } else {
@@ -192,16 +275,12 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                 // 5. Reports Tab
                 SoldierProfileReportsPanel(soldier: soldier),
                 // 6. Relationships Tab
-                SoldierProfileRelationshipsPanel(soldier: soldier),
+                if (gameState.isOmniscientMode)
+                  SoldierProfileRelationshipsPanel(soldier: soldier),
               ],
             ),
           ),
-          const Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: PersistentMenuWidget(),
-          ),
+          const PersistentMenuWidget(),
           Positioned(
             bottom: 70, // Above persistent menu
             left: 0,
@@ -221,15 +300,21 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
   }
 
   Widget _buildTopTabBar() {
-    return TabBar(
-      controller: _tabController,
-      tabs: _tabs,
-      isScrollable: true,
-      labelStyle:
-          GoogleFonts.cinzel(color: Colors.yellow, fontWeight: FontWeight.bold),
-      unselectedLabelStyle: GoogleFonts.cinzel(color: Colors.white),
-      indicatorColor: Colors.yellow,
-      dividerColor: Colors.transparent,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        tabs: _tabs,
+        isScrollable: false,
+        labelStyle: GoogleFonts.cinzel(
+            color: Colors.yellow, fontWeight: FontWeight.bold),
+        unselectedLabelStyle: GoogleFonts.cinzel(color: Colors.white),
+        indicatorColor: Colors.yellow,
+        dividerColor: Colors.transparent,
+      ),
     );
   }
 
@@ -248,7 +333,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildProfilePanel(soldier),
+                _buildProfilePanel(soldier, gameState),
                 const SizedBox(height: 16),
                 _buildInteractionPanel(context, soldier, gameState),
                 if (isOmniscient) ...[
@@ -269,47 +354,121 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     );
   }
 
-  Widget _buildProfilePanel(Soldier soldier) {
+  Widget _buildProfilePanel(Soldier soldier, GameState gameState) {
     final textStyle = GoogleFonts.cinzel(color: Colors.white);
 
     return UiPanel(
       width: 335,
-      height: 255,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildProfileHeader(soldier),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              SoldierPortrait(
-                index: soldier.portraitIndex,
-                backgroundColor: soldier.backgroundColor,
-                size: 80.0,
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Age: ${soldier.age}', style: textStyle),
-                  Text('Aravt: ${soldier.aravt}', style: textStyle),
-                  Text('Years with horde: ${soldier.yearsWithHorde}',
-                      style: textStyle),
-                ],
-              )
-            ],
-          ),
-          const Divider(color: Colors.white54),
-          _buildProfileRow('Ailments:', soldier.ailments ?? 'None'),
-          _buildProfileRow('Injuries:', soldier.injuryDescription ?? 'None'),
-          _buildProfileRow(
-              'Height:', '${soldier.height.toStringAsFixed(0)} cm'),
-        ],
+      height: 240,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileHeader(soldier, gameState),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                SoldierPortrait(
+                  index: soldier.portraitIndex,
+                  backgroundColor: soldier.backgroundColor,
+                  size: 80.0,
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Age: ${soldier.age}', style: textStyle),
+                    Text(
+                        'Aravt: ${gameState.findAravtById(soldier.aravt)?.name ?? soldier.aravt}',
+                        style: textStyle),
+                    Text('Years with horde: ${soldier.yearsWithHorde}',
+                        style: textStyle),
+                  ],
+                )
+              ],
+            ),
+            const Divider(color: Colors.white54),
+            _buildTitlesSection(soldier, gameState),
+            const Divider(color: Colors.white54),
+            _buildProfileRow('Ailments:', soldier.ailments ?? 'None'),
+            _buildProfileRow('Injuries:', soldier.injuryDescription ?? 'None'),
+            _buildProfileRow(
+                'Height:', '${soldier.height.toStringAsFixed(0)} cm'),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildProfileHeader(Soldier soldier) {
+  Widget _buildTitlesSection(Soldier soldier, GameState gameState) {
+    final List<String> titles = [];
+
+    // 1. Role Title
+    if (soldier.role == SoldierRole.aravtCaptain) {
+      titles.add("Arban-u Darga");
+    } else if (soldier.role == SoldierRole.hordeLeader) {
+      titles.add("Noyan"); // Assuming Noyan for Horde Leader
+    } else if (soldier.role == SoldierRole.general) {
+      titles.add("General");
+    }
+
+    // 2. Duty Titles
+    final aravt = gameState.findAravtById(soldier.aravt);
+    if (aravt != null) {
+      aravt.dutyAssignments.forEach((duty, assigneeId) {
+        if (assigneeId == soldier.id) {
+          // Capitalize first letter
+          String dutyName =
+              duty.name.substring(0, 1).toUpperCase() + duty.name.substring(1);
+          titles.add(dutyName);
+        }
+      });
+    }
+
+    // 3. Champion Titles
+    gameState.currentChampions.forEach((type, championId) {
+      if (championId == soldier.id) {
+        String typeName = type.name.replaceAll(RegExp(r'(?<!^)(?=[A-Z])'), ' ');
+        // Capitalize
+        typeName =
+            typeName.substring(0, 1).toUpperCase() + typeName.substring(1);
+        titles.add("$typeName Champion");
+      }
+    });
+
+    if (titles.isEmpty) {
+      titles.add("None");
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("TITLES",
+            style: GoogleFonts.cinzel(
+                color: Colors.white, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 4.0,
+          children: titles.map((title) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.white30),
+              ),
+              child: Text(title,
+                  style: GoogleFonts.cinzel(
+                      color: const Color(0xFFE0D5C1), fontSize: 12)),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileHeader(Soldier soldier, GameState gameState) {
     final headerStyle = GoogleFonts.cinzel(
         color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold);
 
@@ -333,7 +492,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               style: headerStyle,
               underline: Container(), // Remove underline
               icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-              isExpanded: false, // Don't expand to full width to keep centered
+              isExpanded: true,
               items: _aravtMembers.asMap().entries.map((entry) {
                 return DropdownMenuItem<int>(
                   value: entry.key,
@@ -357,7 +516,12 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
           shape: BoxShape.circle,
           child: IconButton(
             icon: const Icon(Icons.chevron_right, color: Colors.white),
-            onPressed: () => _navigateToSoldier(_currentIndex + 1),
+            onPressed: () {
+              //  Advance tutorial if highlighted
+              context.read<TutorialService>().advanceIfHighlighted(
+                  context, gameState, 'navigate_next_soldier');
+              _navigateToSoldier(_currentIndex + 1);
+            },
             tooltip: 'Next Member',
           ),
         ),
@@ -414,11 +578,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               },
             ),
           ),
-          const Divider(color: Colors.white54),
-          Text('Supplies: ${soldier.suppliesWealth.toStringAsFixed(0)}',
-              style: GoogleFonts.cinzel(color: Colors.white)),
-          Text('Treasure: ${soldier.treasureWealth.toStringAsFixed(0)}',
-              style: GoogleFonts.cinzel(color: Colors.white)),
           if (!soldier.isPlayer) ...[
             const Divider(color: Colors.white54),
             _buildManagementPanel(context, gameState, soldier),
@@ -428,7 +587,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     );
   }
 
-  // [GEMINI-UPDATED] Management Panel with Role Checks
+  // Management Panel with Role Checks
   Widget _buildManagementPanel(
       BuildContext context, GameState gameState, Soldier soldier) {
     final headerStyle = GoogleFonts.cinzel(
@@ -453,11 +612,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               text: 'Gift',
               color: Colors.brown[800]!,
               onPressed: () => _showGiftDialog(context, gameState, soldier),
-            ),
-            _buildManagementButton(
-              text: 'Trade',
-              color: Colors.brown[800]!,
-              onPressed: () => _showTradeDialog(context, gameState, soldier),
             ),
 
             // --- Management Buttons (Restricted by Role) ---
@@ -512,6 +666,42 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                     Navigator.of(context).pop(); // Exit profile after execution
                   },
                 ),
+              ),
+
+            // PROMOTE TO CAPTAIN: Only Horde Leader, Target is Soldier
+            if (isHordeLeader &&
+                soldier.role == SoldierRole.soldier &&
+                gameState.canPromoteToCaptain(soldier))
+              _buildManagementButton(
+                text: 'Promote to Captain',
+                color: Colors.amber[800]!,
+                onPressed: () => _showConfirmationDialog(
+                  context,
+                  'Promote to Captain?',
+                  'This will create a new Aravt with ${soldier.name} as its captain.\n\nNote: Aravts with fewer than 10 soldiers suffer efficiency penalties.',
+                  () {
+                    gameState.promoteSoldierToCaptain(soldier);
+                    setState(() {});
+                  },
+                ),
+              ),
+
+            // PROMOTE TO GENERAL: Only Horde Leader, Target is Captain
+            if (isHordeLeader && soldier.role == SoldierRole.aravtCaptain)
+              _buildManagementButton(
+                text: 'Promote to General',
+                color: Colors.amber[900]!,
+                onPressed: gameState.canPromoteToGeneral(soldier)
+                    ? () => _showConfirmationDialog(
+                          context,
+                          'Promote to General?',
+                          '${soldier.name} will be promoted to General, taking command of an army.',
+                          () {
+                            gameState.promoteToGeneral(soldier);
+                            setState(() {});
+                          },
+                        )
+                    : null, // Greyed out
               ),
           ],
         )
@@ -730,8 +920,13 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                   context: context,
                   text: 'Inquire',
                   onPressed: canInteract
-                      ? () => _handleInteraction(
-                          InteractionType.inquire, gameState, player, soldier)
+                      ? () {
+                          //  Advance tutorial if highlighted
+                          context.read<TutorialService>().advanceIfHighlighted(
+                              context, gameState, 'inquire_soldier');
+                          _handleInteraction(InteractionType.inquire, gameState,
+                              player, soldier);
+                        }
                       : null,
                 ),
               ),
@@ -786,7 +981,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
   Future<void> _handleInteraction(InteractionType type, GameState gameState,
       Soldier player, Soldier target) async {
-    // [GEMINI-FIX] No dialog needed. Just execute and refresh.
+
     switch (type) {
       case InteractionType.scold:
         InteractionService.resolveScold(gameState, player, target);
@@ -817,24 +1012,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     );
   }
 
-  void _showTradeDialog(
-      BuildContext context, GameState gameState, Soldier target) {
-    // TODO: Build a full UI showing player and soldier inventories side-by-side
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Trade with ${target.name}'),
-        content: const Text('TODO: Show trade UI here.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          )
-        ],
-      ),
-    );
-  }
-
   Widget _buildHiddenStatsPanel(Soldier soldier) {
     const double panelHeight = 280; // Reduced from 350
     final textStyle =
@@ -854,7 +1031,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
                       fontSize: 14,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              Text('XP: ${soldier.experience.toStringAsFixed(1)}',
+              Text('Experience: ${soldier.experience.toStringAsFixed(1)}',
                   style: textStyle),
               Text(
                   'DOB: ${soldier.dateOfBirth.toLocal().toString().split(' ')[0]}',

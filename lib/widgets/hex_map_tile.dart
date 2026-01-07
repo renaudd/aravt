@@ -1,19 +1,30 @@
-// lib/widgets/hex_map_tile.dart
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-import 'package:flutter/material.dart';
-import 'dart:math';
+// lib/widgets/hex_map_tile.dart
 
 import '../models/area_data.dart'; // For GameArea and HexCoordinates
 
 /// Helper to map AreaType to its new tile image path.
 /// Assumes tiles are in 'assets/tiles/'
 String getTileImagePath(GameArea area, {bool isExplored = true}) {
-  // --- NEW: Handle fog of war ---
+
   if (!isExplored) {
     // You will need to create a 'fog_tile.png' image in your assets/tiles/ folder
     return 'assets/tiles/fog_tile.png';
   }
-  // --- END NEW ---
+
 
   // Handle special cases first
   if (area.type == AreaType.Settlement) {
@@ -34,7 +45,7 @@ String getTileImagePath(GameArea area, {bool isExplored = true}) {
       return 'assets/tiles/river_tile.png';
     case AreaType.Lake:
       return 'assets/tiles/lake_tile.png';
-  
+
     // TODO: Add tiles for these as well
     case AreaType.Steppe:
     case AreaType.Plains:
@@ -48,8 +59,4 @@ String getTileImagePath(GameArea area, {bool isExplored = true}) {
   }
 }
 
-
-/// --- REMOVED: HexagonClipper ---
-/// We will not use clipping, as your images are already transparent.
-/// The border is now handled by the CustomPaint in the map screens.
 

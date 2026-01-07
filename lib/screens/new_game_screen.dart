@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // screens/new_game_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,11 +30,11 @@ class NewGameScreen extends StatefulWidget {
 }
 
 class _NewGameScreenState extends State<NewGameScreen> {
-  // --- MODIFIED: Set default to MEDIUM and updated Omniscience logic ---
+
   String _selectedDifficulty = 'MEDIUM'; // Default difficulty
   bool _allowOmniscience = false; // Controls if the button is available in-game
   bool _isYoloMode = false;
-  // --- END MODIFIED ---
+
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +129,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
       ),
       child: Column(
         children: [
-          // --- MODIFIED: Logic and text for Omniscience ---
+
           CheckboxListTile(
             title: Text('Allow Omniscient Mode',
                 style: GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
@@ -130,7 +144,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
             activeColor: const Color(0xFFE0D5C1),
             checkColor: Colors.black,
           ),
-          // --- END MODIFIED ---
+
           CheckboxListTile(
             title: Text('YOLO Mode',
                 style: GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
@@ -156,12 +170,12 @@ class _NewGameScreenState extends State<NewGameScreen> {
       onTap: () {
         final gameState = context.read<GameState>();
 
-        // --- MODIFIED: Pass the new `allowOmniscience` flag ---
+
         gameState.initializeNewGame(
             difficulty: _selectedDifficulty,
             enableAutoSave: _isYoloMode,
             allowOmniscience: _allowOmniscience);
-        // --- END MODIFIED ---
+
 
         Navigator.push(
           context,

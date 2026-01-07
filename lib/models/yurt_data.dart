@@ -1,15 +1,24 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // models/yurt_data.dart
 
 import 'package:flutter/material.dart'; // For Offset
 import 'soldier_data.dart'; // To access Soldier wealth
 
 // Enum to represent the quality/appearance of the yurt
-enum YurtQuality {
-  Destitute, 
-  Normal,    
-  Nice,      
-  Opulent    
-}
+enum YurtQuality { Destitute, Normal, Nice, Opulent }
 
 YurtQuality _yurtQualityFromName(String? name) {
   for (final value in YurtQuality.values) {
@@ -19,11 +28,11 @@ YurtQuality _yurtQualityFromName(String? name) {
 }
 
 class Yurt {
-  final String id; 
-  final List<int> occupantIds; 
+  final String id;
+  final List<int> occupantIds;
   final YurtQuality quality;
-  Offset? position; 
-  double? scale;    
+  Offset? position;
+  double? scale;
 
   Yurt({
     required this.id,
@@ -34,12 +43,13 @@ class Yurt {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'occupantIds': occupantIds,
-    'quality': quality.name,
-    'position': position != null ? {'dx': position!.dx, 'dy': position!.dy} : null,
-    'scale': scale,
-  };
+        'id': id,
+        'occupantIds': occupantIds,
+        'quality': quality.name,
+        'position':
+            position != null ? {'dx': position!.dx, 'dy': position!.dy} : null,
+        'scale': scale,
+      };
 
   factory Yurt.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic>? posJson = json['position'];
@@ -52,15 +62,16 @@ class Yurt {
     );
   }
 
-  // --- THIS IS THE FIX ---
   // Helper function to determine quality based on occupants' wealth
   static YurtQuality calculateQuality(List<Soldier> occupants) {
     if (occupants.isEmpty) {
-      return YurtQuality.Destitute; 
+      return YurtQuality.Destitute;
     }
 
-    double totalSupplies = occupants.fold(0.0, (sum, s) => sum + s.suppliesWealth);
-    double totalTreasure = occupants.fold(0.0, (sum, s) => sum + s.treasureWealth);
+    double totalSupplies =
+        occupants.fold(0.0, (sum, s) => sum + s.suppliesWealth);
+    double totalTreasure =
+        occupants.fold(0.0, (sum, s) => sum + s.treasureWealth);
     double avgSupplies = totalSupplies / occupants.length;
     double avgTreasure = totalTreasure / occupants.length; // Use average
 
@@ -70,7 +81,8 @@ class Yurt {
     const double opulentSuppliesThreshold = 500.0;
     const double opulentTreasureThreshold = 100.0; // Avg treasure
 
-    if (avgSupplies >= opulentSuppliesThreshold && avgTreasure >= opulentTreasureThreshold) {
+    if (avgSupplies >= opulentSuppliesThreshold &&
+        avgTreasure >= opulentTreasureThreshold) {
       return YurtQuality.Opulent;
     } else if (avgSupplies >= niceSuppliesThreshold) {
       return YurtQuality.Nice;
@@ -94,6 +106,5 @@ class Yurt {
         return 'assets/images/opulent_yurt.png';
     }
   }
-  // --- END FIX ---
-}
 
+}

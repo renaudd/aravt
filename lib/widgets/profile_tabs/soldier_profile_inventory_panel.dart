@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // widgets/profile_tabs/soldier_profile_inventory_panel.dart
 
 import 'package:flutter/material.dart';
@@ -6,7 +20,7 @@ import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/widgets/item_sprite_widget.dart'; // Import the new sprite widget
 
-// --- FIX: Added the missing placeholder map ---
+
 const Map<EquipmentSlot, IconData> _placeholderIconMap = {
   EquipmentSlot.helmet: Icons.headset,
   EquipmentSlot.armor: Icons.shield,
@@ -22,7 +36,7 @@ const Map<EquipmentSlot, IconData> _placeholderIconMap = {
   EquipmentSlot.ring: Icons.circle,
   EquipmentSlot.undergarments: Icons.checkroom,
 };
-// --- END FIX ---
+
 
 class SoldierProfileInventoryPanel extends StatelessWidget {
   final Soldier soldier;
@@ -161,7 +175,20 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
           children: [
             Text("Personal Items",
                 style: GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text('Scrap: ${soldier.fungibleScrap.toStringAsFixed(0)}',
+                    style:
+                        GoogleFonts.cinzel(color: Colors.white, fontSize: 14)),
+                Text('Rupees: ${soldier.fungibleRupees.toStringAsFixed(0)}',
+                    style:
+                        GoogleFonts.cinzel(color: Colors.white, fontSize: 14)),
+              ],
+            ),
+            const Divider(color: Colors.white54),
+            const SizedBox(height: 4),
             Expanded(
               child: inventory.isEmpty
                   ? Center(

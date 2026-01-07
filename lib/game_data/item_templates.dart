@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/game_data/item_templates.dart
 import 'dart:math';
 import 'package:aravt/models/inventory_item.dart';
@@ -7,7 +21,7 @@ import 'package:aravt/models/inventory_item.dart';
 
 abstract class BaseItemTemplate {
   final String templateId;
-  final String defaultOrigin; // [GEMINI-NEW]
+  final String defaultOrigin;
   final String name;
   final String description;
   final ItemType itemType;
@@ -29,7 +43,7 @@ abstract class BaseItemTemplate {
     required this.iconAssetPath,
     this.spriteIndex = 0,
     this.equippableSlot,
-    this.defaultOrigin = 'Unknown', // [GEMINI-NEW]
+    this.defaultOrigin = 'Unknown', 
   });
 
   // Abstract method to be implemented by subclasses
@@ -62,7 +76,7 @@ class WeaponTemplate extends BaseItemTemplate {
     required this.baseDamage,
     required this.effectiveRange,
     required this.damageType,
-    super.defaultOrigin, // [GEMINI-NEW]
+    super.defaultOrigin,
   });
 
   @override
@@ -99,7 +113,7 @@ class WeaponTemplate extends BaseItemTemplate {
       damageType: damageType,
       baseDamage: finalDamage,
       effectiveRange: effectiveRange,
-      origin: origin ?? defaultOrigin, // [GEMINI-NEW]
+      origin: origin ?? defaultOrigin,
     );
   }
 }
@@ -120,7 +134,7 @@ class ArmorTemplate extends BaseItemTemplate {
     required super.equippableSlot,
     required this.baseDeflect,
     required this.baseDamageReduction,
-    super.defaultOrigin, // [GEMINI-NEW]
+    super.defaultOrigin,
   });
 
   @override
@@ -158,7 +172,7 @@ class ArmorTemplate extends BaseItemTemplate {
       maxCondition: maxCondition,
       deflectValue: finalDeflect,
       damageReductionValue: finalReduction,
-      origin: origin ?? defaultOrigin, // [GEMINI-NEW]
+      origin: origin ?? defaultOrigin,
     );
   }
 }
@@ -179,7 +193,7 @@ class ShieldTemplate extends BaseItemTemplate {
     required super.equippableSlot,
     required this.baseDeflect,
     required this.baseBlockChance,
-    super.defaultOrigin, // [GEMINI-NEW]
+    super.defaultOrigin,
   });
 
   @override
@@ -214,7 +228,7 @@ class ShieldTemplate extends BaseItemTemplate {
       maxCondition: maxCondition,
       deflectValue: finalDeflect,
       blockChance: (baseBlockChance * protectionMultiplier).clamp(0.1, 0.9),
-      origin: origin ?? defaultOrigin, // [GEMINI-NEW]
+      origin: origin ?? defaultOrigin,
     );
   }
 }
@@ -233,7 +247,7 @@ class RelicTemplate extends BaseItemTemplate {
     required super.iconAssetPath,
     required super.equippableSlot,
     this.bonusDescription = '',
-    super.defaultOrigin, // [GEMINI-NEW]
+    super.defaultOrigin,
   });
 
   @override
@@ -257,10 +271,10 @@ class RelicTemplate extends BaseItemTemplate {
       iconAssetPath: iconAssetPath,
       spriteIndex: spriteIndex,
       slot: equippableSlot!,
-      condition: condition, // Relics don't degrade
+      condition: condition,
       maxCondition: maxCondition,
       bonusDescription: bonusDescription,
-      origin: origin ?? defaultOrigin, // [GEMINI-NEW]
+      origin: origin ?? defaultOrigin,
     );
   }
 }
@@ -282,7 +296,7 @@ class MountTemplate extends BaseItemTemplate {
     required super.equippableSlot,
     required this.baseHealth,
     required this.baseSpeed,
-    super.defaultOrigin, // [GEMINI-NEW]
+    super.defaultOrigin,
   });
 
   @override
@@ -300,7 +314,6 @@ class MountTemplate extends BaseItemTemplate {
     return Mount(
       id: '${templateId}_${DateTime.now().microsecondsSinceEpoch}',
       templateId: templateId,
-      // [GEMINI-FIX] Use new PUBLIC method
       name: ItemDatabase.getRandomHorseName(),
       description: 'A $quality steppe horse.',
       itemType: itemType,
@@ -314,12 +327,12 @@ class MountTemplate extends BaseItemTemplate {
       condition: condition,
       maxCondition: maxCondition,
       health: (baseHealth * statMultiplier).round(),
-      temperament: 5, // Can be randomized
+      temperament: 5,
       speed: (baseSpeed * statMultiplier).round(),
       might: 5,
       bonding: 0,
       exhaustion: 0,
-      origin: origin ?? defaultOrigin, // [GEMINI-NEW]
+      origin: origin ?? defaultOrigin,
     );
   }
 }
@@ -337,7 +350,7 @@ class ConsumableTemplate extends BaseItemTemplate {
     required super.baseWeight,
     required super.iconAssetPath,
     required this.effect,
-    super.defaultOrigin, // [GEMINI-NEW]
+    super.defaultOrigin,
   }) : super(equippableSlot: null); // Consumables are not equippable
 
   @override
@@ -355,12 +368,12 @@ class ConsumableTemplate extends BaseItemTemplate {
       description: description,
       itemType: itemType,
       valueType: valueType,
-      baseValue: finalValue, // Consumables have fixed value
+      baseValue: finalValue,
       weight: baseWeight,
       iconAssetPath: iconAssetPath,
       spriteIndex: spriteIndex,
       effect: effect,
-      origin: origin ?? defaultOrigin, // [GEMINI-NEW]
+      origin: origin ?? defaultOrigin,
     );
   }
 }
@@ -387,10 +400,57 @@ class ItemDatabase {
     'Khatan',
     'Chuluun',
     'Naran',
-    'Gerel'
+    'Gerel',
+    'Altan',
+    'Batu',
+    'Chinua',
+    'Dorn',
+    'Enkh',
+    'Gansukh',
+    'Hulan',
+    'Ider',
+    'Jargal',
+    'Khasar',
+    'Lkhagva',
+    'Munkh',
+    'Ochir',
+    'Puren',
+    'Qara',
+    'Saran',
+    'Temujin',
+    'Ulan',
+    'Vanchig',
+    'Yul',
+    'Arslan',
+    'Bataar',
+    'Bayar',
+    'Bold',
+    'Chimeg',
+    'Delger',
+    'Erdene',
+    'Ganbaatar',
+    'Khaliun',
+    'Munkhbat',
+    'Narangerel',
+    'Odgerel',
+    'Otgon',
+    'Sukhbat',
+    'Tsetseg',
+    'Tuya',
+    'Uranchimeg',
+    'Zaya',
+    'Zolboo',
+    'Alagh',
+    'Boro',
+    'Khula',
+    'Sharga',
+    'Zeerd',
+    'Tsagaan',
+    'Khar',
+    'Khongor',
+    'Saaral'
   ];
 
-  // [GEMINI-FIX] Made public (removed underscore)
   static String getRandomHorseName() {
     return _horseNames[_random.nextInt(_horseNames.length)];
   }
@@ -442,6 +502,20 @@ class ItemDatabase {
       effectiveRange: 2.0,
       damageType: DamageType.Slashing,
     );
+    _templates['wep_iron_sword'] = WeaponTemplate(
+      templateId: 'wep_iron_sword',
+      name: 'Iron Sword',
+      description: 'A finely forged iron sword.',
+      itemType: ItemType.sword,
+      valueType: ValueType.Supply,
+      baseValue: 80.0,
+      baseWeight: 4.0,
+      iconAssetPath: 'assets/images/items/swords_items.png',
+      equippableSlot: EquipmentSlot.melee,
+      baseDamage: 12.0,
+      effectiveRange: 2.0,
+      damageType: DamageType.Slashing,
+    );
     _templates['wep_lance'] = WeaponTemplate(
       templateId: 'wep_lance',
       name: 'Lance Spear',
@@ -454,6 +528,20 @@ class ItemDatabase {
       equippableSlot: EquipmentSlot.spear,
       baseDamage: 12.0,
       effectiveRange: 5.0,
+      damageType: DamageType.Piercing,
+    );
+    _templates['wep_spear'] = WeaponTemplate(
+      templateId: 'wep_spear',
+      name: 'Spear',
+      description: 'A standard spear.',
+      itemType: ItemType.spear,
+      valueType: ValueType.Supply,
+      baseValue: 40.0,
+      baseWeight: 3.0,
+      iconAssetPath: 'assets/images/items/spears_items.png',
+      equippableSlot: EquipmentSlot.spear,
+      baseDamage: 8.0,
+      effectiveRange: 4.0,
       damageType: DamageType.Piercing,
     );
     _templates['wep_throwing_spear'] = WeaponTemplate(
@@ -472,6 +560,32 @@ class ItemDatabase {
     );
 
     // --- ARMOR ---
+    _templates['arm_leather_lamellar'] = ArmorTemplate(
+      templateId: 'arm_leather_lamellar',
+      name: 'Leather Lamellar',
+      description: 'Armor made of leather scales.',
+      itemType: ItemType.armor,
+      valueType: ValueType.Supply,
+      baseValue: 80.0,
+      baseWeight: 12.0,
+      iconAssetPath: 'assets/images/items/armors_items.png',
+      equippableSlot: EquipmentSlot.armor,
+      baseDeflect: 7.0,
+      baseDamageReduction: 4.0,
+    );
+    _templates['arm_leather_lamellar'] = ArmorTemplate(
+      templateId: 'arm_leather_lamellar',
+      name: 'Leather Lamellar',
+      description: 'Armor made of leather scales.',
+      itemType: ItemType.armor,
+      valueType: ValueType.Supply,
+      baseValue: 80.0,
+      baseWeight: 12.0,
+      iconAssetPath: 'assets/images/items/armors_items.png',
+      equippableSlot: EquipmentSlot.armor,
+      baseDeflect: 7.0,
+      baseDamageReduction: 4.0,
+    );
     _templates['arm_undergarments'] = ArmorTemplate(
       templateId: 'arm_undergarments',
       name: 'Undergarments',
@@ -569,7 +683,7 @@ class ItemDatabase {
         templateId: 'rel_ring',
         name: 'Ring',
         description: 'A simple ring.',
-        itemType: ItemType.relic,
+        itemType: ItemType.ring,
         valueType: ValueType.Treasure,
         baseValue: 80.0,
         baseWeight: 0.1,
@@ -586,7 +700,7 @@ class ItemDatabase {
       valueType: ValueType.Supply,
       baseValue: 150.0,
       baseWeight: 400.0,
-      iconAssetPath: 'assets/images/items/horses_items.png',
+      iconAssetPath: 'assets/images/horses.png',
       equippableSlot: EquipmentSlot.mount,
       baseHealth: 7,
       baseSpeed: 5,
@@ -604,7 +718,62 @@ class ItemDatabase {
         iconAssetPath: 'assets/images/items/consumables_items.png',
         effect: 'Restores a small amount of stamina.');
 
-    // [GEMINI-NEW] Added missing templates
+    _templates['consumable_wine'] = ConsumableTemplate(
+        templateId: 'consumable_wine',
+        name: 'Wine Skin',
+        description: 'A skin of fermented grape wine.',
+        itemType: ItemType.consumable,
+        valueType: ValueType.Treasure,
+        baseValue: 10.0,
+        baseWeight: 1.0,
+        iconAssetPath:
+            'assets/images/items/consumables_items.png', // Placeholder
+        effect: 'Improves morale, but may have side effects.');
+
+    _templates['con_arrows_short'] = ConsumableTemplate(
+        templateId: 'con_arrows_short',
+        name: 'Short Bow Arrows',
+        description: 'A bundle of 20 short bow arrows.',
+        itemType: ItemType.consumable,
+        valueType: ValueType.Supply,
+        baseValue: 4.0,
+        baseWeight: 0.8,
+        iconAssetPath: 'assets/images/items/consumables_items.png',
+        effect: 'Ammunition for short bows.');
+    _templates['con_arrows_long'] = ConsumableTemplate(
+        templateId: 'con_arrows_long',
+        name: 'Long Bow Arrows',
+        description: 'A bundle of 20 long bow arrows.',
+        itemType: ItemType.consumable,
+        valueType: ValueType.Supply,
+        baseValue: 6.0,
+        baseWeight: 1.2,
+        iconAssetPath: 'assets/images/items/consumables_items.png',
+        effect: 'Ammunition for long bows.');
+    _templates['con_rope'] = ConsumableTemplate(
+        templateId: 'con_rope',
+        name: 'Coil of Rope',
+        description: 'A sturdy hempen rope.',
+        itemType: ItemType.consumable,
+        valueType: ValueType.Supply,
+        baseValue: 2.0,
+        baseWeight: 2.0,
+        iconAssetPath:
+            'assets/images/items/consumables_items.png', // Placeholder
+        effect: 'Useful for various tasks.');
+    _templates['con_water'] = ConsumableTemplate(
+        templateId: 'con_water',
+        name: 'Waterskin',
+        description: 'A skin filled with fresh water.',
+        itemType: ItemType.consumable,
+        valueType: ValueType.Supply,
+        baseValue: 0.5,
+        baseWeight: 1.0,
+        iconAssetPath:
+            'assets/images/items/consumables_items.png', // Placeholder
+        effect: 'Quenches thirst.');
+
+    // Added missing templates
     _templates['relic_jade_figurine'] = RelicTemplate(
         templateId: 'relic_jade_figurine',
         name: 'Jade Figurine',
@@ -616,12 +785,21 @@ class ItemDatabase {
         iconAssetPath: 'assets/images/items/relics_items.png',
         equippableSlot: EquipmentSlot.trophy,
         bonusDescription: '+2 Culture');
+    _templates['trade_pelt'] = ConsumableTemplate(
+        templateId: 'trade_pelt',
+        name: 'Animal Pelt',
+        description: 'A pelt for trade.',
+        itemType: ItemType.consumable,
+        valueType: ValueType.Supply,
+        baseValue: 10.0,
+        baseWeight: 2.0,
+        iconAssetPath: 'assets/images/items/consumables_items.png',
+        effect: 'Can be traded.');
   }
 
   // --- The new Universal Item Creator ---
   static InventoryItem? createItemInstance(String templateId,
       {String? forcedQuality, String? origin}) {
-    // [GEMINI-NEW]
     final template = _templates[templateId];
     if (template == null) {
       print('Error: No item template found for ID $templateId');
@@ -643,7 +821,7 @@ class ItemDatabase {
         // Consumables have no quality, just create and return
         return (template as ConsumableTemplate).createInstance(
             'Standard', 1, 1, template.baseValue,
-            origin: origin); // [GEMINI-NEW]
+            origin: origin);
       }
       quality = qualityList[_random.nextInt(qualityList.length)];
     }
@@ -720,7 +898,7 @@ class ItemDatabase {
       currentCondition,
       finalMaxCondition,
       finalValue,
-      origin: origin, // [GEMINI-NEW]
+      origin: origin,
     );
   }
 }

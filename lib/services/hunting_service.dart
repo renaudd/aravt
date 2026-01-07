@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:math';
 import 'package:aravt/models/animal_data.dart';
 import 'package:aravt/models/horde_data.dart';
@@ -7,8 +21,7 @@ import 'package:aravt/models/game_date.dart';
 import 'package:aravt/models/hunting_report.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/services/combat_service.dart'; // For TerrainType
-import 'package:aravt/models/combat_models.dart';
-// [GEMINI-NEW] Import for PerformanceEvent
+//  Import for PerformanceEvent
 import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/justification_event.dart';
 
@@ -45,10 +58,11 @@ class HuntingService {
       if (soldier != null &&
           soldier.status == SoldierStatus.alive &&
           !soldier.isImprisoned) {
-        final result = _resolveSoldierHunt(soldier, localAnimals, gameState);
+        final result =
+            _resolveSoldierHunt(soldier, localAnimals, gameState, aravt);
         individualResults.add(result);
 
-        // [GEMINI-NEW] Log Performance based on results
+        //  Log Performance based on results
         if (result.totalMeat > 50.0 || result.kills.length >= 3) {
           soldier.performanceLog.add(PerformanceEvent(
               turnNumber: currentTurn,
@@ -90,6 +104,15 @@ class HuntingService {
       }
     }
 
+    // Sort individualResults so Captain is first
+    individualResults.sort((a, b) {
+      final soldierA = gameState.findSoldierById(a.soldierId);
+      final soldierB = gameState.findSoldierById(b.soldierId);
+      if (soldierA?.role == SoldierRole.aravtCaptain) return -1;
+      if (soldierB?.role == SoldierRole.aravtCaptain) return 1;
+      return 0;
+    });
+
     // Filter out soldiers who caught nothing
     final filteredResults =
         individualResults.where((result) => result.totalMeat > 0).toList();
@@ -104,7 +127,8 @@ class HuntingService {
   }
 
   IndividualHuntResult _resolveSoldierHunt(
-      Soldier soldier, List<Animal> localAnimals, GameState gameState) {
+      Soldier soldier,
+      List<Animal> localAnimals, GameState gameState, Aravt aravt) {
     final List<HuntedAnimal> kills = [];
     bool wasInjured = false; // Placeholder for future "boar gores you" logic
 
@@ -117,11 +141,13 @@ class HuntingService {
         (_random.nextInt(20) - 10); // Variance
 
     int spottedCount = 0;
-    if (spotScore > 35)
+    if (spotScore > 35) {
       spottedCount = 3;
-    else if (spotScore > 25)
+    } else if (spotScore > 25) {
       spottedCount = 2;
-    else if (spotScore > 15) spottedCount = 1;
+    } else if (spotScore > 15) {
+      spottedCount = 1;
+    }
 
     for (int i = 0; i < spottedCount; i++) {
       // 2. Identify Animal (weighted random based on rarity)
@@ -133,9 +159,17 @@ class HuntingService {
       if (chosenWeapon != null) {
         // 4. Take the shot!
         if (_attemptKill(soldier, animal, chosenWeapon)) {
-          // Success! Calculate yield.
-          double meat = animal.minMeat +
-              _random.nextDouble() * (animal.maxMeat - animal.minMeat);
+          // --- UNDERSTRENGTH PENALTY ---
+          // Aravts with < 10 members work less efficiently.
+          // Efficiency = (Members / 10). Clamped to 1.0 max.
+          // See ResourceService for detailed reasoning.
+          final int memberCount = aravt.soldierIds.length;
+          final double understrengthFactor =
+              (memberCount / 10.0).clamp(0.0, 1.0);
+          double meat = (animal.minMeat +
+              _random.nextDouble() * (animal.maxMeat - animal.minMeat));
+
+          meat *= understrengthFactor;
 
           kills.add(HuntedAnimal(
             animalId: animal.id,
@@ -146,7 +180,7 @@ class HuntingService {
             weaponUsed: chosenWeapon.name,
           ));
 
-          // [GEMINI-NEW] Add Pelts to Communal Stash
+          //  Add Pelts to Communal Stash
           for (int p = 0; p < animal.peltCount; p++) {
             gameState.addItemToCommunalStash(InventoryItem(
               id: 'pelt_${animal.id}_${DateTime.now().microsecondsSinceEpoch}_$p',
@@ -162,6 +196,11 @@ class HuntingService {
               iconAssetPath: 'assets/images/items/consumables_items.png',
             ));
           }
+
+          //  Add Scrap (Bones/Sinew) for Fletching
+          // Each kill provides a small amount of "scrap" usable for arrows.
+          gameState
+              .addCommunalScrap(1.0 + _random.nextInt(2)); // 1-2 scrap per kill
         }
       }
     }
@@ -228,7 +267,7 @@ class HuntingService {
     }
   }
 
-  int _getSkillForWeapon(Soldier soldier, ItemType type) {
+  double _getSkillForWeapon(Soldier soldier, ItemType type) {
     switch (type) {
       case ItemType.bow:
         return soldier
@@ -238,7 +277,7 @@ class HuntingService {
       case ItemType.sword:
         return soldier.swordSkill;
       default:
-        return 0;
+        return 0.0;
     }
   }
 
@@ -247,7 +286,7 @@ class HuntingService {
     double baseHitChance = 0.60;
 
     // Skill modifier
-    int skill = _getSkillForWeapon(soldier, weapon.itemType);
+    double skill = _getSkillForWeapon(soldier, weapon.itemType);
     baseHitChance += (skill - 5) * 0.05;
 
     // Attribute modifiers

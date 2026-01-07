@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,9 +20,9 @@ import 'dart:ui'; // For ImageFilter
 import '../providers/game_state.dart';
 import '../models/area_data.dart';
 import '../models/horde_data.dart';
-import '../models/assignment_data.dart';
 import '../widgets/persistent_menu_widget.dart';
-import '../models/soldier_data.dart'; // Needed for SoldierRole
+import '../widgets/aravt_assignment_dialog.dart';
+import '../models/assignment_data.dart';
 
 class AreaScreen extends StatelessWidget {
   const AreaScreen({super.key});
@@ -150,192 +164,39 @@ class AreaScreen extends StatelessWidget {
   void _showPoiDetailDialog(BuildContext context, PointOfInterest poi) {
     final gameState = Provider.of<GameState>(context, listen: false);
 
-    // [GEMINI-NEW] Check player role
-    final bool isHordeLeader =
-        gameState.player?.role == SoldierRole.hordeLeader;
-
     final List<Aravt> assignedAravts = gameState.aravts
         .where((aravt) => poi.assignedAravtIds.contains(aravt.id))
         .toList();
     final List<Aravt> availableAravts = gameState.aravts
-        .where((aravt) => aravt.task == null && !assignedAravts.contains(aravt))
+        .where((aravt) =>
+            aravt.soldierIds.isNotEmpty &&
+            (aravt.task == null ||
+                (aravt.task is AssignedTask &&
+                    (aravt.task as AssignedTask).assignment ==
+                        AravtAssignment.Rest)) &&
+            !assignedAravts.contains(aravt))
         .toList();
-
-    AravtAssignment? _selectedAssignment;
-    final Set<String> _selectedAravtIds = {};
 
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            bool canConfirm =
-                _selectedAssignment != null && _selectedAravtIds.isNotEmpty;
-
-            return AlertDialog(
-              backgroundColor: Colors.grey[900]?.withOpacity(0.95),
-              title: Text(
-                  _selectedAssignment == null
-                      ? poi.name
-                      : "Assign to: ${_selectedAssignment!.name}",
-                  style: GoogleFonts.cinzel(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-              content: SingleChildScrollView(
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_selectedAssignment == null) ...[
-                        Text(poi.description,
-                            style: GoogleFonts.cinzel(color: Colors.white70)),
-                        const Divider(color: Colors.white24, height: 20),
-                        Text("Your Aravts Here:",
-                            style: GoogleFonts.cinzel(
-                                color: Colors.white, fontSize: 16)),
-                        if (assignedAravts.isEmpty)
-                          Text("None",
-                              style: GoogleFonts.cinzel(
-                                  color: Colors.white54,
-                                  fontStyle: FontStyle.italic)),
-                        ...assignedAravts.map((aravt) => Text(
-                              "- ${aravt.id} (${aravt.currentAssignment.name})",
-                              style:
-                                  GoogleFonts.cinzel(color: Colors.amber[200]),
-                            )),
-                        const Divider(color: Colors.white24, height: 20),
-
-                        // [GEMINI-FIX] Only show assignment controls if Horde Leader
-                        if (isHordeLeader) ...[
-                          Text("Available Assignments:",
-                              style: GoogleFonts.cinzel(
-                                  color: Colors.white, fontSize: 16)),
-                          if (poi.availableAssignments.isEmpty)
-                            Text("None",
-                                style: GoogleFonts.cinzel(
-                                    color: Colors.white54,
-                                    fontStyle: FontStyle.italic)),
-                          Wrap(
-                            spacing: 8.0,
-                            runSpacing: 4.0,
-                            children:
-                                poi.availableAssignments.map((assignment) {
-                              return ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.teal[800],
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: Text(assignment.name,
-                                    style: GoogleFonts.cinzel()),
-                                onPressed: availableAravts.isEmpty
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          _selectedAssignment = assignment;
-                                        });
-                                      },
-                              );
-                            }).toList(),
-                          ),
-                          if (availableAravts.isEmpty &&
-                              poi.availableAssignments.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text("No aravts available (all are busy).",
-                                  style: GoogleFonts.cinzel(
-                                      color: Colors.red[300],
-                                      fontStyle: FontStyle.italic)),
-                            ),
-                        ] else ...[
-                          // Not Horde Leader
-                          Text("Only the Horde Leader can assign tasks here.",
-                              style: GoogleFonts.cinzel(
-                                  color: Colors.white54,
-                                  fontStyle: FontStyle.italic)),
-                        ]
-                      ] else ...[
-                        // Step 2 of assignment (only reachable if Horde Leader)
-                        Text("Select Aravts to assign:",
-                            style: GoogleFonts.cinzel(
-                                color: Colors.white, fontSize: 16)),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 250,
-                          child: ListView(
-                            children: availableAravts.map((aravt) {
-                              return CheckboxListTile(
-                                title: Text(aravt.id,
-                                    style: GoogleFonts.cinzel(
-                                        color: Colors.white)),
-                                subtitle: Text(
-                                    "Soldiers: ${aravt.soldierIds.length}",
-                                    style: GoogleFonts.cinzel(
-                                        color: Colors.white70)),
-                                value: _selectedAravtIds.contains(aravt.id),
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    if (value == true) {
-                                      _selectedAravtIds.add(aravt.id);
-                                    } else {
-                                      _selectedAravtIds.remove(aravt.id);
-                                    }
-                                  });
-                                },
-                                checkColor: Colors.black,
-                                activeColor: Colors.amber,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                              );
-                            }).toList(),
-                          ),
-                        )
-                      ]
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                if (_selectedAssignment != null)
-                  TextButton(
-                    child: Text("Back",
-                        style: GoogleFonts.cinzel(color: Colors.white70)),
-                    onPressed: () {
-                      setState(() {
-                        _selectedAssignment = null;
-                        _selectedAravtIds.clear();
-                      });
-                    },
-                  ),
-                TextButton(
-                  child: Text("Close",
-                      style: GoogleFonts.cinzel(color: Colors.white70)),
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-                if (_selectedAssignment != null)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
-                    ),
-                    onPressed: !canConfirm
-                        ? null
-                        : () {
-                            for (final aravtId in _selectedAravtIds) {
-                              final aravt = gameState.findAravtById(aravtId);
-                              if (aravt != null) {
-                                gameState.assignAravtToPoi(
-                                    aravt, poi, _selectedAssignment!);
-                              }
-                            }
-                            Navigator.of(dialogContext).pop();
-                          },
-                    child: Text("Confirm (${_selectedAravtIds.length})",
-                        style: GoogleFonts.cinzel(fontWeight: FontWeight.bold)),
-                  ),
-              ],
-            );
-          },
+        return AravtAssignmentDialog(
+          title: poi.name,
+          description: poi.description,
+          availableAssignments: poi.availableAssignments,
+          assignedAravts: assignedAravts,
+          availableAravts: availableAravts,
+          onConfirm: gameState.isPlayerLeader
+              ? (assignment, selectedAravtIds, option) {
+                  for (final aravtId in selectedAravtIds) {
+                    final aravt = gameState.findAravtById(aravtId);
+                    if (aravt != null) {
+                      gameState.assignAravtToPoi(aravt, poi, assignment,
+                          option: option);
+                    }
+                  }
+                }
+              : null, // Disable if not leader
         );
       },
     );

@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +22,8 @@ import 'soldier_portrait_widget.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/narrative_models.dart';
 import 'narrative/tournament_conclusion_dialog.dart';
+import 'narrative/horde_leader_transition_dialog.dart';
+import 'narrative/assassination_dialog.dart';
 
 class NarrativeOverlayWidget extends StatefulWidget {
   const NarrativeOverlayWidget({super.key});
@@ -32,6 +48,13 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
             return _buildTradeDialog(context, gameState, event);
           case NarrativeEventType.tournamentConclusion:
             return TournamentConclusionDialog(event: event);
+          case NarrativeEventType.hordeLeaderTransition:
+            return HordeLeaderTransitionDialog(event: event);
+          case NarrativeEventType.assassinationPoison:
+          case NarrativeEventType.assassinationAccident:
+          case NarrativeEventType.assassinationStrangle:
+          case NarrativeEventType.assassinationConfront:
+            return AssassinationDialog(event: event);
           default:
             return const SizedBox.shrink();
         }
@@ -61,6 +84,8 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
     final tradeableSoldiers = gameState.horde
         .where((s) => !s.isPlayer && s.aravt == playerAravt.id)
         .toList();
+    // Sort by ID to ensure consistent, standard order (2nd, 3rd, etc.)
+    tradeableSoldiers.sort((a, b) => a.id.compareTo(b.id));
 
     // Reset selection if it's no longer valid (e.g. after a reload)
     if (_selectedSoldierId != null &&
@@ -193,66 +218,78 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
                         Text("Offer Swap:",
                             style: GoogleFonts.cinzel(color: Colors.white70)),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<int>(
-                                  isExpanded: true,
-                                  value: _selectedSoldierId,
-                                  hint: Text("Select a soldier...",
-                                      style: GoogleFonts.cinzel(
-                                          color: Colors.white54)),
-                                  dropdownColor: const Color(0xFF333333),
-                                  items: tradeableSoldiers.map((s) {
-                                    return DropdownMenuItem<int>(
-                                      value: s.id,
-                                      child: Row(
-                                        children: [
-                                          // Small portrait in dropdown for polish
-                                          SoldierPortrait(
-                                              index: s.portraitIndex,
-                                              size: 30,
-                                              backgroundColor:
-                                                  s.backgroundColor),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(s.name,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: GoogleFonts.cinzel(
-                                                    color: Colors.white)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (int? id) {
-                                    setState(() {
-                                      _selectedSoldierId = id;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber[800],
+                        // Custom Selectable List instead of DropdownButton
+                        Container(
+                          height: 150, // Fixed height for scrollable list
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white24),
+                            color: Colors.black26,
+                          ),
+                          child: ListView.builder(
+                            itemCount: tradeableSoldiers.length,
+                            itemBuilder: (context, index) {
+                              final s = tradeableSoldiers[index];
+                              final isSelected = s.id == _selectedSoldierId;
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedSoldierId = s.id;
+                                  });
+                                },
+                                child: Container(
+                                  color: isSelected
+                                      ? Colors.amber.withOpacity(0.2)
+                                      : Colors.transparent,
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 14)),
-                              onPressed: _selectedSoldierId == null
-                                  ? null
-                                  : () {
-                                      _handleTrade(gameState, event,
-                                          playerAravt, captain);
-                                    },
-                              child: Text("Swap",
-                                  style: GoogleFonts.cinzel(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        )
+                                      horizontal: 8, vertical: 6),
+                                  child: Row(
+                                    children: [
+                                      SoldierPortrait(
+                                          index: s.portraitIndex,
+                                          size: 30,
+                                          backgroundColor: s.backgroundColor),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(s.name,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.cinzel(
+                                                color: isSelected
+                                                    ? Colors.amber[200]
+                                                    : Colors.white,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal)),
+                                      ),
+                                      if (isSelected)
+                                        const Icon(Icons.check,
+                                            color: Colors.amber, size: 16),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber[800],
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 14)),
+                            onPressed: _selectedSoldierId == null
+                                ? null
+                                : () {
+                                    _handleTrade(
+                                        gameState, event, playerAravt, captain);
+                                  },
+                            child: Text("Swap Selected Soldier",
+                                style: GoogleFonts.cinzel(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
                       ],
                     ),
                   ),

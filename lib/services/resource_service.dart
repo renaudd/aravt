@@ -1,13 +1,28 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:math';
 import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/area_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
-import 'package:aravt/models/combat_models.dart';
+
 import 'package:aravt/models/resource_report.dart';
 import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/justification_event.dart';
+import 'package:aravt/models/game_date.dart';
 
 class ResourceService {
   final Random _random = Random();
@@ -17,6 +32,7 @@ class ResourceService {
     required Aravt aravt,
     required PointOfInterest poi,
     required GameState gameState,
+    GameDate? date,
   }) async {
     return await _resolveResourceGatheringDetailed(
       aravt: aravt,
@@ -33,6 +49,7 @@ class ResourceService {
           (s.intelligence * 0.5) +
           (s.adaptability * 0.5) +
           (s.swordSkill * 0.5), // Using sword as proxy for pickaxe
+      date: date,
     );
   }
 
@@ -41,6 +58,7 @@ class ResourceService {
     required Aravt aravt,
     required PointOfInterest poi,
     required GameState gameState,
+    GameDate? date,
   }) async {
     return await _resolveResourceGatheringDetailed(
       aravt: aravt,
@@ -56,6 +74,7 @@ class ResourceService {
           // (s.axeSkill * 1.5) + // Future: Axe skill
           (s.strength * 0.5) +
           s.adaptability,
+      date: date,
     );
   }
 
@@ -64,6 +83,7 @@ class ResourceService {
     required Aravt aravt,
     required PointOfInterest poi,
     required GameState gameState,
+    GameDate? date,
   }) async {
     return await _resolveResourceGatheringDetailed(
       aravt: aravt,
@@ -75,6 +95,7 @@ class ResourceService {
       maxYieldPerSoldier: 30.0,
       skillEvaluator: (s) =>
           s.intelligence * 1.5 + s.adaptability * 1.5 + s.knowledge,
+      date: date,
     );
   }
 
@@ -88,6 +109,7 @@ class ResourceService {
     required double baseYieldPerSoldier,
     required double maxYieldPerSoldier,
     required double Function(Soldier) skillEvaluator,
+    GameDate? date,
   }) async {
     double totalGathered = 0;
     List<IndividualResourceResult> individualResults = [];
@@ -128,6 +150,21 @@ class ResourceService {
           performanceRating = 0.2;
         }
 
+        // --- UNDERSTRENGTH PENALTY ---
+        // Aravts with < 10 members work less efficiently.
+        // Efficiency = (Members / 10). Clamped to 1.0 max (no bonus for >10).
+        // However, we are iterating *per soldier*, so we shouldn't penalize per soldier *count* directly again?
+        // The user said: "Aravts operate with a penalty when they have fewer than 10 members. The penalty is linear relative to the number of missing soldiers."
+        // If an aravt has 5 members, they should be at 50% efficiency *per soldier*? Or just 50% total output?
+        // "Penalty is linear... relative to missing soldiers."
+        // If it was just "total output is less because fewer soldiers", that's natural.
+        // The user implies an *additional* penalty.
+        // So 5 soldiers = 50% efficiency factor on top of having 50% manpower.
+        // Effectively 25% total output compared to a full 10-man squad.
+        final int memberCount = aravt.soldierIds.length;
+        final double understrengthFactor = (memberCount / 10.0).clamp(0.0, 1.0);
+        individualYield *= understrengthFactor;
+
         // 3. Apply richness modifier
         individualYield *= resourceRichness;
 
@@ -139,7 +176,7 @@ class ResourceService {
           performanceRating: performanceRating,
         ));
 
-        // [GEMINI-NEW] Log Performance & Justification
+        //  Log Performance & Justification
         if (performanceRating >= 1.0) {
           soldier.performanceLog.add(PerformanceEvent(
               turnNumber: gameState.turn.turnNumber,
@@ -165,8 +202,25 @@ class ResourceService {
         }
 
         totalGathered += individualYield;
+
+        //  Mining byproduct: Scrap
+        if (resourceType == ResourceType.ironOre &&
+            _random.nextDouble() < 0.3) {
+          // 30% chance per soldier to find some scrap metal/old tools
+          double scrapFound = 1.0 + _random.nextInt(3);
+          gameState.addCommunalScrap(scrapFound);
+        }
       }
     }
+
+    // Sort individualResults so Captain is first
+    individualResults.sort((a, b) {
+      final soldierA = gameState.findSoldierById(a.soldierId);
+      final soldierB = gameState.findSoldierById(b.soldierId);
+      if (soldierA?.role == SoldierRole.aravtCaptain) return -1;
+      if (soldierB?.role == SoldierRole.aravtCaptain) return 1;
+      return 0;
+    });
 
     // 5. Update Location Depletion
     // Rate: 10,000 units gathered = 100% depletion of a node.
@@ -179,17 +233,19 @@ class ResourceService {
         "The $resourceName at ${poi.name} is almost completely depleted.",
         category: EventCategory.general,
         severity: EventSeverity.high,
+        isPlayerKnown: poi.isDiscovered,
       );
     }
 
     return ResourceReport(
-      date: gameState.gameDate,
+      date: date ?? gameState.gameDate.copy(),
       aravtId: aravt.id,
       aravtName: aravt.id,
       locationName: poi.name,
       type: resourceType,
       totalGathered: totalGathered,
       individualResults: individualResults,
+      turn: gameState.turn.turnNumber,
     );
   }
 

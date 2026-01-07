@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // new narrative
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart'; // Using Google Fonts for consistency
@@ -10,14 +24,14 @@ class NarrativeScreen extends StatelessWidget {
   final String title;
   final String bodyText;
   final VoidCallback onContinue;
-  final String? imagePath; // --- NEW: Optional image path ---
+  final String? imagePath;
 
   const NarrativeScreen({
     Key? key,
     required this.title,
     required this.bodyText,
     required this.onContinue,
-    this.imagePath, // --- NEW ---
+    this.imagePath,
   }) : super(key: key);
 
   @override
@@ -44,7 +58,7 @@ class NarrativeScreen extends StatelessWidget {
                   ),
                 ),
 
-                // --- NEW: Image Display Logic ---
+
                 if (imagePath != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -63,7 +77,7 @@ class NarrativeScreen extends StatelessWidget {
                   )
                 else
                   const SizedBox(height: 40), // Original spacing if no image
-                // --- END NEW ---
+
 
                 // The main body text of the narrative
                 Padding(

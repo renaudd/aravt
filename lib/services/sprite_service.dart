@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // services/sprite_service.dart
 
 import 'package:flutter/material.dart'; // For Rect
@@ -23,9 +37,9 @@ class SpriteInfo {
 }
 
 class SpriteService {
-  // --- NEW: A static cache for loaded spritesheet images ---
+
   static final Map<String, ui.Image> _imageCache = {};
-  // --- END NEW ---
+
 
   // Define quality tiers - maps quality string to an index level
   static const List<String> qualityTiers = [
@@ -82,19 +96,19 @@ class SpriteService {
       spriteCount: 12,
     ),
     ItemType.spear: SpriteInfo(
-      assetPath: 'assets/images/items/lance_spears_items.png', 
+      assetPath: 'assets/images/items/lance_spears_items.png',
       spriteWidth: 150,
       spriteHeight: 350,
-      spriteCount: 4, 
+      spriteCount: 4,
     ),
-    // --- NEW: Added specific entry for throwingSpear ---
+
     ItemType.throwingSpear: SpriteInfo(
       assetPath: 'assets/images/items/throwing_spears_items.png',
       spriteWidth: 150, // Assuming same dims, update if needed
       spriteHeight: 350,
-      spriteCount: 4, 
+      spriteCount: 4,
     ),
-    // --- END NEW ---
+
     ItemType.shield: SpriteInfo(
       assetPath: 'assets/images/items/shields_items.png',
       spriteWidth: 200,
@@ -120,35 +134,21 @@ class SpriteService {
       spriteCount: 6,
     ),
     ItemType.mount: SpriteInfo(
-      assetPath: 'assets/images/items/horses_spritesheet.png', // Placeholder
-      spriteWidth: 200,
-      spriteHeight: 200,
-      spriteCount: 5, 
+      assetPath: 'assets/images/horses.png', // Corrected Path
+      spriteWidth: 250, // Corrected Width
+      spriteHeight: 250, // Corrected Height
+      spriteCount: 16,
     ),
-    ItemType.consumable: SpriteInfo(
-      assetPath: 'assets/images/items/consumables_spritesheet.png', // Placeholder
-      spriteWidth: 50,
-      spriteHeight: 50,
-      spriteCount: 10, 
-    ),
-    ItemType.misc: SpriteInfo(
-        assetPath: 'assets/images/items/placeholder_spritesheet.png', 
-        spriteWidth: 50,
-        spriteHeight: 50,
-        spriteCount: 1),
+    // ItemType.consumable, ItemType.misc, ItemType.relic are not defined here
+    // getSpriteInfo will return null, UI should handle this.
   };
 
   /// Gets the SpriteInfo for a given ItemType.
   static SpriteInfo? getSpriteInfo(ItemType itemType) {
-    // --- NEW: Handle specific throwing spear ---
-    if (itemType == ItemType.throwingSpear) {
-      return _spriteSheetData[ItemType.throwingSpear];
-    }
-    // --- END NEW ---
     return _spriteSheetData[itemType];
   }
 
-  // --- NEW: Caching Image Loader ---
+
   /// Loads a spritesheet image from assets and caches it.
   static Future<ui.Image> loadSpritesheet(String assetPath) async {
     // 1. Check cache
@@ -162,7 +162,7 @@ class SpriteService {
       final ui.Codec codec =
           await ui.instantiateImageCodec(data.buffer.asUint8List());
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
-      
+
       // 3. Store in cache and return
       _imageCache[assetPath] = frameInfo.image;
       return frameInfo.image;
@@ -171,7 +171,7 @@ class SpriteService {
       rethrow;
     }
   }
-  // --- END NEW ---
+
 
   /// Calculates the sprite index based on quality.
   static int getSpriteIndexForQuality(ItemType itemType, String? quality) {
@@ -183,7 +183,8 @@ class SpriteService {
     int qualityIndex = qualityTiers.indexOf(quality);
     if (qualityIndex == -1) {
       qualityIndex = 1; // Default to "Humble"
-      print("Warning: Quality '$quality' not found in qualityTiers. Defaulting index.");
+      print(
+          "Warning: Quality '$quality' not found in qualityTiers. Defaulting index.");
     }
 
     return qualityIndex.clamp(0, info.spriteCount - 1);
@@ -202,4 +203,3 @@ class SpriteService {
         left, top, info.spriteWidth.toDouble(), info.spriteHeight.toDouble());
   }
 }
-

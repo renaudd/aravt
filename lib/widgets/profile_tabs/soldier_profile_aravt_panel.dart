@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/widgets/profile_tabs/soldier_profile_aravt_panel.dart
 
 import 'package:flutter/material.dart';
@@ -112,11 +126,11 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
         headingRowHeight: 40,
         dataRowMinHeight: 48,
         dataRowMaxHeight: 48,
-        columnSpacing: 25, // [GEMINI-FIX] More space between columns
+        columnSpacing: 25,
         horizontalMargin: 10,
         columns: [
           DataColumn(label: Text('Soldier', style: headerStyle)),
-          // [GEMINI-FIX] Removed RotatedBox, now horizontal
+
           ...duties
               .map((d) => DataColumn(label: Text(d.name, style: headerStyle))),
         ],
@@ -129,12 +143,18 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
             ...duties.map((duty) {
               final isAssigned = aravt.dutyAssignments[duty] == s.id;
 
-              // [GEMINI-FIX] Much higher opacity for visibility
+
               Color? cellColor;
               if (s.preferredDuties.contains(duty))
                 cellColor = Colors.green.withValues(alpha: 0.3);
               else if (s.despisedDuties.contains(duty))
                 cellColor = Colors.red.withValues(alpha: 0.3);
+
+
+              bool isDisabled = false;
+              if (duty == AravtDuty.lieutenant && s.id == aravt.captainId) {
+                isDisabled = true;
+              }
 
               return DataCell(Container(
                 color: cellColor,
@@ -143,7 +163,9 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
                     value: isAssigned,
                     activeColor: const Color(0xFFE0D5C1),
                     checkColor: Colors.black,
-                    onChanged: (val) {
+                    onChanged: isDisabled
+                        ? null
+                        : (val) {
                       setState(() {
                         if (val == true) {
                           aravt.dutyAssignments[duty] = s.id;

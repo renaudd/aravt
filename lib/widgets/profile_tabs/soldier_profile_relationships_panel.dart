@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // widgets/profile_tabs/soldier_profile_relationships_panel.dart
 
 import 'package:aravt/screens/soldier_profile_screen.dart';
@@ -20,10 +34,9 @@ class SoldierProfileRelationshipsPanel extends StatefulWidget {
 class _SoldierProfileRelationshipsPanelState
     extends State<SoldierProfileRelationshipsPanel>
     with TickerProviderStateMixin {
-      
   // This controller needs to be late-initialized
   late TabController _tabController;
-  
+
   // These will be populated by _initializeAndGroupData
   Map<String, List<Soldier>> _aravts = {};
   List<String> _sortedAravtKeys = [];
@@ -55,17 +68,17 @@ class _SoldierProfileRelationshipsPanelState
     }
     super.dispose();
   }
-  
+
   /// Groups soldiers and initializes the TabController.
   void _initializeAndGroupData(GameState gameState) {
     final allSoldiers = gameState.horde;
     final viewingSoldier = widget.soldier;
 
-    _hordeLeader =
-        allSoldiers.firstWhere((s) => s.role == SoldierRole.hordeLeader, orElse: () => allSoldiers.first);
+    _hordeLeader = allSoldiers.firstWhere(
+        (s) => s.role == SoldierRole.hordeLeader,
+        orElse: () => allSoldiers.first);
 
-    _aravts =
-        _groupSoldiersByAravt(allSoldiers, viewingSoldier, _hordeLeader!);
+    _aravts = _groupSoldiersByAravt(allSoldiers, viewingSoldier, _hordeLeader!);
     _sortedAravtKeys = _aravts.keys.toList()..sort();
 
     int initialIndex = _sortedAravtKeys.indexOf(viewingSoldier.aravt);
@@ -74,7 +87,9 @@ class _SoldierProfileRelationshipsPanelState
     }
 
     _tabController = TabController(
-      length: _sortedAravtKeys.isNotEmpty ? _sortedAravtKeys.length : 1, // Must be at least 1
+      length: _sortedAravtKeys.isNotEmpty
+          ? _sortedAravtKeys.length
+          : 1, // Must be at least 1
       initialIndex: _sortedAravtKeys.isEmpty ? 0 : initialIndex,
       vsync: this,
     );
@@ -117,25 +132,25 @@ class _SoldierProfileRelationshipsPanelState
     final gameState = context.watch<GameState>();
     final allSoldiers = gameState.horde;
     final viewingSoldier = widget.soldier;
-    
+
     // Re-group data on build to catch changes
-    _hordeLeader =
-        allSoldiers.firstWhere((s) => s.role == SoldierRole.hordeLeader, orElse: () => allSoldiers.first);
-    _aravts =
-        _groupSoldiersByAravt(allSoldiers, viewingSoldier, _hordeLeader!);
+    _hordeLeader = allSoldiers.firstWhere(
+        (s) => s.role == SoldierRole.hordeLeader,
+        orElse: () => allSoldiers.first);
+    _aravts = _groupSoldiersByAravt(allSoldiers, viewingSoldier, _hordeLeader!);
     _sortedAravtKeys = _aravts.keys.toList()..sort();
 
     // Check if controller is initialized
     if (!_isInitialized) {
-      return Center(
-          child: CircularProgressIndicator(color: Color(0xFFE0D5C1)));
+      return Center(child: CircularProgressIndicator(color: Color(0xFFE0D5C1)));
     }
-    
+
     // Check if the number of aravts has changed
-    if (_tabController.length != (_sortedAravtKeys.isNotEmpty ? _sortedAravtKeys.length : 1)) {
-        // If it changed, dispose the old one and create a new one
-        _tabController.dispose();
-        _initializeAndGroupData(gameState);
+    if (_tabController.length !=
+        (_sortedAravtKeys.isNotEmpty ? _sortedAravtKeys.length : 1)) {
+      // If it changed, dispose the old one and create a new one
+      _tabController.dispose();
+      _initializeAndGroupData(gameState);
     }
 
     return Padding(
@@ -199,7 +214,9 @@ class _SoldierProfileRelationshipsPanelState
             Text(
               'Towards Other Factions',
               style: GoogleFonts.cinzel(
-                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             ),
             const Divider(color: Colors.white54),
             Text('No external relations.',
@@ -247,16 +264,20 @@ class _SoldierProfileRelationshipsPanelState
         children: [
           SizedBox(
               width: 45,
-              child: Text('ADM', style: headerStyle, textAlign: TextAlign.center)),
+              child:
+                  Text('ADM', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(
               width: 45,
-              child: Text('RES', style: headerStyle, textAlign: TextAlign.center)),
+              child:
+                  Text('RES', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(
               width: 45,
-              child: Text('FEAR', style: headerStyle, textAlign: TextAlign.center)),
+              child: Text('FEAR',
+                  style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(
               width: 45,
-              child: Text('LOY', style: headerStyle, textAlign: TextAlign.center)),
+              child:
+                  Text('LOY', style: headerStyle, textAlign: TextAlign.center)),
         ],
       ),
     );
@@ -303,8 +324,9 @@ class _SoldierProfileRelationshipsPanelState
             isScrollable: true,
             labelStyle: GoogleFonts.cinzel(fontWeight: FontWeight.bold),
             unselectedLabelStyle: GoogleFonts.cinzel(),
-            tabs:
-                sortedAravtKeys.map((aravtName) => Tab(text: aravtName)).toList(),
+            tabs: sortedAravtKeys
+                .map((aravtName) => Tab(text: aravtName))
+                .toList(),
           ),
           Expanded(
             child: TabBarView(
@@ -361,7 +383,8 @@ class _SoldierProfileRelationshipsPanelState
                             subtitle: isCaptain
                                 ? Text("Captain",
                                     style: GoogleFonts.cinzel(
-                                        color: Colors.yellow[300], fontSize: 12))
+                                        color: Colors.yellow[300],
+                                        fontSize: 12))
                                 : null,
                             trailing: relationship != null
                                 ? Row(
@@ -468,4 +491,3 @@ class _RelationshipValuesDisplay extends StatelessWidget {
     );
   }
 }
-

@@ -1,8 +1,23 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:math';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/tournament_data.dart';
+import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/services/aravt_captain_service.dart';
 import 'package:aravt/services/horde_ai_service.dart';
@@ -12,14 +27,17 @@ import 'package:aravt/services/settlement_ai_service.dart';
 import 'package:aravt/services/npc_horde_turn_service.dart';
 import 'package:aravt/services/aravt_assignment_service.dart';
 import 'package:aravt/services/tournament_service.dart';
-import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/aravt_models.dart';
 import 'package:aravt/models/narrative_models.dart';
+import 'package:aravt/models/inventory_item.dart';
+import 'package:aravt/game_data/item_templates.dart';
 
 import 'package:aravt/services/daily_maintenance_service.dart';
 import 'package:aravt/services/training_discipline_service.dart';
 import 'package:aravt/services/morale_narrative_service.dart';
 import 'package:aravt/services/leadership_reports_service.dart';
+import 'package:aravt/services/horde_transition_service.dart';
+import 'package:aravt/services/infirmary_service.dart';
 
 /// NextTurnService is the main "conductor" for all game logic that
 /// happens when the player ends their turn.
@@ -43,6 +61,9 @@ class NextTurnService {
       MoraleNarrativeService();
   final LeadershipReportsService _leadershipReportsService =
       LeadershipReportsService();
+  final HordeTransitionService _hordeTransitionService =
+      HordeTransitionService();
+  final InfirmaryService _infirmaryService = InfirmaryService();
 
   final Random _random = Random();
 
@@ -52,6 +73,7 @@ class NextTurnService {
   Future<void> executeNextTurn(GameState gameState) async {
     gameState.setLoading(true);
 
+
     // Record state BEFORE any logic runs for transfer tracking
     _originalAravtAssignments.clear();
     for (var soldier in gameState.horde) {
@@ -59,6 +81,9 @@ class NextTurnService {
     }
 
     try {
+      // --- 7. ARAVT ASSIGNMENTS (Travel, Scout, Patrol, Hunt, etc.) ---
+      await _step7_ResolveAravtAssignments(gameState);
+
       // --- 1. ARAVT CAPTAIN AI ---
       await _step1_ResolveAravtCaptainDecisions(gameState);
 
@@ -77,9 +102,6 @@ class NextTurnService {
       // --- 6. NEARBY HORDE AI ---
       await _step6_ResolveNearbyHordeActions(gameState);
 
-      // --- 7. ARAVT ASSIGNMENTS (Travel, Scout, Patrol, Hunt, etc.) ---
-      await _step7_ResolveAravtAssignments(gameState);
-
       // --- 8. UNAVOIDABLE COMBAT (Phase 1) ---
       await _step8_ResolveUnavoidableCombat(gameState);
 
@@ -97,12 +119,17 @@ class NextTurnService {
 
       // --- 10.7 MORALE & NARRATIVE (Tuulch, Chaplain) ---
       await _step10_7_ResolveMoraleAndNarrativeRoles(gameState);
+      await _resolveListenItems(gameState);
 
       // --- 10.8 LEADERSHIP & REPORTS (Lieutenant, Chronicler) ---
       await _step10_8_ResolveLeadershipAndReports(gameState);
 
+      // --- 10.9 INFIRMARY (Medic) ---
+      _infirmaryService.processDailyInfirmary(gameState);
+
       // --- 11. SOLDIER UPDATES (Aging, Health, Birthdays) ---
       await _step11_UpdateSoldiers(gameState);
+      _cleanupEmptyAravts(gameState);
 
       // --- 11.5 NARRATIVE EVENTS (Trade, Tournaments) ---
       await _step11_5_ResolveNarrativeEvents(gameState);
@@ -125,6 +152,7 @@ class NextTurnService {
       // --- ADVANCE CLOCK (Strictly 1 Day) ---
       gameState.gameDate.nextDay();
       gameState.turn.incrementTurn();
+      gameState.communalCattle.resetDailyTracker();
     } catch (e, stack) {
       print("CRITICAL ERROR during Next Turn processing: $e");
       print(stack);
@@ -265,9 +293,9 @@ class NextTurnService {
   Future<void> _step11_UpdateSoldiers(GameState gameState) async {
     print("Step 11: Updating soldiers (Health, Age)...");
 
-    for (final soldier in gameState.horde) {
+    for (final soldier in List<Soldier>.from(gameState.horde)) {
       // --- 1. HEALING ---
-      if (soldier.status == SoldierStatus.alive) {
+      if (soldier.status == SoldierStatus.alive && !soldier.isInfirm) {
         int healingAmount = 1; // Base natural healing
 
         // Apply Medic Bonus
@@ -279,8 +307,9 @@ class NextTurnService {
             if (medic != null && medic.status == SoldierStatus.alive) {
               healingAmount += 1; // Base medic bonus
               if (medic.knowledge >= 7) healingAmount += 1;
-              if (medic.specialSkills.contains(SpecialSkill.surgeon))
+              if (medic.specialSkills.contains(SpecialSkill.surgeon)) {
                 healingAmount += 1;
+              }
             }
           }
         }
@@ -314,6 +343,69 @@ class NextTurnService {
           severity: EventSeverity.normal,
           soldierId: soldier.id,
         );
+
+        //  Birthday Gifts for Player
+        if (soldier.isPlayer) {
+          _handlePlayerBirthdayGifts(gameState, soldier);
+        }
+      }
+
+      // --- 3. DEATH (Old Age & Leader Transition) ---
+      bool died = false;
+      final turn = gameState.turn.turnNumber;
+      final bool isLeader = soldier.role == SoldierRole.hordeLeader;
+      final bool isPlayer = soldier.id == gameState.player?.id;
+
+      if (soldier.age > 60 && soldier.status == SoldierStatus.alive) {
+        // Protect leader from old age death before turn 15
+        if (!isLeader || turn >= 15) {
+          // Simple probability: (age - 60) * 0.5% per turn
+          double deathProb = (soldier.age - 60) * 0.005;
+          if (_random.nextDouble() < deathProb) {
+            died = true;
+            soldier.deathReason = DeathReason.oldAge;
+          }
+        }
+      }
+
+      // Special Leader Death Probability (Turn-based)
+      // Only if not already dead, is leader, and not the player
+      if (!died &&
+          isLeader &&
+          soldier.status == SoldierStatus.alive &&
+          !isPlayer) {
+        double leaderDeathProb = 0.0;
+        if (turn >= 15 && turn <= 40) {
+          // Linear interpolation from 1% at turn 15 to 10% at turn 40
+          leaderDeathProb = 0.01 + (turn - 15) * (0.09 / 25.0);
+        } else if (turn > 40 && turn <= 50) {
+          leaderDeathProb = 0.10;
+        } else if (turn > 50) {
+          leaderDeathProb =
+              1.0; // Guaranteed death after turn 50 for testing/demo
+        }
+
+        if (_random.nextDouble() < leaderDeathProb) {
+          died = true;
+          soldier.deathReason = DeathReason.oldAge; // Keep it simple for now
+        }
+      }
+
+      if (died) {
+        soldier.status = SoldierStatus.killed;
+        gameState.logEvent(
+          "${soldier.name} has died at ${soldier.age}.",
+          category: EventCategory.general,
+          severity: EventSeverity.critical,
+          soldierId: soldier.id,
+        );
+
+        if (soldier.role == SoldierRole.hordeLeader) {
+          await _hordeTransitionService.handleLeaderDeath(gameState, soldier);
+        }
+
+
+        gameState.removeDeadSoldier(soldier);
       }
     }
   }
@@ -470,10 +562,10 @@ class NextTurnService {
       }
     }
 
-    // --- DAY 7: The Great Downsizing (April 28th, 1140) ---
+    // --- DAY 7: The Great Downsizing (April 29th, 1140) ---
     if (gameState.gameDate.year == 1140 &&
         gameState.gameDate.month == 4 &&
-        gameState.gameDate.day == 28) {
+        gameState.gameDate.day == 29) {
       print("TRIGGERING DAY 7 TOURNAMENT");
 
       // 1. Identify Participants: All Player Horde Aravts EXCEPT the Leader's
@@ -498,6 +590,66 @@ class NextTurnService {
     }
   }
 
+  Future<void> _resolveListenItems(GameState gameState) async {
+    print("Step 10.8: Resolving Listen Items...");
+    final int currentTurn = gameState.gameDate.totalDays;
+
+    // 1. Clear expired items
+    for (var soldier in gameState.horde) {
+      if (soldier.queuedListenItem != null) {
+        // Expire if from previous turn (or older)
+        if (soldier.queuedListenItem!.turnNumber < currentTurn) {
+          soldier.queuedListenItem = null;
+        }
+      }
+    }
+
+    // 2. Generate new items (randomly for now)
+    // Chance per soldier: 5%
+    // Cap total active items: 3
+    int activeCount =
+        gameState.horde.where((s) => s.queuedListenItem != null).length;
+
+    if (activeCount < 3) {
+      final candidates = gameState.horde
+          .where((s) =>
+              !s.isPlayer &&
+              s.queuedListenItem == null &&
+              s.status == SoldierStatus.alive)
+          .toList();
+
+      if (candidates.isNotEmpty) {
+        candidates.shuffle(_random);
+        // Add up to 1-2 new items per turn
+        int newItems = 1 + _random.nextInt(2);
+
+        for (int i = 0;
+            i < newItems && i < candidates.length && activeCount < 3;
+            i++) {
+          final soldier = candidates[i];
+
+          final messages = [
+            "I have concerns about the rations.",
+            "I saw something strange on patrol.",
+            "My family is struggling.",
+            "I wish to discuss my future.",
+            "The horses are restless.",
+            "I had a dream about wolves.",
+            "Can we speak privately?",
+          ];
+
+          soldier.queuedListenItem = QueuedListenItem(
+            message: messages[_random.nextInt(messages.length)],
+            turnNumber: currentTurn,
+            urgency: 1.0,
+          );
+          activeCount++;
+          print("Generated Listen Item for ${soldier.name}");
+        }
+      }
+    }
+  }
+
   // --- 12. AUTOSAVE ---
   Future<void> _step12_Autosave(GameState gameState) async {
     print("Step 12: Autosaving...");
@@ -517,6 +669,69 @@ class NextTurnService {
     gameState.resetInteractionTokens();
   }
 
+  void _handlePlayerBirthdayGifts(GameState gameState, Soldier player) {
+    print("It's the player's birthday! Checking for gifts...");
+    for (final other in gameState.horde) {
+      if (other.id == player.id || other.status != SoldierStatus.alive) {
+        continue;
+      }
+
+      final rel = other.getRelationship(player.id);
+      if (rel.admiration >= 4.0) {
+        // High admiration, give a gift
+        final giftType = other.giftTypePreference; // Or random
+        InventoryItem? gift;
+
+        // Try to give preferred type, fallback to random
+        if (_random.nextDouble() < 0.7) {
+          // 70% chance to give preferred type if available in templates
+          // For simplicity, we'll just create a random item of that type for now,
+          // or a default gift if type is supplies/treasure.
+          if (giftType == GiftTypePreference.horse) {
+            gift = ItemDatabase.createItemInstance('mount_horse');
+          } else if (giftType == GiftTypePreference.sword) {
+            gift = ItemDatabase.createItemInstance('wep_iron_sword');
+          } else if (giftType == GiftTypePreference.spear) {
+            gift = ItemDatabase.createItemInstance('wep_spear');
+          } else if (giftType == GiftTypePreference.bow) {
+            gift = ItemDatabase.createItemInstance('wep_short_bow');
+          } else if (giftType == GiftTypePreference.armor) {
+            gift = ItemDatabase.createItemInstance('arm_leather_lamellar');
+          } else if (giftType == GiftTypePreference.supplies) {
+            player.fungibleScrap += 10.0;
+          } else if (giftType == GiftTypePreference.treasure) {
+            player.fungibleRupees += 5.0;
+          }
+        }
+
+        if (gift == null &&
+            giftType != GiftTypePreference.supplies &&
+            giftType != GiftTypePreference.treasure) {
+          // Fallback gift
+          gift = ItemDatabase.createItemInstance('trade_pelt');
+        }
+
+        if (gift != null) {
+          player.personalInventory.add(gift);
+          gameState.logEvent(
+            "${other.name} gave you a gift for your birthday: ${gift.name}!",
+            category: EventCategory.general,
+            severity: EventSeverity.high,
+            soldierId: other.id,
+          );
+        } else if (giftType == GiftTypePreference.supplies ||
+            giftType == GiftTypePreference.treasure) {
+          gameState.logEvent(
+            "${other.name} gave you some ${giftType == GiftTypePreference.supplies ? 'supplies' : 'rupees'} for your birthday!",
+            category: EventCategory.general,
+            severity: EventSeverity.high,
+            soldierId: other.id,
+          );
+        }
+      }
+    }
+  }
+
   // Final check for Game Over conditions
   bool _checkGameOver(GameState gameState) {
     if (gameState.player == null) return false;
@@ -534,5 +749,16 @@ class NextTurnService {
     }
 
     return false;
+  }
+
+  void _cleanupEmptyAravts(GameState gameState) {
+    // Remove Aravts that have no soldiers
+    final emptyAravts =
+        gameState.aravts.where((a) => a.soldierIds.isEmpty).toList();
+
+    for (var aravt in emptyAravts) {
+      print("Cleaning up empty Aravt: ${aravt.id}");
+      gameState.aravts.remove(aravt);
+    }
   }
 }

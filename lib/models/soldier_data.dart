@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/models/soldier_data.dart
 
 import 'dart:math';
@@ -15,12 +29,21 @@ import 'package:aravt/services/social_helper.dart';
 /// The status of a soldier.
 enum SoldierStatus { alive, wounded, unconscious, fled, killed }
 
+enum DeathReason { none, oldAge, combat, disease, execution, event }
+
 /// Helper to get SoldierStatus from a string name
 SoldierStatus soldierStatusFromName(String? name) {
   for (final val in SoldierStatus.values) {
     if (val.name == name) return val;
   }
   return SoldierStatus.alive; // Default
+}
+
+DeathReason _deathReasonFromName(String? name) {
+  for (final val in DeathReason.values) {
+    if (val.name == name) return val;
+  }
+  return DeathReason.none;
 }
 
 class RelationshipValues {
@@ -86,7 +109,12 @@ class RelationshipValues {
   }
 }
 
-enum SoldierRole { soldier, aravtCaptain, hordeLeader }
+enum SoldierRole {
+  soldier,
+  aravtCaptain,
+  hordeLeader,
+  general,
+}
 
 enum ReligionType {
   none,
@@ -319,7 +347,11 @@ class Soldier {
   Map<String, RelationshipValues> externalRelationships = {};
   List<Injury> injuries = [];
   SoldierStatus status = SoldierStatus.alive;
+  DeathReason deathReason = DeathReason.none;
   bool isImprisoned;
+  DateTime? imprisonmentStartDate;
+  String? imprisonmentNotes;
+  bool isInfirm;
   bool isExpelled;
   int age;
   int yearsWithHorde;
@@ -347,13 +379,13 @@ class Soldier {
   int ambition;
   int courage;
   int strength;
-  int longRangeArcherySkill;
-  int mountedArcherySkill;
-  int spearSkill;
-  int swordSkill;
-  int shieldSkill;
+  double longRangeArcherySkill;
+  double mountedArcherySkill;
+  double spearSkill;
+  double swordSkill;
+  double shieldSkill;
 
-  // [GEMINI-NEW] Equip item logic
+  //  Equip item logic
   void equip(InventoryItem item) {
     final slot = item.equippableSlot;
     if (slot == null) return;
@@ -370,7 +402,7 @@ class Soldier {
     equippedItems[slot] = item;
   }
 
-  // [GEMINI-NEW] Unequip item logic
+  //  Unequip item logic
   void unequip(EquipmentSlot slot) {
     final item = equippedItems[slot];
     if (item == null) return;
@@ -389,7 +421,7 @@ class Soldier {
   int honesty;
   num temperament;
   int stamina;
-  int hygiene;
+  double hygiene;
   int charisma;
   int leadership;
   int adaptability;
@@ -421,14 +453,20 @@ class Soldier {
     double itemWealth = personalInventory
         .where((item) => item.valueType == ValueType.Supply)
         .fold(0.0, (sum, item) => sum + item.baseValue);
-    return itemWealth + fungibleScrap;
+    double equippedWealth = equippedItems.values
+        .where((item) => item.valueType == ValueType.Supply)
+        .fold(0.0, (sum, item) => sum + item.baseValue);
+    return itemWealth + equippedWealth + fungibleScrap;
   }
 
   double get treasureWealth {
     double itemWealth = personalInventory
         .where((item) => item.valueType == ValueType.Treasure)
         .fold(0.0, (sum, item) => sum + item.baseValue);
-    return itemWealth + fungibleRupees;
+    double equippedWealth = equippedItems.values
+        .where((item) => item.valueType == ValueType.Treasure)
+        .fold(0.0, (sum, item) => sum + item.baseValue);
+    return itemWealth + equippedWealth + fungibleRupees;
   }
 
   double get equippedGearSupplyWealth {
@@ -442,10 +480,10 @@ class Soldier {
       intelligence +
       ambition +
       perception +
-      longRangeArcherySkill +
-      mountedArcherySkill +
-      spearSkill +
-      swordSkill +
+      longRangeArcherySkill.toInt() +
+      mountedArcherySkill.toInt() +
+      spearSkill.toInt() +
+      swordSkill.toInt() +
       temperament.toInt() +
       knowledge +
       patience +
@@ -517,6 +555,9 @@ class Soldier {
     List<AravtDuty>? despisedDuties,
     List<InventoryItem>? personalInventory,
     this.isImprisoned = false,
+    this.imprisonmentStartDate,
+    this.imprisonmentNotes,
+    this.isInfirm = false,
     this.isExpelled = false,
   })  : headHealthMax = (healthMax * 0.9).clamp(1, 10).round(),
         bodyHealthMax = (healthMax * 1.1).clamp(1, 10).round(),
@@ -565,7 +606,11 @@ class Soldier {
             .map((key, value) => MapEntry(key, value.toJson())),
         'injuries': injuries.map((i) => i.toJson()).toList(),
         'status': status.name,
+        'deathReason': deathReason.name,
         'isImprisoned': isImprisoned,
+        'imprisonmentStartDate': imprisonmentStartDate?.toIso8601String(),
+        'imprisonmentNotes': imprisonmentNotes,
+        'isInfirm': isInfirm,
         'isExpelled': isExpelled,
         'age': age,
         'yearsWithHorde': yearsWithHorde,
@@ -666,11 +711,11 @@ class Soldier {
       ambition: json['ambition'],
       courage: json['courage'],
       strength: json['strength'],
-      longRangeArcherySkill: json['longRangeArcherySkill'],
-      mountedArcherySkill: json['mountedArcherySkill'],
-      spearSkill: json['spearSkill'],
-      swordSkill: json['swordSkill'],
-      shieldSkill: json['shieldSkill'],
+      longRangeArcherySkill: (json['longRangeArcherySkill'] as num).toDouble(),
+      mountedArcherySkill: (json['mountedArcherySkill'] as num).toDouble(),
+      spearSkill: (json['spearSkill'] as num).toDouble(),
+      swordSkill: (json['swordSkill'] as num).toDouble(),
+      shieldSkill: (json['shieldSkill'] as num).toDouble(),
       perception: json['perception'],
       intelligence: json['intelligence'],
       knowledge: json['knowledge'],
@@ -681,7 +726,7 @@ class Soldier {
       honesty: json['honesty'],
       temperament: json['temperament'],
       stamina: json['stamina'],
-      hygiene: json['hygiene'],
+      hygiene: (json['hygiene'] as num).toDouble(),
       charisma: json['charisma'],
       leadership: json['leadership'],
       adaptability: json['adaptability'],
@@ -709,6 +754,11 @@ class Soldier {
       preferredDuties: aravtDutyListFromJson(json['preferredDuties']),
       despisedDuties: aravtDutyListFromJson(json['despisedDuties']),
       isImprisoned: json['isImprisoned'] ?? false,
+      imprisonmentStartDate: json['imprisonmentStartDate'] != null
+          ? DateTime.parse(json['imprisonmentStartDate'])
+          : null,
+      imprisonmentNotes: json['imprisonmentNotes'],
+      isInfirm: json['isInfirm'] ?? false,
       isExpelled: json['isExpelled'] ?? false,
     )
       ..hordeRelationships =
@@ -721,6 +771,7 @@ class Soldier {
       ..injuries =
           (json['injuries'] as List).map((i) => Injury.fromJson(i)).toList()
       ..status = soldierStatusFromName(json['status'])
+      ..deathReason = _deathReasonFromName(json['deathReason'])
       ..headHealthCurrent = json['headHealthCurrent']
       ..bodyHealthCurrent = json['bodyHealthCurrent']
       ..rightArmHealthCurrent = json['rightArmHealthCurrent']
@@ -1077,7 +1128,9 @@ class SoldierGenerator {
     SoldierAttribute.horseWhisperer,
     SoldierAttribute.shepherd,
     SoldierAttribute.talentScout,
-    SoldierAttribute.survivalist
+    SoldierAttribute.survivalist,
+    SoldierAttribute.inept,
+    SoldierAttribute.murderer
   ];
 
   static int _getStandardDistributionValue(int min, int max, int mean) {
@@ -1141,7 +1194,6 @@ class SoldierGenerator {
       double declineFrom70 = (70 - 40) * 0.2;
       health = basePotential - declineFrom40 - declineFrom70 - (age - 70) * 0.3;
     }
-    health += _random.nextDouble() * 2 - 1;
     return health.clamp(1, 10).round();
   }
 
@@ -1176,7 +1228,8 @@ class SoldierGenerator {
       _getStandardDistributionValue(0, 5, 1).toDouble();
   static double _generateStress() =>
       _getStandardDistributionValue(0, 5, 1).toDouble();
-  static int _generateHygiene() => _getStandardDistributionValue(0, 5, 2);
+  static double _generateHygiene() =>
+      _getStandardDistributionValue(0, 5, 2).toDouble();
   static int _generateCoreAttribute(int mean) =>
       _getStandardDistributionValue(0, 10, mean);
 
@@ -1506,13 +1559,13 @@ class SoldierGenerator {
 
   static double _generateFoodSupply() => _random.nextDouble() * 50 + 10;
 
-  // [GEMINI-FIX] Added optional 'hasHorse' parameter to control mount generation
+
   static Soldier generateNewSoldier({
     required int id,
     required String aravt,
     bool isPlayerCharacter = false,
     bool hasHorse = true,
-    // [GEMINI-NEW] Added optional overrides for Proto-Soldier data
+    //  Added optional overrides for Proto-Soldier data
     int? overrideAge,
     int? overrideStrength,
     int? overrideIntelligence,
@@ -1525,10 +1578,12 @@ class SoldierGenerator {
     int? overrideMountedArchery,
     int? overrideSpear,
     int? overrideSword,
+    List<SoldierAttribute>? overrideTraits,
+    String? overrideFamilyName,
   }) {
     final int statMean = isPlayerCharacter ? 5 : 4;
 
-    // [GEMINI-FIX] Use override if present, otherwise generate
+
     int age = overrideAge ?? _generateAge();
 
     // Cap player age at 50
@@ -1542,7 +1597,7 @@ class SoldierGenerator {
     final height = _generateHeight();
     final healthMax = _generateMaxHealth(age);
 
-    // [GEMINI-FIX] Apply overrides to core attributes
+
     int ambition = overrideAmbition ?? _generateCoreAttribute(statMean);
     int courage = _generateCoreAttribute(
         statMean); // Proto doesn't currently have courage, so we still generate it
@@ -1557,7 +1612,7 @@ class SoldierGenerator {
     int honesty = _generateCoreAttribute(statMean);
     int temperament = overrideTemperament ?? _generateCoreAttribute(statMean);
     int stamina = _generateCoreAttribute(statMean);
-    int hygiene = _generateHygiene();
+    double hygiene = _generateHygiene();
     int charisma = _generateCoreAttribute(statMean);
     int leadership = _generateCoreAttribute(statMean);
     int adaptability = _generateCoreAttribute(statMean);
@@ -1621,7 +1676,7 @@ class SoldierGenerator {
               knowledge = (knowledge + modifier).clamp(0, 10);
             break;
           case 'hygiene':
-            hygiene = (hygiene + modifier).clamp(0, 10);
+            hygiene = (hygiene + modifier).clamp(0, 5.0);
             break;
         }
       });
@@ -1640,7 +1695,7 @@ class SoldierGenerator {
             ? -2
             : 0;
 
-    // [GEMINI-FIX] Apply overrides to skills.
+
     // If overridden, we use the exact value. If not, we use the complex generation logic.
     final longRangeArcherySkill = overrideLongRangeArchery ??
         _generateLongRangeArcherySkill(
@@ -1674,7 +1729,7 @@ class SoldierGenerator {
 
     // ... (Rest of the method for name, religion, equipment, etc. remains the same)
     final firstName = _generateFirstName();
-    final familyName = _generateFamilyName();
+    final familyName = overrideFamilyName ?? _generateFamilyName();
     final name = '$firstName $familyName';
     final placeOrTribe = _generatePlaceOrTribeOfOrigin();
     final languages = _generateLanguages(placeOrTribe.name);
@@ -1698,7 +1753,7 @@ class SoldierGenerator {
         }
       }
     }
-    final attributes = _generateAttributes(zodiacAttributes);
+    final attributes = overrideTraits ?? _generateAttributes(zodiacAttributes);
 
     final dutyPrefs = _generateDutyPreferences(
       religion: religion,
@@ -1742,8 +1797,8 @@ class SoldierGenerator {
 
     // Arrows (70% chance)
     if (_random.nextDouble() < 0.7) {
-      final item =
-          ItemDatabase.createItemInstance('con_arrows', origin: itemOrigin);
+      final item = ItemDatabase.createItemInstance('con_arrows_short',
+          origin: itemOrigin);
       if (item != null) personalInventory.add(item);
     }
 
@@ -1838,11 +1893,11 @@ class SoldierGenerator {
       ambition: ambition,
       courage: courage,
       strength: strength,
-      longRangeArcherySkill: longRangeArcherySkill,
-      mountedArcherySkill: mountedArcherySkill,
-      spearSkill: spearSkill,
-      swordSkill: swordSkill,
-      shieldSkill: shieldSkill,
+      longRangeArcherySkill: longRangeArcherySkill.toDouble(),
+      mountedArcherySkill: mountedArcherySkill.toDouble(),
+      spearSkill: spearSkill.toDouble(),
+      swordSkill: swordSkill.toDouble(),
+      shieldSkill: shieldSkill.toDouble(),
       perception: perception,
       intelligence: intelligence,
       knowledge: knowledge,
@@ -1930,7 +1985,7 @@ class SoldierGenerator {
       case Zodiac.dog:
         return const Color.fromARGB(255, 197, 137, 207);
       case Zodiac.pig:
-        return Colors.grey;
+        return Colors.grey; // grey
     }
   }
 }

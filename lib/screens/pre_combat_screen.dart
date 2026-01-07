@@ -1,11 +1,23 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // lib/screens/pre_combat_screen.dart
 
-import 'package:aravt/models/combat_flow_state.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'combat_screen.dart'; // Keep this import, it's not ambiguous here
 
 class PreCombatScreen extends StatelessWidget {
   const PreCombatScreen({super.key});
@@ -15,9 +27,8 @@ class PreCombatScreen extends StatelessWidget {
     // This Consumer handles UI building
     return Consumer<GameState>(
       builder: (context, gameState, child) {
-        
         // --- UI LOGIC ---
-        final pendingCombat = gameState.pendingCombat;
+        final pendingCombat = gameState.pendingCombatState;
 
         if (pendingCombat == null) {
           // This state is now valid (e.g., after clicking a button but
@@ -46,13 +57,12 @@ class PreCombatScreen extends StatelessWidget {
           );
         }
 
-        // --- This is your original UI, now returned inside a Scaffold ---
         return Scaffold(
           body: Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image:
-                    AssetImage('assets/images/background.png'), // Use your main background
+                image: AssetImage(
+                    'assets/images/background.png'), // Use your main background
                 fit: BoxFit.cover,
                 opacity: 0.5,
               ),
@@ -79,10 +89,8 @@ class PreCombatScreen extends StatelessWidget {
                       Text("VS",
                           style: GoogleFonts.cinzel(
                               fontSize: 30, color: Colors.white)),
-                      _buildForceDisplay(
-                          "Enemy Forces",
-                          pendingCombat.opponentSoldiers.length,
-                          Colors.red),
+                      _buildForceDisplay("Enemy Forces",
+                          pendingCombat.opponentSoldiers.length, Colors.red),
                     ],
                   ),
 
@@ -101,7 +109,8 @@ class PreCombatScreen extends StatelessWidget {
                     },
                     child: Text(
                       "Begin Battle!",
-                      style: GoogleFonts.cinzel(fontSize: 24, color: Colors.white),
+                      style:
+                          GoogleFonts.cinzel(fontSize: 24, color: Colors.white),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -114,8 +123,8 @@ class PreCombatScreen extends StatelessWidget {
                     },
                     child: Text(
                       "Attempt to Retreat",
-                      style:
-                          GoogleFonts.cinzel(fontSize: 16, color: Colors.grey[300]),
+                      style: GoogleFonts.cinzel(
+                          fontSize: 16, color: Colors.grey[300]),
                     ),
                   ),
                 ],
@@ -143,10 +152,10 @@ class PreCombatScreen extends StatelessWidget {
         ),
         Text(
           "Soldiers",
-          style: GoogleFonts.cinzel(fontSize: 18, color: color.withOpacity(0.8)),
+          style:
+              GoogleFonts.cinzel(fontSize: 18, color: color.withOpacity(0.8)),
         ),
       ],
     );
   }
 }
-

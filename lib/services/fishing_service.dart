@@ -1,14 +1,26 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:math';
 import 'package:aravt/models/fish_data.dart';
 import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/models/soldier_data.dart';
-import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/models/game_date.dart';
 import 'package:aravt/models/fishing_report.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/services/combat_service.dart';
-// [GEMINI-NEW] Needed for PerformanceEvent
 import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/justification_event.dart';
 
@@ -46,10 +58,11 @@ class FishingService {
       if (soldier != null &&
           soldier.status == SoldierStatus.alive &&
           !soldier.isImprisoned) {
-        final result = _resolveSoldierFishing(soldier, localFish, gameState);
+        final result =
+            _resolveSoldierFishing(soldier, localFish, gameState, aravt);
         individualResults.add(result);
 
-        // [GEMINI-NEW] Log Performance based on results
+        //  Log Performance based on results
         if (result.totalMeat > 10.0 || result.catches.length >= 4) {
           soldier.performanceLog.add(PerformanceEvent(
               turnNumber: currentTurn,
@@ -90,6 +103,17 @@ class FishingService {
       }
     }
 
+    // Sort individualResults so Captain is first
+    individualResults.sort((a, b) {
+      final soldierA = gameState.findSoldierById(a.soldierId);
+      final soldierB = gameState.findSoldierById(b.soldierId);
+      if (soldierA?.role == SoldierRole.aravtCaptain) return -1;
+      if (soldierB?.role == SoldierRole.aravtCaptain) return 1;
+      return aravt.soldierIds
+          .indexOf(a.soldierId)
+          .compareTo(aravt.soldierIds.indexOf(b.soldierId));
+    });
+
     // Filter out soldiers who caught nothing
     final filteredResults =
         individualResults.where((result) => result.totalMeat > 0).toList();
@@ -104,7 +128,7 @@ class FishingService {
   }
 
   IndividualFishingResult _resolveSoldierFishing(
-      Soldier soldier, List<Fish> localFish, GameState gameState) {
+      Soldier soldier, List<Fish> localFish, GameState gameState, Aravt aravt) {
     final List<CaughtFish> catches = [];
 
     // 1. Determine Technique
@@ -118,13 +142,15 @@ class FishingService {
         (_random.nextInt(30) - 15); // Variance
 
     int opportunities = 0;
-    if (opportunityScore > 40)
+    if (opportunityScore > 40) {
       opportunities = 4;
-    else if (opportunityScore > 30)
+    } else if (opportunityScore > 30) {
       opportunities = 3;
-    else if (opportunityScore > 20)
+    } else if (opportunityScore > 20) {
       opportunities = 2;
-    else if (opportunityScore > 10) opportunities = 1;
+    } else if (opportunityScore > 10) {
+      opportunities = 1;
+    }
 
     for (int i = 0; i < opportunities; i++) {
       // 3. Identify Fish (weighted random based on rarity)
@@ -133,8 +159,14 @@ class FishingService {
       // 4. Attempt Catch
       if (_attemptCatch(soldier, fish, technique)) {
         // Success! Calculate yield.
+        // --- UNDERSTRENGTH PENALTY ---
+        final int memberCount = aravt.soldierIds.length;
+        final double understrengthFactor = (memberCount / 10.0).clamp(0.0, 1.0);
+
         double meat =
-            fish.minMeat + _random.nextDouble() * (fish.maxMeat - fish.minMeat);
+            (fish.minMeat +
+            _random.nextDouble() * (fish.maxMeat - fish.minMeat));
+        meat *= understrengthFactor;
 
         catches.add(CaughtFish(
           fishId: fish.id,
@@ -165,17 +197,18 @@ class FishingService {
 
   _FishingTechnique _chooseFishingTechnique(Soldier soldier) {
     // Find best available tool and skill combination
-    int shieldSkill = soldier.equippedItems.containsKey(EquipmentSlot.shield)
+    double shieldSkill = soldier.equippedItems.containsKey(EquipmentSlot.shield)
         ? soldier.shieldSkill
-        : -1;
-    int spearSkill = soldier.equippedItems.containsKey(EquipmentSlot.spear)
+        : -1.0;
+    double spearSkill = soldier.equippedItems.containsKey(EquipmentSlot.spear)
         ? soldier.spearSkill
-        : -1;
-    int swordSkill = soldier.equippedItems.containsKey(EquipmentSlot.melee) &&
-            (soldier.equippedItems[EquipmentSlot.melee]?.itemType ==
-                ItemType.sword)
-        ? soldier.swordSkill
-        : -1;
+        : -1.0;
+    double swordSkill =
+        soldier.equippedItems.containsKey(EquipmentSlot.melee) &&
+                (soldier.equippedItems[EquipmentSlot.melee]?.itemType ==
+                    ItemType.sword)
+            ? soldier.swordSkill
+            : -1.0;
 
     if (shieldSkill >= spearSkill &&
         shieldSkill >= swordSkill &&
@@ -189,7 +222,7 @@ class FishingService {
     } else {
       // Desperation: Hand fishing uses adaptability
       return _FishingTechnique(
-          "Hand Fishing", ItemType.misc, (soldier.adaptability / 2).round());
+          "Hand Fishing", ItemType.misc, (soldier.adaptability / 2).toDouble());
     }
   }
 
@@ -224,6 +257,6 @@ class FishingService {
 class _FishingTechnique {
   final String name;
   final ItemType toolType;
-  final int skillLevel;
+  final double skillLevel;
   _FishingTechnique(this.name, this.toolType, this.skillLevel);
 }

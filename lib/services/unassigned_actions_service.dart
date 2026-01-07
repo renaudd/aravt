@@ -1,5 +1,18 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:math';
-import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/soldier_action.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/social_interaction_data.dart';
@@ -11,6 +24,7 @@ import 'package:aravt/services/unassigned_actions_helpers/proselytize_helper.dar
 import 'package:aravt/services/unassigned_actions_helpers/gossip_helper.dart';
 import 'package:aravt/services/unassigned_actions_helpers/advice_helper.dart';
 import 'package:aravt/services/unassigned_actions_helpers/assassination_helper.dart';
+import 'package:aravt/models/narrative_models.dart';
 
 /// Service to handle all of Step 4: Unassigned Soldier Actions
 /// This is the core system that drives emergent social dynamics in the horde
@@ -205,7 +219,6 @@ class UnassignedActionsService {
           double murderProb =
               hostilityProb * (entry.value.admiration < 0.5 ? 2.0 : 1.0);
 
-          // [GEMINI-FIX] Murderers are MUCH more dangerous to the player
           // If this soldier has the murderer attribute AND is targeting the player,
           // give them a massive probability boost to ensure they're a real threat
           if (target.isPlayer &&
@@ -254,7 +267,6 @@ class UnassignedActionsService {
       }
     }
 
-    // [GEMINI-FIX] Murderer Attribute Logic
     // Murderers have a compulsion to kill, regardless of relationships.
     if (soldier.attributes.contains(SoldierAttribute.murderer)) {
       // Pick a random target from the horde
@@ -553,6 +565,7 @@ class UnassignedActionsService {
       actionType: UnassignedActionType.divulgeInfoToPlayer,
       soldier: soldier,
       probability: baseProb,
+      targetSoldierId: null,
     ));
 
     return actions;
@@ -751,17 +764,12 @@ class UnassignedActionsService {
     if (result.success) {
       // Target dies
       if (target.isPlayer) {
-        // PLAYER DEATH - GAME OVER
+        // PLAYER DEATH - Narrative event will handle game over
         gameState.logEvent(
           result.description,
           category: EventCategory.combat,
           severity: EventSeverity.critical,
           soldierId: target.id,
-        );
-
-        // Trigger game over
-        gameState.triggerGameOver(
-          "You were assassinated by ${assassin.name}",
         );
       } else {
         // NPC death
@@ -777,6 +785,17 @@ class UnassignedActionsService {
       }
     } else {
       // Assassination failed
+      if (type == AssassinationType.confront) {
+        gameState.logEvent(
+          result.description,
+          category: EventCategory.combat,
+          severity: EventSeverity.critical,
+          soldierId: assassin.id,
+        );
+        gameState.executeSoldier(assassin);
+        return; // Assassin is dead, no further punishment needed
+      }
+
       if (result.discovered) {
         // Assassin was discovered
         gameState.logEvent(
@@ -788,55 +807,109 @@ class UnassignedActionsService {
 
         // Severe consequences for assassin
         if (target.isPlayer) {
-          // Player can execute the assassin
-          gameState.logEvent(
-            "${assassin.name} has been caught attempting to assassinate you! You may execute them.",
-            category: EventCategory.system,
-            severity: EventSeverity.critical,
-            soldierId: assassin.id,
-          );
+          if (gameState.isPlayerLeader) {
+            // Player is leader, they decide
+            gameState.logEvent(
+              "${assassin.name} has been caught attempting to assassinate you! You may execute him.",
+              category: EventCategory.system,
+              severity: EventSeverity.critical,
+              soldierId: assassin.id,
+            );
+          } else {
+            // AI leader decides
+            double roll = _random.nextDouble();
+            if (roll < 0.6) {
+              gameState.logEvent(
+                "The Horde Leader has executed ${assassin.name} for attempting to assassinate you.",
+                category: EventCategory.combat,
+                severity: EventSeverity.critical,
+                soldierId: assassin.id,
+              );
+              gameState.executeSoldier(assassin);
+            } else if (roll < 0.9) {
+              gameState.logEvent(
+                "The Horde Leader has exiled ${assassin.name} for attempting to assassinate you.",
+                category: EventCategory.combat,
+                severity: EventSeverity.critical,
+                soldierId: assassin.id,
+              );
+              gameState.expelSoldier(assassin);
+            } else {
+              gameState.logEvent(
+                "The Horde Leader has imprisoned ${assassin.name} for attempting to assassinate you.",
+                category: EventCategory.combat,
+                severity: EventSeverity.critical,
+                soldierId: assassin.id,
+              );
+              assassin.isImprisoned = true;
+            }
+          }
         } else {
           // Target may execute or exile assassin
           if (_random.nextDouble() < 0.7) {
             gameState.logEvent(
-              "${target.name} executed ${assassin.name} for the assassination attempt.",
+              "${target.name} has executed ${assassin.name} for the attempted assassination.",
               category: EventCategory.combat,
-              severity: EventSeverity.high,
+              severity: EventSeverity.critical,
               soldierId: assassin.id,
             );
             gameState.executeSoldier(assassin);
+          } else {
+            gameState.logEvent(
+              "${target.name} has reported ${assassin.name} for the attempt.",
+              category: EventCategory.general,
+              severity: EventSeverity.high,
+              soldierId: assassin.id,
+            );
+            // Maybe imprison?
+            if (_random.nextDouble() < 0.5) {
+              assassin.isImprisoned = true;
+            }
           }
         }
       } else {
-        // Failed but not discovered
-        if (gameState.isOmniscientMode) {
-          gameState.logEvent(
-            result.description,
-            category: EventCategory.combat,
-            severity: EventSeverity.high,
-            soldierId: target.id,
-            isPlayerKnown: false,
-          );
-        }
-
-        // Target may be injured
-        if (result.injuryDamage != null) {
-          target.bodyHealthCurrent =
-              (target.bodyHealthCurrent - result.injuryDamage!).clamp(0, 100);
+        // Failed but not discovered - apply injury if any
+        if (result.injuryDamage != null && result.injuryDamage! > 0) {
+          target.bodyHealthCurrent -= result.injuryDamage!.toInt();
+          if (target.isPlayer) {
+            gameState.logEvent(
+              "You suffered a mysterious injury during the night.",
+              category: EventCategory.general,
+              severity: EventSeverity.high,
+            );
+          }
         }
       }
     }
 
-    // Handle confrontation special case (one dies)
-    if (result.type == AssassinationType.confront && !result.success) {
-      // Assassin lost the confrontation and died
-      gameState.logEvent(
-        "${target.name} killed ${assassin.name} in self-defense.",
-        category: EventCategory.combat,
-        severity: EventSeverity.critical,
-        soldierId: assassin.id,
-      );
-      gameState.executeSoldier(assassin);
+    // Trigger narrative event for player targets (always) OR discovered attempts on player
+    if (target.isPlayer) {
+      NarrativeEventType? eventType;
+      switch (result.type) {
+        case AssassinationType.poisoning:
+          eventType = NarrativeEventType.assassinationPoison;
+          break;
+        case AssassinationType.strangleInSleep:
+          eventType = NarrativeEventType.assassinationStrangle;
+          break;
+        case AssassinationType.createAccident:
+          eventType = NarrativeEventType.assassinationAccident;
+          break;
+        case AssassinationType.confront:
+          eventType = NarrativeEventType.assassinationConfront;
+          break;
+      }
+
+      // Only show if successful OR discovered. If failed and not discovered, player doesn't know.
+      if (result.success || result.discovered) {
+        gameState.startNarrativeEvent(NarrativeEvent(
+          type: eventType,
+          instigatorId: assassin.id,
+          targetId: target.id,
+          description: result.description,
+          success: result.success,
+        ));
+      }
     }
   }
 }

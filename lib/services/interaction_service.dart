@@ -1,9 +1,23 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:math';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/interaction_models.dart';
 import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/providers/game_state.dart';
-import 'package:aravt/models/assignment_data.dart'; // For AravtDuty enum
+// For AravtDuty enum
 import 'package:aravt/services/dialogue_helpers.dart';
 import 'package:aravt/models/justification_event.dart';
 import 'package:aravt/services/loyalty_service.dart';
@@ -44,7 +58,7 @@ class InteractionService {
     final log = InteractionLogEntry(
       dateString: gameState.gameDate.toShortString(),
       type: InteractionType.inquire,
-      // [GEMINI-FIX] Put dialogue directly here for cleaner log display
+
       interactionSummary: dialogue,
       outcomeSummary: "",
       informationRevealed: "",
@@ -129,13 +143,12 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.05, admiration: 0.02, fear: 0.05);
         if (_random.nextDouble() < 0.7) {
-          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
               : '"${_generateSelfCriticism(target, gameState)}"';
         }
-        break;
 
       case _InteractionTier.success:
         outcomeSummary = "They accepted the rebuke.";
@@ -152,13 +165,12 @@ class InteractionService {
         }
         _applySocialEffect(socialCircle, player.id, respect: 0.02, fear: 0.02);
         if (_random.nextDouble() < 0.4) {
-          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
               : '"${_generateSelfCriticism(target, gameState)}"';
         }
-        break;
 
       case _InteractionTier.lessSuccessful:
         outcomeSummary = "They listened, but seemed resentful.";
@@ -174,7 +186,6 @@ class InteractionService {
         if (_random.nextDouble() < 0.3) {
           infoRevealed = '"${_generateOtherCriticism(target, gameState)}"';
         }
-        break;
 
       case _InteractionTier.unsuccessful:
         outcomeSummary = "They rejected your authority!";
@@ -192,7 +203,6 @@ class InteractionService {
         if (_random.nextDouble() < 0.6) {
           infoRevealed = '"${_generateOtherCriticism(target, gameState)}"';
         }
-        break;
     }
 
     final log = InteractionLogEntry(
@@ -283,13 +293,12 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.05, admiration: 0.1, loyalty: 0.02);
         if (_random.nextDouble() < 0.7) {
-          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
               : '"${_generateOtherPraise(target, gameState)}"';
         }
-        break;
 
       case _InteractionTier.success:
         outcomeSummary = "They were encouraged.";
@@ -307,13 +316,12 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.02, admiration: 0.05);
         if (_random.nextDouble() < 0.4) {
-          // [GEMINI-ENHANCED] Use full dialogue generation instead of canned responses
+
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
               : '"${_generateOtherPraise(target, gameState)}"';
         }
-        break;
 
       case _InteractionTier.lessSuccessful:
         outcomeSummary = "They accepted it awkwardly.";
@@ -324,7 +332,6 @@ class InteractionService {
         if (_random.nextDouble() < 0.3) {
           infoRevealed = '"${_generateSelfPraise(target, gameState)}"';
         }
-        break;
 
       case _InteractionTier.unsuccessful:
         outcomeSummary = "They saw through the empty flattery.";
@@ -337,7 +344,6 @@ class InteractionService {
         if (_random.nextDouble() < 0.6) {
           infoRevealed = '"${_generateSelfPraise(target, gameState)}"';
         }
-        break;
     }
 
     final log = InteractionLogEntry(
@@ -507,7 +513,7 @@ class InteractionService {
       _applySocialEffect(socialCircle, player.id,
           respect: 0.03, admiration: 0.05);
 
-      // [GEMINI-ENHANCED] Generate inquiry-type dialogue response
+
       if (_random.nextDouble() < 0.6) {
         // Use dialogue generation for more dynamic responses
         String dynamicResponse = _generateDialogue(target, gameState);
@@ -610,8 +616,6 @@ class InteractionService {
             itemType == ItemType.ring ||
             itemType == ItemType.necklace ||
             itemType == ItemType.misc;
-      default:
-        return false;
     }
   }
 
@@ -676,7 +680,7 @@ class InteractionService {
       () => _topicIneptitudeAdmission(speaker),
       () => _topicMurdererHint(speaker),
       () =>
-          DialogueHelpers.topicOwnBirthday(speaker, gameState), // [GEMINI-NEW]
+          DialogueHelpers.topicOwnBirthday(speaker, gameState),
     ];
     topics.shuffle(_random);
     for (var topicGen in topics) {
@@ -701,7 +705,7 @@ class InteractionService {
       (s) => _topicHighSkill(speaker, s, "mate"),
       (s) => _topicLowSkill(speaker, s, "mate"),
       (s) => DialogueHelpers.topicMateBirthday(
-          speaker, s, gameState), // [GEMINI-NEW]
+          speaker, s, gameState),
     ];
     topics.shuffle(_random);
     for (var topicGen in topics) {
@@ -729,7 +733,7 @@ class InteractionService {
   }
 
   static String _generateSubjectRandom(Soldier speaker, GameState gameState) {
-    // [GEMINI-FIX] Reduced chance of random gossip
+
     if (_random.nextDouble() > 0.05) return "";
 
     Soldier? rando = _getRandomOutsider(speaker, gameState);
@@ -755,18 +759,20 @@ class InteractionService {
       if (subject.preferredDuties.isEmpty) return "";
       final duty = subject
           .preferredDuties[_random.nextInt(subject.preferredDuties.length)];
-      if (rel == "self")
+      if (rel == "self") {
         return _useTopic(speaker, 'duty_like_${duty.name}',
             "'I wouldn't mind being assigned to ${duty.name}. I have a knack for it.'");
+      }
       return _useTopic(speaker, 'mate_duty_like_${subject.id}_${duty.name}',
           "${subject.name} actually enjoys being a ${duty.name}. Strange.");
     } else {
       if (subject.despisedDuties.isEmpty) return "";
       final duty = subject
           .despisedDuties[_random.nextInt(subject.despisedDuties.length)];
-      if (rel == "self")
+      if (rel == "self") {
         return _useTopic(speaker, 'duty_hate_${duty.name}',
             "'Don't make me do ${duty.name}, Captain. I can't stand it.'");
+      }
       return _useTopic(speaker, 'mate_duty_hate_${subject.id}_${duty.name}',
           "Never assign ${subject.name} to ${duty.name}. They won't stop complaining.");
     }
@@ -775,9 +781,10 @@ class InteractionService {
   static String _topicGiftPreference(
       Soldier speaker, Soldier subject, String rel) {
     final pref = subject.giftTypePreference.name;
-    if (rel == "self")
+    if (rel == "self") {
       return _useTopic(speaker, 'gift_pref_$pref',
           "'If we ever get rich, I've always wanted a fine $pref.'");
+    }
     return _useTopic(speaker, 'mate_gift_pref_${subject.id}_$pref',
         "You know what ${subject.name} wants? A $pref. It's all they talk about.");
   }
@@ -788,18 +795,20 @@ class InteractionService {
     if (originName == 'allappreciative') originName = 'any';
 
     if (subject.giftOriginPreference == GiftOriginPreference.unappreciative) {
-      if (rel == "self")
+      if (rel == "self") {
         return _useTopic(speaker, 'gift_origin_unappreciative',
             "Most 'gifts' we get are trash.");
+      }
       return _useTopic(speaker, 'mate_gift_origin_unappreciative_${subject.id}',
           "${subject.name} is never happy with their share.");
     }
 
-    if (rel == "self")
+    if (rel == "self") {
       return _useTopic(
           speaker,
           'gift_origin_${subject.giftOriginPreference.name}',
           "'I prefer goods from the $originName lands. Better craftsmanship.'");
+    }
     return "";
   }
 
@@ -817,9 +826,10 @@ class InteractionService {
       Soldier speaker, Soldier subject, String rel) {
     if (subject.specialSkills.isEmpty) return "";
     final skill = subject.specialSkills.first.name;
-    if (rel == "self")
+    if (rel == "self") {
       return _useTopic(speaker, 'special_$skill',
           "'Before I rode with the horde, I was a $skill. Useful, sometimes.'");
+    }
     return _useTopic(speaker, 'mate_special_${subject.id}_$skill',
         "Did you know ${subject.name} is a $skill? We should use that.");
   }
@@ -833,9 +843,10 @@ class InteractionService {
     if (visibleAttributes.isEmpty) return "";
     final attr = visibleAttributes[_random.nextInt(visibleAttributes.length)];
 
-    if (rel == "self")
+    if (rel == "self") {
       return _useTopic(speaker, 'attr_${attr.name}',
           "'People say I am ${attr.name}. I suppose it's true.'");
+    }
     return _useTopic(speaker, 'mate_attr_${subject.id}_${attr.name}',
         "${subject.name} is quite the ${attr.name}, don't you think?");
   }
@@ -843,30 +854,151 @@ class InteractionService {
   static String _topicSkillProficiency(
       Soldier speaker, Soldier subject, String rel,
       {bool high = true}) {
-    Map<String, int> skills = {
+    Map<String, num> skills = {
       'archery': subject.longRangeArcherySkill,
+      'mounted archery': subject.mountedArcherySkill,
       'riding': subject.horsemanship,
       'swordsmanship': subject.swordSkill,
-      'spear use': subject.spearSkill
+      'spear use': subject.spearSkill,
+      'shield use': subject.shieldSkill,
+      'animal handling': subject.animalHandling,
     };
     var entries = high
         ? skills.entries.where((e) => e.value >= 7).toList()
-        : skills.entries.where((e) => e.value <= 3).toList();
+        : skills.entries
+            .where((e) => e.value <= 6)
+            .toList(); // Expanded to 6 to support mid-range feedback
     if (entries.isEmpty) return "";
     final entry = entries[_random.nextInt(entries.length)];
 
     if (high) {
-      if (rel == "self")
+      if (entry.key == 'spear use' && entry.value >= 7) {
+        if (rel == "self") {
+          return _useTopic(speaker, 'skill_high_spear_7',
+              "'I am deadly with a spear. Try me.'");
+        }
+        final name = subject.isPlayer ? "Your" : "${subject.name}'s";
+        return _useTopic(speaker, 'mate_skill_high_${subject.id}_spear_7',
+            "$name spear use is deadly.");
+      }
+      if (rel == "self") {
         return _useTopic(speaker, 'skill_high_${entry.key}',
             "'I am confident in my ${entry.key}. I won't let you down.'");
+      }
+      final name = subject.isPlayer ? "your" : "${subject.name}'s";
       return _useTopic(speaker, 'mate_skill_high_${subject.id}_${entry.key}',
-          "You should see ${subject.name}'s ${entry.key}. Impressive.");
+          "You should see $name ${entry.key}. Impressive.");
     } else {
-      if (rel == "self")
+
+      if (entry.key == 'spear use') {
+        if (entry.value <= 2) {
+          if (rel == "self") {
+            return _useTopic(speaker, 'skill_low_spear_0',
+                "'Honestly, Captain... my spear use is terrible. I need practice.'");
+          }
+          final String subjectName = subject.isPlayer ? "You" : subject.name;
+          final String verb = subject.isPlayer ? "are" : "is";
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_spear_0',
+              "$subjectName $verb terrible at spear use.");
+        } else if (entry.value <= 4) {
+          if (rel == "self") {
+            return _useTopic(speaker, 'skill_low_spear_3',
+                "'My spear use isn't great, Captain. Still learning.'");
+          }
+          final String subjectName = subject.isPlayer ? "You" : subject.name;
+          final String verb = subject.isPlayer ? "are" : "is";
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_spear_3',
+              "$subjectName $verb not great at spear use.");
+        } else if (entry.value <= 6) {
+          if (rel == "self") {
+            return _useTopic(speaker, 'skill_low_spear_5',
+                "'I'm pretty good with a spear, but always room to improve.'");
+          }
+          final String subjectName = subject.isPlayer ? "You" : subject.name;
+          final String verb = subject.isPlayer ? "are" : "is";
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_spear_5',
+              "$subjectName $verb pretty good with a spear.");
+        }
+      } else if (entry.key == 'swordsmanship') {
+        if (entry.value <= 2) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_sword_0',
+                "'I can barely hold a sword, Captain.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_sword_0',
+              "${subject.isPlayer ? "You are" : "${subject.name} is"} dangerous with a sword... to ${subject.isPlayer ? "yourself" : "themselves"}.");
+        } else if (entry.value <= 4) {
+          if (rel == "self")
+            return _useTopic(
+                speaker, 'skill_low_sword_3', "'My swordsmanship needs work.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_sword_3',
+              "${subject.isPlayer ? "You aren't" : "${subject.name} isn't"} very skilled with a sword.");
+        }
+      } else if (entry.key == 'archery' || entry.key == 'mounted archery') {
+        if (entry.value <= 2) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_archery_0',
+                "'I couldn't hit a yurt from the inside.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_archery_0',
+              "${subject.isPlayer ? "You couldn't" : "${subject.name} couldn't"} hit a yurt from the inside.");
+        } else if (entry.value <= 4) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_archery_3',
+                "'My aim is a bit off lately.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_archery_3',
+              "${subject.isPlayer ? "You need" : "${subject.name} needs"} more practice with a bow.");
+        }
+      } else if (entry.key == 'shield use') {
+        if (entry.value <= 2) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_shield_0',
+                "'I keep forgetting to raise my shield.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_shield_0',
+              "${subject.isPlayer ? "You forget" : "${subject.name} forgets"} to use ${subject.isPlayer ? "your" : "their"} shield.");
+        } else if (entry.value <= 4) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_shield_3',
+                "'I'm not used to fighting with a shield.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_shield_3',
+              "${subject.isPlayer ? "You aren't" : "${subject.name} isn't"} used to shields.");
+        }
+      } else if (entry.key == 'riding') {
+        if (entry.value <= 2) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_riding_0',
+                "'I'm more comfortable on my own two feet.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_riding_0',
+              "${subject.isPlayer ? "You ride" : "${subject.name} rides"} like a sack of grain.");
+        } else if (entry.value <= 4) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_riding_3',
+                "'I'm still getting used to this horse.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_riding_3',
+              "${subject.isPlayer ? "You need" : "${subject.name} needs"} more time in the saddle.");
+        }
+      } else if (entry.key == 'animal handling') {
+        if (entry.value <= 2) {
+          if (rel == "self")
+            return _useTopic(speaker, 'skill_low_animal_0',
+                "'Animals don't seem to like me.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_animal_0',
+              "Animals hate ${subject.isPlayer ? "you" : subject.name}.");
+        } else if (entry.value <= 4) {
+          if (rel == "self")
+            return _useTopic(
+                speaker, 'skill_low_animal_3', "'I'm not great with animals.'");
+          return _useTopic(speaker, 'mate_skill_low_${subject.id}_animal_3',
+              "${subject.isPlayer ? "You aren't" : "${subject.name} isn't"} great with animals.");
+        }
+      }
+
+      if (rel == "self") {
         return _useTopic(speaker, 'skill_low_${entry.key}',
             "'Honestly, Captain... my ${entry.key} is not good. I need practice.'");
+      }
+      final String subjectName = subject.isPlayer ? "You" : subject.name;
+      final String verb = subject.isPlayer ? "are" : "is";
       return _useTopic(speaker, 'mate_skill_low_${subject.id}_${entry.key}',
-          "${subject.name} is terrible at ${entry.key}. Don't rely on them for it.");
+          "$subjectName $verb terrible at ${entry.key}.");
     }
   }
 
@@ -879,38 +1011,172 @@ class InteractionService {
   }
 
   static String _topicHighStat(Soldier speaker, Soldier subject, String rel) {
-    if (subject.strength > 7)
+    if (subject.strength > 7) {
       return _useTopic(
           speaker,
           rel == "self" ? 'stat_high_str' : 'mate_stat_high_str_${subject.id}',
           rel == "self"
               ? "'I can carry more than most. Use that.'"
-              : "${subject.name} is strong as an ox.");
-    if (subject.intelligence > 7)
+              : (subject.isPlayer
+                  ? "You are strong as an ox."
+                  : "${subject.name} is strong as an ox."));
+    }
+    if (subject.intelligence > 7) {
       return _useTopic(
           speaker,
           rel == "self" ? 'stat_high_int' : 'mate_stat_high_int_${subject.id}',
           rel == "self"
               ? "'I see things others miss.'"
-              : "${subject.name} is sharp. Maybe too sharp.");
+              : (subject.isPlayer
+                  ? "You are sharp. Maybe too sharp."
+                  : "${subject.name} is sharp. Maybe too sharp."));
+    }
+    if (subject.courage > 7) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_cou' : 'mate_stat_high_cou_${subject.id}',
+          rel == "self"
+              ? "'I'm not afraid of anything!'"
+              : (subject.isPlayer
+                  ? "You have the heart of a lion."
+                  : "${subject.name} has the heart of a lion."));
+    }
+    if (subject.leadership > 7) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_lea' : 'mate_stat_high_lea_${subject.id}',
+          rel == "self"
+              ? "'People tend to follow my lead.'"
+              : (subject.isPlayer
+                  ? "You are a natural born leader."
+                  : "${subject.name} is a natural born leader."));
+    }
+    if (subject.charisma > 7) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_cha' : 'mate_stat_high_cha_${subject.id}',
+          rel == "self"
+              ? "'I can talk my way out of anything.'"
+              : (subject.isPlayer
+                  ? "You could charm the birds from the trees."
+                  : "${subject.name} could charm the birds from the trees."));
+    }
+    if (subject.ambition > 7) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_amb' : 'mate_stat_high_amb_${subject.id}',
+          rel == "self"
+              ? "'I have big plans for the future.'"
+              : (subject.isPlayer
+                  ? "You are very ambitious. Watch your back."
+                  : "${subject.name} is very ambitious. Keep an eye on them."));
+    }
+    if (subject.honesty > 7) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_hon' : 'mate_stat_high_hon_${subject.id}',
+          rel == "self"
+              ? "'I cannot tell a lie.'"
+              : (subject.isPlayer
+                  ? "You are honest to a fault."
+                  : "${subject.name} is honest to a fault."));
+    }
+    if (subject.adaptability > 7) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_ada' : 'mate_stat_high_ada_${subject.id}',
+          rel == "self"
+              ? "'I can adapt to any situation.'"
+              : (subject.isPlayer
+                  ? "You are like water, adapting to everything."
+                  : "${subject.name} is like water, adapting to everything."));
+    }
+
     return "";
   }
 
   static String _topicLowStat(Soldier speaker, Soldier subject, String rel) {
-    if (subject.intelligence < 4)
+    if (subject.intelligence < 4) {
       return _useTopic(
           speaker,
           rel == "self" ? 'stat_low_int' : 'mate_stat_low_int_${subject.id}',
           rel == "self"
               ? "'Too much thinking makes my head hurt.'"
-              : "${subject.name} isn't the smartest rider in the horde.");
-    if (subject.stamina < 4)
+              : (subject.isPlayer
+                  ? "You aren't the smartest rider in the horde."
+                  : "${subject.name} isn't the smartest rider in the horde."));
+    }
+    if (subject.stamina < 4) {
       return _useTopic(
           speaker,
           rel == "self" ? 'stat_low_sta' : 'mate_stat_low_sta_${subject.id}',
           rel == "self"
               ? "'I get winded easily these days.'"
-              : "${subject.name} tires too quickly in a fight.");
+              : (subject.isPlayer
+                  ? "You tire too quickly in a fight."
+                  : "${subject.name} tires too quickly in a fight."));
+    }
+    if (subject.patience < 4) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_low_pat' : 'mate_stat_low_pat_${subject.id}',
+          rel == "self"
+              ? "'I have no patience for this!'"
+              : (subject.isPlayer
+                  ? "You are really impatient."
+                  : "${subject.name} is really impatient."));
+    }
+    if (subject.courage < 4) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_low_cou' : 'mate_stat_low_cou_${subject.id}',
+          rel == "self"
+              ? "'I... I don't want to die out here.'"
+              : (subject.isPlayer
+                  ? "You are a bit of a coward, aren't you?"
+                  : "${subject.name} is a bit of a coward."));
+    }
+    if (subject.honesty < 4) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_low_hon' : 'mate_stat_low_hon_${subject.id}',
+          rel == "self"
+              ? "'A little lie never hurt anyone.'"
+              : (subject.isPlayer
+                  ? "You are a liar."
+                  : "${subject.name} is a liar."));
+    }
+    if (subject.exhaustion > 50) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_exh' : 'mate_stat_high_exh_${subject.id}',
+          rel == "self"
+              ? "'I am exhausted. I need rest.'"
+              : (subject.isPlayer
+                  ? "You look exhausted."
+                  : "${subject.name} looks exhausted."));
+    }
+    if (subject.stress > 50) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_high_str' : 'mate_stat_high_str_${subject.id}',
+          rel == "self"
+              ? "'I am cracking under the pressure.'"
+              : (subject.isPlayer
+                  ? "You look stressed out."
+                  : "${subject.name} looks stressed out."));
+    }
+    if (subject.hygiene < 20) {
+      return _useTopic(
+          speaker,
+          rel == "self" ? 'stat_low_hyg' : 'mate_stat_low_hyg_${subject.id}',
+          rel == "self"
+              ? "'I smell like a horse's backside.'"
+              : (subject.isPlayer
+                  ? "You smell terrible."
+                  : "${subject.name} smells terrible."));
+    }
+
     return "";
   }
 
@@ -941,45 +1207,57 @@ class InteractionService {
 
     switch (type) {
       case 'hate':
-        if (rel.admiration < 2.0 && rel.respect < 2.0)
-          return _useTopic(speaker, key,
-              "'I can't stand ${target.name}. Keep an eye on them.'");
+        if (rel.admiration < 2.0 && rel.respect < 2.0) {
+          final name = target.isPlayer ? "you" : target.name;
+          final pronoun = target.isPlayer ? "you" : "them";
+          return _useTopic(
+              speaker, key, "'I can't stand $name. Keep an eye on $pronoun.'");
+        }
         break;
       case 'admire':
-        if (rel.admiration > 4.0)
+        if (rel.admiration > 4.0) {
+          final name = target.isPlayer ? "You are" : "${target.name} is";
+          final pronoun = target.isPlayer ? "you" : "them";
           return _useTopic(speaker, key,
-              "'${target.name} is a true hero. We are lucky to have them.'");
+              "'$name a true hero. We are lucky to have $pronoun.'");
+        }
         break;
       case 'respect':
-        if (rel.respect > 4.0)
-          return _useTopic(speaker, key,
-              "'${target.name} knows what they are doing. A good soldier.'");
+        if (rel.respect > 4.0) {
+          final name = target.isPlayer ? "You know" : "${target.name} knows";
+          final pronoun = target.isPlayer ? "you are" : "they are";
+          return _useTopic(
+              speaker, key, "'$name what $pronoun doing. A good soldier.'");
+        }
         break;
       case 'fear':
-        if (rel.fear > 4.0)
+        if (rel.fear > 4.0) {
+          final name = target.isPlayer ? "you" : target.name;
+          final pronoun = target.isPlayer ? "You scare" : "They scare";
           return _useTopic(
-              speaker, key, "'Stay away from ${target.name}. They scare me.'");
+              speaker, key, "'Stay away from $name. $pronoun me.'");
+        }
         break;
       case 'disrespect':
-        if (rel.respect < 2.0)
-          return _useTopic(speaker, key,
-              "'${target.name} is useless. Why are they even here?'");
+        if (rel.respect < 2.0) {
+          final name = target.isPlayer ? "You are" : "${target.name} is";
+          final pronoun = target.isPlayer ? "you" : "they";
+          return _useTopic(
+              speaker, key, "'$name useless. Why are $pronoun even here?'");
+        }
         break;
     }
     return "";
   }
 
-  static String _topicRelAdmire(Soldier speaker, Soldier target) =>
-      _topicRelationship(speaker, target, 'admire');
-  static String _topicRelDisrespect(Soldier speaker, Soldier target) =>
-      _topicRelationship(speaker, target, 'disrespect');
-
   static String _topicGossipInept(Soldier speaker, Soldier target) {
     if (target.attributes.contains(SoldierAttribute.inept)) {
       if (speaker.attributes.contains(SoldierAttribute.gossip) ||
           speaker.perception > 6) {
+        final name = target.isPlayer ? "you" : target.name;
+        final pronoun = target.isPlayer ? "You" : "They";
         return _useTopic(speaker, 'gossip_inept_${target.id}',
-            "'Have you noticed ${target.name}? They keep dropping things. Dangerous.'");
+            "'Have you noticed $name? $pronoun keep dropping things. Dangerous.'");
       }
     }
     return "";
@@ -988,8 +1266,10 @@ class InteractionService {
   static String _topicGossipMurder(Soldier speaker, Soldier target) {
     if (target.attributes.contains(SoldierAttribute.murderer)) {
       if (speaker.perception > 7) {
+        final name = target.isPlayer ? "you" : target.name;
+        final pronoun = target.isPlayer ? "you" : "they";
         return _useTopic(speaker, 'gossip_murder_${target.id}',
-            "'There's something off about ${target.name}. The way they look at people when they think no one is watching...'");
+            "'There's something off about $name. The way $pronoun look at people when $pronoun think no one is watching...'");
       }
     }
     return "";
@@ -1076,7 +1356,7 @@ class InteractionService {
         : null;
   }
 
-  // [GEMINI-FIX] Restored this helper that was missing in previous versions
+
   static List<Soldier> _getSocialCircle(Soldier target, GameState gameState) {
     List<Soldier> circle = [];
     if (target.yurtId != null) {
@@ -1091,7 +1371,9 @@ class InteractionService {
       if (captain != null && captain.id != target.id) {
         circle.add(captain);
       }
-    } catch (e) {}
+    } catch (e) {
+      // Ignore if no mates available
+    }
     final leader = gameState.horde.firstWhere(
         (s) => s.role == SoldierRole.hordeLeader,
         orElse: () => gameState.player!);

@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // screens/load_game_screen.dart
 import 'package:aravt/models/save_file_info.dart';
 import 'package:aravt/providers/game_state.dart';
@@ -44,13 +58,15 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
           ),
           actions: [
             TextButton(
-              child: Text('Cancel', style: GoogleFonts.cinzel(color: Colors.white70)),
+              child: Text('Cancel',
+                  style: GoogleFonts.cinzel(color: Colors.white70)),
               onPressed: () {
                 Navigator.of(dialogContext).pop(false); // Do not load
               },
             ),
             TextButton(
-              child: Text('Load', style: GoogleFonts.cinzel(color: Colors.amber)),
+              child:
+                  Text('Load', style: GoogleFonts.cinzel(color: Colors.amber)),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true); // Yes, load
               },
@@ -64,7 +80,7 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
     if (shouldLoad == true) {
       // Use 'mounted' check for async operations in stateful widgets
       if (!mounted) return;
-      
+
       final gameState = context.read<GameState>();
       final bool loadSuccess = await gameState.loadGame(save.fullFileName);
 
@@ -117,7 +133,8 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
                 child: Text(
                   'Error loading save files:\n${snapshot.error}',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.cinzel(color: Colors.red[300], fontSize: 16),
+                  style:
+                      GoogleFonts.cinzel(color: Colors.red[300], fontSize: 16),
                 ),
               );
             }
@@ -127,7 +144,8 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
               return Center(
                 child: Text(
                   'No save files found.',
-                  style: GoogleFonts.cinzel(color: Colors.white70, fontSize: 18),
+                  style:
+                      GoogleFonts.cinzel(color: Colors.white70, fontSize: 18),
                 ),
               );
             }
@@ -140,7 +158,8 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
                 final save = saveFiles[index];
                 return Card(
                   color: Colors.black.withOpacity(0.6),
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
                   child: ListTile(
                     leading: const Icon(Icons.save, color: Colors.white70),
                     title: Text(
@@ -167,4 +186,3 @@ class _LoadGameScreenState extends State<LoadGameScreen> {
     );
   }
 }
-

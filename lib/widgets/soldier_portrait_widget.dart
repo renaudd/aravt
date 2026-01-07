@@ -1,11 +1,23 @@
-//new soldier portrait widget
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+//new soldier portrait widget
 
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 
 /// A widget that displays a single, UNTINTED portrait from a soldier spritesheet
 /// on a solid-colored background.
@@ -14,7 +26,6 @@ class SoldierPortrait extends StatefulWidget {
   final Color backgroundColor; // Changed from 'tint'
   final double size;
 
-
   const SoldierPortrait({
     Key? key,
     required this.index,
@@ -22,29 +33,23 @@ class SoldierPortrait extends StatefulWidget {
     required this.backgroundColor, // Now required and no longer nullable
   }) : super(key: key);
 
-
   // --- Static cache for the loaded spritesheet ---
   static ui.Image? _spriteSheetCache;
   static bool _isLoading = false;
   static final List<Completer<void>> _loadingCompleters = [];
 
-
   // --- Spritesheet properties ---
-  static const String _spritesheetPath =
-      'assets/images/soldier_portraits.png';
+  static const String _spritesheetPath = 'assets/images/soldier_portraits.png';
   static const double _frameWidth = 250.0;
   static const double _frameHeight = 250.0;
-
 
   @override
   _SoldierPortraitState createState() => _SoldierPortraitState();
 }
 
-
 class _SoldierPortraitState extends State<SoldierPortrait> {
   // This future will complete once the image is loaded.
   Future<void>? _loadingFuture;
-
 
   @override
   void initState() {
@@ -54,7 +59,6 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
       _loadingFuture = _loadSpriteSheet();
     }
   }
-
 
   /// Loads the spritesheet image from assets and stores it in the static cache.
   /// Uses a completer system to handle concurrent requests.
@@ -66,19 +70,18 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
       return completer.future;
     }
 
-
     // Mark as loading
     SoldierPortrait._isLoading = true;
 
-
     try {
-      final ByteData data = await rootBundle.load(SoldierPortrait._spritesheetPath);
-      final ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final ByteData data =
+          await rootBundle.load(SoldierPortrait._spritesheetPath);
+      final ui.Codec codec =
+          await ui.instantiateImageCodec(data.buffer.asUint8List());
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
-    
+
       // Store in cache
       SoldierPortrait._spriteSheetCache = frameInfo.image;
-
 
       // Notify all waiting widgets that loading is complete
       for (var completer in SoldierPortrait._loadingCompleters) {
@@ -100,10 +103,9 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
-    // --- NEW: Wrap with a ClipRRect for background ---
+
     return ClipRRect(
       // Use a circular clip for the portrait
       borderRadius: BorderRadius.circular(widget.size / 2),
@@ -115,7 +117,6 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
       ),
     );
   }
-
 
   /// Builds the CustomPaint or a placeholder
   Widget _buildPortraitPainter() {
@@ -132,14 +133,14 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
       );
     }
 
-
     // If the image is not yet loaded, show a placeholder and
     // use a FutureBuilder to rebuild when loading completes.
     return FutureBuilder(
       future: _loadingFuture,
       builder: (context, snapshot) {
         // When loading is done, this will return the CustomPaint
-        if (snapshot.connectionState == ConnectionState.done && SoldierPortrait._spriteSheetCache != null) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            SoldierPortrait._spriteSheetCache != null) {
           return CustomPaint(
             size: Size(widget.size, widget.size),
             painter: _PortraitPainter(
@@ -150,14 +151,13 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
             ),
           );
         }
-      
+
         // While loading, just show the background color
         return Container();
       },
     );
   }
 }
-
 
 /// The CustomPainter that draws the correct frame from the spritesheet.
 class _PortraitPainter extends CustomPainter {
@@ -166,7 +166,6 @@ class _PortraitPainter extends CustomPainter {
   final double frameWidth;
   final double frameHeight;
 
-
   _PortraitPainter({
     required this.spriteSheet,
     required this.index,
@@ -174,31 +173,26 @@ class _PortraitPainter extends CustomPainter {
     required this.frameHeight,
   });
 
-
   @override
   void paint(Canvas canvas, Size size) {
     // Calculate the source rectangle (the part of the spritesheet to draw)
     final double srcX = index * frameWidth;
     final srcRect = Rect.fromLTWH(srcX, 0, frameWidth, frameHeight);
 
-
     // The destination rectangle is the full size of the widget
     final dstRect = Rect.fromLTWH(0, 0, size.width, size.height);
-
 
     // --- REMOVED ALL TINTING LOGIC ---
     // We just draw the image directly onto the colored background.
     final Paint paint = Paint();
-  
+
     // Draw the specified part of the image onto the canvas
     canvas.drawImageRect(spriteSheet, srcRect, dstRect, paint);
   }
 
-
   @override
   bool shouldRepaint(_PortraitPainter oldDelegate) {
     // Repaint only if the image or frame changes
-    return oldDelegate.spriteSheet != spriteSheet ||
-        oldDelegate.index != index;
+    return oldDelegate.spriteSheet != spriteSheet || oldDelegate.index != index;
   }
 }
