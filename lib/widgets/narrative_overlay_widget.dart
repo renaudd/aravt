@@ -151,7 +151,7 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
 
                   // --- BODY (The Offer) ---
                   Text(
-                    '"Brother, I have a soldier, ${offeredSoldier.firstName}, who is... struggling. Perhaps they would fare better under your command before I must cut them loose?"',
+                    '"Brother, I have a soldier, ${offeredSoldier.firstName}, who is... struggling. Perhaps he would fare better under your command?"',
                     style: GoogleFonts.cinzel(
                         color: Colors.white, fontSize: 18, height: 1.3),
                   ),

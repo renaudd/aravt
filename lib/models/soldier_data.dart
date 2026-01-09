@@ -290,6 +290,32 @@ StartingInjuryType _startingInjuryTypeFromName(String? name) {
   return StartingInjuryType.none;
 }
 
+class PlantedEncounter {
+  final String encounterType; // 'patrol_bandits', 'shepherd_wolf', etc.
+  final int turnExpires;
+  final double difficulty;
+
+  PlantedEncounter({
+    required this.encounterType,
+    required this.turnExpires,
+    this.difficulty = 1.0,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'encounterType': encounterType,
+        'turnExpires': turnExpires,
+        'difficulty': difficulty,
+      };
+
+  factory PlantedEncounter.fromJson(Map<String, dynamic> json) {
+    return PlantedEncounter(
+      encounterType: json['encounterType'],
+      turnExpires: json['turnExpires'],
+      difficulty: json['difficulty'] ?? 1.0,
+    );
+  }
+}
+
 class PlaceOrTribeOfOrigin {
   String name;
   String type;
@@ -448,6 +474,9 @@ class Soldier {
   Disease? currentDisease;
   int? plotDrivenActionPriority; // Lower number = higher priority
   List<JustificationEvent> pendingJustifications = [];
+  List<PlantedEncounter> plantedEncounters = [];
+  bool hasFamilyNeed;
+  bool desiresRoleAppointment;
 
   double get suppliesWealth {
     double itemWealth = personalInventory
@@ -559,6 +588,9 @@ class Soldier {
     this.imprisonmentNotes,
     this.isInfirm = false,
     this.isExpelled = false,
+    this.plantedEncounters = const [],
+    this.hasFamilyNeed = false,
+    this.desiresRoleAppointment = false,
   })  : headHealthMax = (healthMax * 0.9).clamp(1, 10).round(),
         bodyHealthMax = (healthMax * 1.1).clamp(1, 10).round(),
         rightArmHealthMax = healthMax.clamp(1, 10),
@@ -673,6 +705,9 @@ class Soldier {
         'plotDrivenActionPriority': plotDrivenActionPriority,
         'pendingJustifications':
             pendingJustifications.map((j) => j.toJson()).toList(),
+        'plantedEncounters': plantedEncounters.map((e) => e.toJson()).toList(),
+        'hasFamilyNeed': hasFamilyNeed,
+        'desiresRoleAppointment': desiresRoleAppointment,
       };
 
   factory Soldier.fromJson(Map<String, dynamic> json) {
@@ -790,7 +825,12 @@ class Soldier {
       ..plotDrivenActionPriority = json['plotDrivenActionPriority']
       ..pendingJustifications = (json['pendingJustifications'] as List? ?? [])
           .map((j) => JustificationEvent.fromJson(j))
-          .toList();
+          .toList()
+      ..plantedEncounters = (json['plantedEncounters'] as List? ?? [])
+          .map((e) => PlantedEncounter.fromJson(e))
+          .toList()
+      ..hasFamilyNeed = json['hasFamilyNeed'] ?? false
+      ..desiresRoleAppointment = json['desiresRoleAppointment'] ?? false;
   }
 
   RelationshipValues getRelationship(int soldierId) {
@@ -1559,7 +1599,6 @@ class SoldierGenerator {
 
   static double _generateFoodSupply() => _random.nextDouble() * 50 + 10;
 
-
   static Soldier generateNewSoldier({
     required int id,
     required String aravt,
@@ -1583,7 +1622,6 @@ class SoldierGenerator {
   }) {
     final int statMean = isPlayerCharacter ? 5 : 4;
 
-
     int age = overrideAge ?? _generateAge();
 
     // Cap player age at 50
@@ -1596,7 +1634,6 @@ class SoldierGenerator {
     final yearsWithHorde = _generateYearsWithHorde(age);
     final height = _generateHeight();
     final healthMax = _generateMaxHealth(age);
-
 
     int ambition = overrideAmbition ?? _generateCoreAttribute(statMean);
     int courage = _generateCoreAttribute(
@@ -1694,7 +1731,6 @@ class SoldierGenerator {
         (startingInjuryType == StartingInjuryType.fingersMissingRightHand)
             ? -2
             : 0;
-
 
     // If overridden, we use the exact value. If not, we use the complex generation logic.
     final longRangeArcherySkill = overrideLongRangeArchery ??

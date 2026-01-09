@@ -74,9 +74,25 @@ class ShepherdingService {
       );
     }
 
-    // 2. Wolf Attack Check (10% chance for demo/testing)
+    // Check for Planted Encounters
+    bool plantedWolfAttack = false;
+    for (var soldier in shepherds) {
+      final planted = soldier.plantedEncounters
+          .where((e) => e.encounterType == 'shepherd_wolf')
+          .toList();
+
+      if (planted.isNotEmpty) {
+        // Force Wolf Attack
+        plantedWolfAttack = true;
+        // Remove the encounter
+        soldier.plantedEncounters.remove(planted.first);
+        break; // Only trigger one
+      }
+    }
+
+    // 2. Wolf Attack Check (10% chance OR forced)
     bool hadWolfAttack = false;
-    if (_random.nextDouble() < 0.10) {
+    if (plantedWolfAttack || _random.nextDouble() < 0.10) {
       hadWolfAttack = true;
       await _resolveWolfAttack(
           aravt, shepherds, herd, gameState, events, individualResults);

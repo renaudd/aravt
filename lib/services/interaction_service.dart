@@ -58,7 +58,6 @@ class InteractionService {
     final log = InteractionLogEntry(
       dateString: gameState.gameDate.toShortString(),
       type: InteractionType.inquire,
-
       interactionSummary: dialogue,
       outcomeSummary: "",
       informationRevealed: "",
@@ -143,7 +142,6 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.05, admiration: 0.02, fear: 0.05);
         if (_random.nextDouble() < 0.7) {
-
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
@@ -165,7 +163,6 @@ class InteractionService {
         }
         _applySocialEffect(socialCircle, player.id, respect: 0.02, fear: 0.02);
         if (_random.nextDouble() < 0.4) {
-
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
@@ -293,7 +290,6 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.05, admiration: 0.1, loyalty: 0.02);
         if (_random.nextDouble() < 0.7) {
-
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
@@ -316,7 +312,6 @@ class InteractionService {
         _applySocialEffect(socialCircle, player.id,
             respect: 0.02, admiration: 0.05);
         if (_random.nextDouble() < 0.4) {
-
           String dialogue = _generateDialogue(target, gameState);
           infoRevealed = dialogue.isNotEmpty
               ? '"$dialogue"'
@@ -388,8 +383,51 @@ class InteractionService {
     }
 
     String infoRevealed = "'${queuedItem.message}'";
-    String outcomeSummary = "You listened to what they had to say.";
+    String outcomeSummary = "";
     String statChanges = '';
+
+    // Handle Specific Quest Types
+    switch (queuedItem.type) {
+      case ListenQuestType.rations:
+        outcomeSummary = "They shared concerns about food.";
+        // Logic: If player is captain/leader, could trigger "Increase Rations" option
+        // For now, acknowledgement.
+        break;
+      case ListenQuestType.horses:
+        outcomeSummary = "They reported issues with the herd.";
+        break;
+      case ListenQuestType.patrolEncounter:
+        outcomeSummary = "They reported a strange sighting.";
+        if (queuedItem.data != null) {
+          target.plantedEncounters.add(PlantedEncounter(
+            encounterType: queuedItem.data!['encounterType'],
+            turnExpires: gameState.turn.turnNumber + 3, // Expires in 3 turns
+            difficulty: queuedItem.data!['difficulty'],
+          ));
+        }
+        break;
+      case ListenQuestType.wolfDream:
+        outcomeSummary = "They shared an omen about wolves.";
+        if (queuedItem.data != null) {
+          target.plantedEncounters.add(PlantedEncounter(
+            encounterType: queuedItem.data!['encounterType'],
+            turnExpires: gameState.turn.turnNumber + 3,
+            difficulty: queuedItem.data!['difficulty'],
+          ));
+        }
+        break;
+      case ListenQuestType.familyStruggling:
+        outcomeSummary = "They confined in you about their family.";
+        target.hasFamilyNeed = true;
+        break;
+      case ListenQuestType.roleRequest:
+        outcomeSummary = "They asked for a specific role.";
+        target.desiresRoleAppointment = true;
+        break;
+      case ListenQuestType.none:
+        // Generic handling
+        break;
+    }
 
     if (target.role == SoldierRole.hordeLeader) {
       target.getRelationship(player.id).updateAdmiration(0.1);
@@ -512,7 +550,6 @@ class InteractionService {
       // Social circle effect for appropriate gifts
       _applySocialEffect(socialCircle, player.id,
           respect: 0.03, admiration: 0.05);
-
 
       if (_random.nextDouble() < 0.6) {
         // Use dialogue generation for more dynamic responses
@@ -679,8 +716,7 @@ class InteractionService {
       () => _topicLowStat(speaker, speaker, "self"),
       () => _topicIneptitudeAdmission(speaker),
       () => _topicMurdererHint(speaker),
-      () =>
-          DialogueHelpers.topicOwnBirthday(speaker, gameState),
+      () => DialogueHelpers.topicOwnBirthday(speaker, gameState),
     ];
     topics.shuffle(_random);
     for (var topicGen in topics) {
@@ -704,8 +740,7 @@ class InteractionService {
       (s) => _topicGossipMurder(speaker, s),
       (s) => _topicHighSkill(speaker, s, "mate"),
       (s) => _topicLowSkill(speaker, s, "mate"),
-      (s) => DialogueHelpers.topicMateBirthday(
-          speaker, s, gameState),
+      (s) => DialogueHelpers.topicMateBirthday(speaker, s, gameState),
     ];
     topics.shuffle(_random);
     for (var topicGen in topics) {
@@ -733,7 +768,6 @@ class InteractionService {
   }
 
   static String _generateSubjectRandom(Soldier speaker, GameState gameState) {
-
     if (_random.nextDouble() > 0.05) return "";
 
     Soldier? rando = _getRandomOutsider(speaker, gameState);
@@ -889,7 +923,6 @@ class InteractionService {
       return _useTopic(speaker, 'mate_skill_high_${subject.id}_${entry.key}',
           "You should see $name ${entry.key}. Impressive.");
     } else {
-
       if (entry.key == 'spear use') {
         if (entry.value <= 2) {
           if (rel == "self") {
@@ -1355,7 +1388,6 @@ class InteractionService {
         ? outsiders[_random.nextInt(outsiders.length)]
         : null;
   }
-
 
   static List<Soldier> _getSocialCircle(Soldier target, GameState gameState) {
     List<Soldier> circle = [];

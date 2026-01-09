@@ -73,7 +73,6 @@ class NextTurnService {
   Future<void> executeNextTurn(GameState gameState) async {
     gameState.setLoading(true);
 
-
     // Record state BEFORE any logic runs for transfer tracking
     _originalAravtAssignments.clear();
     for (var soldier in gameState.horde) {
@@ -404,7 +403,6 @@ class NextTurnService {
           await _hordeTransitionService.handleLeaderDeath(gameState, soldier);
         }
 
-
         gameState.removeDeadSoldier(soldier);
       }
     }
@@ -628,23 +626,83 @@ class NextTurnService {
             i++) {
           final soldier = candidates[i];
 
-          final messages = [
-            "I have concerns about the rations.",
-            "I saw something strange on patrol.",
-            "My family is struggling.",
-            "I wish to discuss my future.",
-            "The horses are restless.",
-            "I had a dream about wolves.",
-            "Can we speak privately?",
-          ];
+          final int roll = _random.nextInt(6);
+          QueuedListenItem newItem;
 
-          soldier.queuedListenItem = QueuedListenItem(
-            message: messages[_random.nextInt(messages.length)],
-            turnNumber: currentTurn,
-            urgency: 1.0,
-          );
+          switch (roll) {
+            case 0:
+              // Rations
+              newItem = QueuedListenItem(
+                message: "I have concerns about the rations.",
+                turnNumber: currentTurn,
+                urgency: 1.0,
+                type: ListenQuestType.rations,
+              );
+              break;
+            case 1:
+              // Patrol Encounter Plant
+              newItem = QueuedListenItem(
+                message: "I saw something strange on patrol.",
+                turnNumber: currentTurn,
+                urgency: 1.0,
+                type: ListenQuestType.patrolEncounter,
+                data: {
+                  'encounterType': 'patrol_bandits',
+                  'difficulty': 1.0 + (_random.nextDouble() * 0.5),
+                },
+              );
+              break;
+            case 2:
+              // Family Struggling
+              newItem = QueuedListenItem(
+                message: "My family is struggling.",
+                turnNumber: currentTurn,
+                urgency: 1.0,
+                type: ListenQuestType.familyStruggling,
+              );
+              break;
+            case 3:
+              // Discuss Future / Role Request
+              newItem = QueuedListenItem(
+                message: "I wish to discuss my future.",
+                turnNumber: currentTurn,
+                urgency: 1.0,
+                type: ListenQuestType.roleRequest,
+              );
+              break;
+            case 4:
+              // Horses
+              newItem = QueuedListenItem(
+                message: "The horses are restless.",
+                turnNumber: currentTurn,
+                urgency: 1.0,
+                type: ListenQuestType.horses,
+              );
+              break;
+            case 5:
+              // Wolf Dream (Shepherd Encounter Plant)
+              newItem = QueuedListenItem(
+                message: "I had a dream about wolves.",
+                turnNumber: currentTurn,
+                urgency: 1.0,
+                type: ListenQuestType.wolfDream,
+                data: {
+                  'encounterType': 'shepherd_wolf',
+                  'difficulty': 1.0 + (_random.nextDouble() * 0.5),
+                },
+              );
+              break;
+            default:
+              newItem = QueuedListenItem(
+                message: "I have concerns.",
+                turnNumber: currentTurn,
+              );
+          }
+
+          soldier.queuedListenItem = newItem;
           activeCount++;
-          print("Generated Listen Item for ${soldier.name}");
+          print(
+              "Generated Listen Item for ${soldier.name} (Type: ${newItem.type})");
         }
       }
     }

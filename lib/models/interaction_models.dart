@@ -23,6 +23,15 @@ enum InteractionType {
   gift,
 }
 
+enum ListenQuestType {
+  none,
+  rations,
+  patrolEncounter,
+  familyStruggling,
+  roleRequest,
+  horses,
+  wolfDream,
+}
 
 InteractionType _interactionTypeFromName(String? name) {
   for (final value in InteractionType.values) {
@@ -30,7 +39,6 @@ InteractionType _interactionTypeFromName(String? name) {
   }
   return InteractionType.inquire;
 }
-
 
 /// Represents a single entry in a soldier's interaction log.
 class InteractionLogEntry {
@@ -47,7 +55,6 @@ class InteractionLogEntry {
     required this.outcomeSummary,
     this.informationRevealed = '',
   });
-
 
   Map<String, dynamic> toJson() => {
         'dateString': dateString,
@@ -66,7 +73,6 @@ class InteractionLogEntry {
       informationRevealed: json['informationRevealed'] ?? '',
     );
   }
-
 }
 
 /// Used to log a soldier's significant positive or negative actions.
@@ -83,7 +89,6 @@ class PerformanceEvent {
     this.magnitude = 1.0,
   });
 
-
   Map<String, dynamic> toJson() => {
         'turnNumber': turnNumber,
         'description': description,
@@ -99,7 +104,6 @@ class PerformanceEvent {
       magnitude: json['magnitude'] ?? 1.0,
     );
   }
-
 }
 
 /// Represents a piece of information a soldier wants to tell the player.
@@ -108,20 +112,25 @@ class QueuedListenItem {
   final String? eventId;
   final double urgency;
   final int turnNumber;
+  final ListenQuestType type;
+  final Map<String, dynamic>? data;
 
   QueuedListenItem({
     required this.message,
     required this.turnNumber,
     this.eventId,
     this.urgency = 1.0,
+    this.type = ListenQuestType.none,
+    this.data,
   });
-
 
   Map<String, dynamic> toJson() => {
         'message': message,
         'eventId': eventId,
         'urgency': urgency,
         'turnNumber': turnNumber,
+        'type': type.name,
+        'data': data,
       };
 
   factory QueuedListenItem.fromJson(Map<String, dynamic> json) {
@@ -130,9 +139,12 @@ class QueuedListenItem {
       turnNumber: json['turnNumber'],
       eventId: json['eventId'],
       urgency: json['urgency'] ?? 1.0,
+      type: json['type'] != null
+          ? ListenQuestType.values.firstWhere((e) => e.name == json['type'])
+          : ListenQuestType.none,
+      data: json['data'],
     );
   }
-
 }
 
 /// The result bundle returned from the InteractionService after processing.

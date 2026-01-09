@@ -46,8 +46,7 @@ class AravtAssignmentService {
   final TrainingService _trainingService = TrainingService();
 
   Future<void> resolveAravtAssignments(GameState gameState) async {
-    DateTime currentTime =
-        gameState.gameDate.toDateTime();
+    DateTime currentTime = gameState.gameDate.toDateTime();
 
     // Migration: If time is midnight, move to 9pm of the same day (since we want turns to end at 9pm)
     if (currentTime.hour == 0 && currentTime.minute == 0) {
@@ -83,7 +82,6 @@ class AravtAssignmentService {
       ...gameState.npcAravts2,
     ];
 
-
     // This was duplicative and causing indefinite resting.
     // Tournament participation is now handled dynamically by HordeAIService and TournamentService.
 
@@ -111,7 +109,7 @@ class AravtAssignmentService {
 
         if (!atCamp && playerCamp != null && gameState.aravts.contains(aravt)) {
           // Auto-return to camp if player aravt is idle away from home
-          int distance = aravt.hexCoords?.distanceTo(playerCamp.position) ?? 1;
+          int distance = aravt.hexCoords.distanceTo(playerCamp.position);
           double travelSeconds = distance * 86400.0;
           aravt.task = MovingTask(
             destination: GameLocation.poi(playerCamp.id),
@@ -323,55 +321,51 @@ class AravtAssignmentService {
         break;
       case AravtAssignment.Pack:
         await _resolvePack(aravt, gameState);
-        break;
       default:
         break;
     }
 
     if (gameState.combatFlowState != CombatFlowState.none) return;
 
-
     if (currentTask.assignment == AravtAssignment.Rest) {
       // Ensure they stay resting if that's what they are doing
       return;
     }
 
-
     // All assignments now trigger return logic after completion.
-    
-      if (poi != null) {
-        poi.assignedAravtIds.remove(aravt.id);
-      }
-      // Determine home camp based on horde
-      String campId = 'camp-player';
-      if (gameState.npcAravts1.any((a) => a.id == aravt.id)) {
-        campId = 'camp-npc1';
-      } else if (gameState.npcAravts2.any((a) => a.id == aravt.id)) {
-        campId = 'camp-npc2';
-      }
 
-      PointOfInterest? homeCamp;
-      // Try to find the camp POI
-      for (final area in gameState.worldMap.values) {
-        try {
-          homeCamp = area.pointsOfInterest.firstWhere((p) => p.id == campId);
-          break; // Found it
-        } catch (e) {
-          // Not in this area
-        }
+    if (poi != null) {
+      poi.assignedAravtIds.remove(aravt.id);
+    }
+    // Determine home camp based on horde
+    String campId = 'camp-player';
+    if (gameState.npcAravts1.any((a) => a.id == aravt.id)) {
+      campId = 'camp-npc1';
+    } else if (gameState.npcAravts2.any((a) => a.id == aravt.id)) {
+      campId = 'camp-npc2';
+    }
+
+    PointOfInterest? homeCamp;
+    // Try to find the camp POI
+    for (final area in gameState.worldMap.values) {
+      try {
+        homeCamp = area.pointsOfInterest.firstWhere((p) => p.id == campId);
+        break; // Found it
+      } catch (e) {
+        // Not in this area
       }
+    }
 
-      if (homeCamp != null && aravt.hexCoords != null) {
-        // Create return task
-        int distance = aravt.hexCoords!.distanceTo(homeCamp.position);
+    if (homeCamp != null) {
+      // Create return task
+      int distance = aravt.hexCoords.distanceTo(homeCamp.position);
 
-        if (distance == 0) {
+      if (distance == 0) {
         if (aravt.persistentAssignment != null &&
             // Don't renew if we just finished a one-off task that happened to match persistent (edge case)
             // Actually, if persistent is set, we SHOULD renew.
             // Exception: If the task logic itself cleared it (like Pack did above).
             true) {
-              
           aravt.task = AssignedTask(
             areaId: aravt.currentLocationType == LocationType.area
                 ? aravt.currentLocationId
@@ -405,33 +399,33 @@ class AravtAssignmentService {
             isPlayerKnown: gameState.aravts.any((a) => a.id == aravt.id),
           );
         }
-        } else {
-          double travelSeconds = distance * 86400.0;
-
-          aravt.task = MovingTask(
-            destination: GameLocation(id: homeCamp.id, type: LocationType.poi),
-            durationInSeconds: travelSeconds,
-            startTime: gameState.currentDate?.toDateTime() ?? DateTime.now(),
-            followUpAssignment: aravt.persistentAssignment,
-            option: currentTask.option,
-          );
-
-          gameState.logEvent(
-            "Your aravt has finished ${aravt.persistentAssignment?.name ?? 'task'} and is returning to camp.",
-            category: EventCategory.travel,
-            aravtId: aravt.id,
-            isPlayerKnown: gameState.aravts.any((a) => a.id == aravt.id),
-          );
-        }
       } else {
-        // Fallback if camp not found
-        aravt.task = null;
+        double travelSeconds = distance * 86400.0;
+
+        aravt.task = MovingTask(
+          destination: GameLocation(id: homeCamp.id, type: LocationType.poi),
+          durationInSeconds: travelSeconds,
+          startTime: gameState.currentDate?.toDateTime() ?? DateTime.now(),
+          followUpAssignment: aravt.persistentAssignment,
+          option: currentTask.option,
+        );
+
         gameState.logEvent(
-          "Your aravt has finished ${aravt.persistentAssignment?.name ?? 'task'} but cannot find the way home.",
-          category: EventCategory.general,
+          "Your aravt has finished ${aravt.persistentAssignment?.name ?? 'task'} and is returning to camp.",
+          category: EventCategory.travel,
           aravtId: aravt.id,
           isPlayerKnown: gameState.aravts.any((a) => a.id == aravt.id),
         );
+      }
+    } else {
+      // Fallback if camp not found
+      aravt.task = null;
+      gameState.logEvent(
+        "Your aravt has finished ${aravt.persistentAssignment?.name ?? 'task'} but cannot find the way home.",
+        category: EventCategory.general,
+        aravtId: aravt.id,
+        isPlayerKnown: gameState.aravts.any((a) => a.id == aravt.id),
+      );
     }
 
     // Random Encounter during travel (Lower chance)
@@ -534,7 +528,6 @@ class AravtAssignmentService {
         }
       }
 
-
       String? option;
       if (aravt.persistentAssignment == AravtAssignment.Train) {
         final captain = gameState.findSoldierById(aravt.captainId);
@@ -613,14 +606,14 @@ class AravtAssignmentService {
     }
 
     if (targetCoords != null && aravt.hexCoords != targetCoords) {
-      final int distance = aravt.hexCoords!.distanceTo(targetCoords);
+      final int distance = aravt.hexCoords.distanceTo(targetCoords);
       if (distance > 0) {
         // Move 1 step closer
         // Simple algorithm: Find neighbor with min distance to target
-        HexCoordinates bestNeighbor = aravt.hexCoords!;
+        HexCoordinates bestNeighbor = aravt.hexCoords;
         int minDist = distance;
 
-        for (var neighbor in aravt.hexCoords!.getNeighbors()) {
+        for (var neighbor in aravt.hexCoords.getNeighbors()) {
           final d = neighbor.distanceTo(targetCoords);
           if (d < minDist) {
             minDist = d;
@@ -653,7 +646,7 @@ class AravtAssignmentService {
       }
     }
     // Fallback to current location if still null
-    if (targetArea == null && aravt.hexCoords != null) {
+    if (targetArea == null) {
       for (final a in gameState.worldMap.values) {
         if (a.coordinates == aravt.hexCoords) {
           targetArea = a;
@@ -719,7 +712,7 @@ class AravtAssignmentService {
       }
     }
     // Fallback to current location
-    if (targetArea == null && aravt.hexCoords != null) {
+    if (targetArea == null) {
       for (final a in gameState.worldMap.values) {
         if (a.coordinates == aravt.hexCoords) {
           targetArea = a;
@@ -742,13 +735,86 @@ class AravtAssignmentService {
       }
     }
 
-    gameState.logEvent("${aravt.id} is patrolling around $targetName.",
-        category: EventCategory.general,
-        aravtId: aravt.id,
-        isPlayerKnown: gameState.aravts.any((a) => a.id == aravt.id));
+    // Check for Planted Encounters
+    bool combatTriggered = false;
+    for (var soldier in soldiers) {
+      final planted = soldier.plantedEncounters
+          .where((e) => e.encounterType.startsWith('patrol'))
+          .toList();
+      if (planted.isNotEmpty) {
+        // Trigger Encounter
+        final encounter = planted.first;
+        _triggerPlantedPatrolEncounter(aravt, encounter, gameState);
+        soldier.plantedEncounters.remove(encounter);
+        combatTriggered = true;
+        break; // One per turn per aravt
+      }
+    }
+
+    if (!combatTriggered) {
+      gameState.logEvent("${aravt.id} is patrolling around $targetName.",
+          category: EventCategory.general,
+          aravtId: aravt.id,
+          isPlayerKnown: gameState.aravts.any((a) => a.id == aravt.id));
+    }
   }
 
+  void _triggerPlantedPatrolEncounter(
+      Aravt playerAravt, PlantedEncounter encounter, GameState gameState) {
+    // Generate Bandit Captain first to get ID
+    final captain = _createGarrisonSoldier(gameState, isCaptain: true);
+    captain.name = "Bandit Leader";
+    gameState.garrisonSoldiers.add(captain);
 
+    // Generate Bandits Aravt
+    final banditAravt = Aravt(
+      id: 'bandits_${playerAravt.id}_${gameState.turn.turnNumber}',
+      captainId: captain.id, // Now using int ID
+      soldierIds: [captain.id],
+      currentLocationType: playerAravt.currentLocationType,
+      currentLocationId: playerAravt.currentLocationId,
+      hexCoords: playerAravt.hexCoords,
+      color: 'red',
+    );
+    captain.aravt = banditAravt.id;
+
+    // Create remaining random soldiers for bandits
+    List<Soldier> bandits = [captain];
+    int count = (2 + _random.nextInt(4) * encounter.difficulty)
+        .round(); // Reduced base by 1 since captain is separate
+    for (int i = 0; i < count; i++) {
+      final bandit = _createGarrisonSoldier(gameState, isCaptain: false);
+      bandit.name = "Bandit";
+      bandit.aravt = banditAravt.id;
+      gameState.garrisonSoldiers.add(bandit);
+      banditAravt.soldierIds.add(bandit.id);
+      bandits.add(bandit);
+    }
+
+    gameState.logEvent(
+        "While patrolling, ${playerAravt.id} was ambushed by bandits! (Quest Encounter)",
+        category: EventCategory.combat,
+        severity: EventSeverity.critical,
+        aravtId: playerAravt.id);
+
+    // Initiate Combat
+    // Note: This relies on manual combat initiation or auto-resolve if flow state is handled
+    // For now simple log and "combat" state setting if supported
+    // Since initiateCombat expects full lists, and works best if interactive
+
+    // Using initiateCombat if player is involved
+    if (gameState.aravts.any((a) => a.id == playerAravt.id)) {
+      gameState.initiateCombat(
+        playerAravts: [playerAravt],
+        opponentAravts: [banditAravt],
+        allPlayerSoldiers: gameState.horde,
+        allOpponentSoldiers: bandits,
+      );
+    } else {
+      // Auto resolve for NPCs
+      // ...
+    }
+  }
 
   Future<void> _resolvePack(Aravt aravt, GameState gameState) async {
     // 1. Calculate contribution
@@ -900,11 +966,13 @@ class AravtAssignmentService {
             playerCamp =
                 area.pointsOfInterest.firstWhere((p) => p.id == 'camp-player');
             break;
-          } catch (e) {}
+          } catch (_) {
+            // Ignore
+          }
         }
 
         if (playerCamp != null) {
-          int distance = aravt.hexCoords?.distanceTo(playerCamp.position) ?? 1;
+          int distance = aravt.hexCoords.distanceTo(playerCamp.position);
           double travelSeconds = distance * 86400.0;
           aravt.task = MovingTask(
             destination: GameLocation.poi(playerCamp.id),
@@ -1050,8 +1118,9 @@ class AravtAssignmentService {
         bool sameLocation = false;
         if (task.areaId == area.id) sameLocation = true;
         if (task.poiId != null &&
-            area.pointsOfInterest.any((p) => p.id == task.poiId))
+            area.pointsOfInterest.any((p) => p.id == task.poiId)) {
           sameLocation = true;
+        }
 
         // Also check if they are physically there (or arriving this turn)
         if (sameLocation &&
@@ -1086,8 +1155,7 @@ class AravtAssignmentService {
               gameState.findPoiByIdWorld('camp-player');
           if (playerCamp != null) {
             for (var involved in involvedPlayerAravts) {
-              int distance =
-                  involved.hexCoords?.distanceTo(playerCamp.position!) ?? 1;
+              int distance = involved.hexCoords.distanceTo(playerCamp.position);
               double travelSeconds = distance * 86400.0;
               involved.task = MovingTask(
                 destination: GameLocation.poi(playerCamp.id),
@@ -1310,7 +1378,7 @@ class AravtAssignmentService {
       } else {
         valPerItem = firstItem.baseValue * 0.8;
       }
-      
+
       final double totalItemVal = valPerItem * qty;
       totalValue += totalItemVal;
 
@@ -1322,30 +1390,24 @@ class AravtAssignmentService {
     }
 
     // Resources Value
-    if (task is TradeTask) {
-      task.resources.forEach((key, amount) {
+    task.resources.forEach((key, amount) {
       double resVal = 0;
-        double unitVal = 1.0;
+      double unitVal = 1.0;
       switch (key) {
         case 'rupees':
-            unitVal = 1.0;
-          break;
+          unitVal = 1.0;
         case 'scrap':
-            unitVal = 0.5;
-          break;
+          unitVal = 0.5;
         case 'meat':
-            unitVal = 2.0;
-          break;
+          unitVal = 2.0;
         case 'wood':
-            unitVal = 1.0;
-          break;
+          unitVal = 1.0;
         case 'iron':
-            unitVal = 5.0;
-          break;
+          unitVal = 5.0;
         default:
-            unitVal = 1.0;
+          unitVal = 1.0;
       }
-        resVal = amount * unitVal;
+      resVal = amount * unitVal;
       totalValue += resVal;
       itemsGiven.add(ItemExchange(
           itemTemplateId: key,
@@ -1353,7 +1415,6 @@ class AravtAssignmentService {
           quantity: amount.toInt(),
           value: resVal));
     });
-    }
 
     // Apply Captain's Charisma Bonus
     final captain = gameState.findSoldierById(aravt.captainId);
@@ -1405,7 +1466,7 @@ class AravtAssignmentService {
 
     // 2. Execute Diplomacy
     final termsCount = task.terms.length;
-    
+
     // Find Settlement
     Settlement? settlement;
     try {
@@ -1422,21 +1483,16 @@ class AravtAssignmentService {
           case DiplomaticTerm.PresentGifts: // (Assuming this matches enum)
             rel.admiration = (rel.admiration + 1.0).clamp(0.0, 10.0);
             rel.respect = (rel.respect + 0.5).clamp(0.0, 10.0);
-            break;
           case DiplomaticTerm.OfferTradingAlliance:
             rel.respect = (rel.respect + 1.0).clamp(0.0, 10.0);
-            break;
           case DiplomaticTerm.DemandTribute:
             rel.fear = (rel.fear + 1.0).clamp(0.0, 10.0);
             rel.admiration = (rel.admiration - 2.0).clamp(0.0, 10.0);
-            break;
           case DiplomaticTerm.OfferTruce:
             rel.respect = (rel.respect + 0.5).clamp(0.0, 10.0);
-            break;
           default:
             // Small interaction boost
             rel.respect = (rel.respect + 0.1).clamp(0.0, 10.0);
-            break;
         }
       }
     }
@@ -1469,8 +1525,8 @@ class AravtAssignmentService {
       } catch (_) {}
     }
 
-    if (homeCamp != null && aravt.hexCoords != null) {
-      int distance = aravt.hexCoords!.distanceTo(homeCamp.position);
+    if (homeCamp != null) {
+      int distance = aravt.hexCoords.distanceTo(homeCamp.position);
       if (distance > 0) {
         double travelSeconds = distance * 86400.0;
         aravt.task = MovingTask(

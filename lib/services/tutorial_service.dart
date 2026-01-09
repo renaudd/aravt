@@ -68,32 +68,30 @@ class TutorialService extends ChangeNotifier {
   final List<TutorialStepData> _steps = [
     // 0. Intro (Camp) -> Direct to Horde
     TutorialStepData(
-        "Captain. I am the leader of the Second Aravt. We must organize. Access the Horde Panel to review our forces.",
+        "Congratulations on your promotion, Captain. I am the leader of the Second Aravt. Let me show you around. Access the Horde Panel to review our forces.",
         requiredRoute: '/camp',
         highlightKey: 'open_horde_panel'),
     // 1. Profile (Horde) -> Direct to Player Profile
     TutorialStepData(
-        "You are the captain of the Third Aravt. Press your profile icon to inspect your own status.",
+        "You are the captain of the Third Aravt. Press your profile icon to inspect your own file.",
         requiredRoute: '/camp', // Horde panel is in camp
         highlightKey: 'open_player_profile'),
     // 2. Navigation (Profile) -> Direct to Next
     TutorialStepData(
-        "Good. Now, press the navigate next button to cycle through the members of your aravt.",
+        "Now, press the navigate next button to cycle through the members of your aravt.",
         requiredRoute: null,
         highlightKey: 'navigate_next_soldier'),
     // 3. Inquire (Profile) -> Direct to Inquire
     TutorialStepData(
-        "You must know your men. Use the 'Inquire' button to learn of their traits and history.",
+        "Get to know your men. Use the 'Inquire' button to learn of their traits and history.",
         requiredRoute: null,
         highlightKey: 'inquire_soldier'),
     // 4. Aravt Tab (Profile) -> Direct to Aravt Tab
-    TutorialStepData(
-        "Go up to the Aravt tab. You won't want to keep all these responsibilities to yourself.",
-        requiredRoute: null,
-        highlightKey: 'open_aravt_tab'),
+    TutorialStepData("Go up to the Aravt tab.",
+        requiredRoute: null, highlightKey: 'open_aravt_tab'),
     // 5. Next Turn
     TutorialStepData(
-        "When you’re done divvying up responsibilities and getting to know your soldiers, hit the Next Turn button to advance to the next day.",
+        "This is where you can assign duties to your men. You won't want to keep all these responsibilities to yourself. When you're done, hit the Next Turn button to advance to the next day.",
         requiredRoute: null,
         highlightKey: 'next_turn_button'),
     // 6. Open Horde Panel Again
@@ -101,12 +99,12 @@ class TutorialService extends ChangeNotifier {
         requiredRoute: '/camp', highlightKey: 'open_horde_panel'),
     // 7. Reports Tab
     TutorialStepData(
-        "Now you can see what each aravt has been assigned to do. If you ever become horde leader, it will be your job to assign these tasks. Click on the Reports Tab.",
+        "Now you can see what our leader has assigned each aravt to do. Click on the Reports Tab.",
         requiredRoute: null,
         highlightKey: 'open_reports_tab'),
     // 8. Conclude
     TutorialStepData(
-        "Every assignment will produce a report upon completion. Study them to identify who deserves to be praised or scolded. You'll need to make the other captains respect you if you expect them to call you Khan some day.",
+        "Every assignment will produce a report upon completion. Study them to identify who deserves to be praised or scolded. You'll want to make the other captains respect you if you expect them to call you Khan some day.",
         requiredRoute: null,
         highlightKey: null,
         isConclude: true),
@@ -313,7 +311,6 @@ class TutorialService extends ChangeNotifier {
     }
 
     if (routeName == null) return;
-
 
     final currentRoute = ModalRoute.of(context)?.settings.name;
     if (currentRoute == routeName) {
