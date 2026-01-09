@@ -46,90 +46,119 @@ class _GiftingDialogState extends State<GiftingDialog> {
     return AlertDialog(
       backgroundColor: Colors.grey[900],
       title: Text('Gift to ${widget.target.name}', style: titleStyle),
-      content: SizedBox(
-        width: 500,
-        height: 400,
-        child: player.personalInventory.isEmpty
-            ? Center(
-                child: Text(
-                  'You have no items to gift.',
-                  style: bodyStyle,
-                ),
-              )
-            : ListView.builder(
-                itemCount: player.personalInventory.length,
-                itemBuilder: (context, index) {
-                  final item = player.personalInventory[index];
-
-                  // Calculate predicted impact
-                  final String prediction = _predictGiftImpact(
-                      widget.gameState, player, widget.target, item);
-
-                  return Card(
-                    color: Colors.grey[850],
-                    margin:
-                        const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ListTile(
-                        title: Text(
-                          item.name,
-                          style: bodyStyle.copyWith(
-                              fontWeight: FontWeight.bold, fontSize: 18),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              'Value: ${item.baseValue} | Origin: ${item.origin}',
-                              style: smallStyle,
-                            ),
-                            if (prediction.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                prediction,
-                                style: smallStyle.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontStyle: FontStyle.italic,
-                                  color: prediction.contains('⚠️')
-                                      ? Colors.red[900]
-                                      : Colors.green[900],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        trailing: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.brown[800],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
-                          ),
-                          onPressed: () {
-                            // Transfer item and resolve gift
-                            setState(() {
-                              player.personalInventory.remove(item);
-                              widget.target.personalInventory.add(item);
-                            });
-
-                            InteractionService.resolveGift(
-                                widget.gameState, player, widget.target, item);
-
-                            widget.gameState.useInteractionToken();
-                            Navigator.of(context).pop();
-                            // Gift result now goes directly to interaction log
-                          },
-                          child: Text('Give',
-                              style: GoogleFonts.cinzel(fontSize: 16)),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.target.hasFamilyNeed)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8.0),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.amber[900]!.withValues(alpha: 0.3),
+                border: Border.all(color: Colors.amber[700]!),
+                borderRadius: BorderRadius.circular(4),
               ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.amber[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "This soldier's family is struggling. Helping them with Supplies or Treasure will be greatly appreciated.",
+                      style: smallStyle.copyWith(color: Colors.amber[100]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          SizedBox(
+            width: 500,
+            height: 400,
+            child: player.personalInventory.isEmpty
+                ? Center(
+                    child: Text(
+                      'You have no items to gift.',
+                      style: bodyStyle,
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: player.personalInventory.length,
+                    itemBuilder: (context, index) {
+                      final item = player.personalInventory[index];
+
+                      // Calculate predicted impact
+                      final String prediction = _predictGiftImpact(
+                          widget.gameState, player, widget.target, item);
+
+                      return Card(
+                        color: Colors.grey[850],
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 0),
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ListTile(
+                            title: Text(
+                              item.name,
+                              style: bodyStyle.copyWith(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Value: ${item.baseValue} | Origin: ${item.origin}',
+                                  style: smallStyle,
+                                ),
+                                if (prediction.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    prediction,
+                                    style: smallStyle.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontStyle: FontStyle.italic,
+                                      color: prediction.contains('⚠️')
+                                          ? Colors.red[900]
+                                          : Colors.green[900],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            trailing: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.brown[800],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                              onPressed: () {
+                                // Transfer item and resolve gift
+                                setState(() {
+                                  player.personalInventory.remove(item);
+                                  widget.target.personalInventory.add(item);
+                                });
+
+                                InteractionService.resolveGift(widget.gameState,
+                                    player, widget.target, item);
+
+                                widget.gameState.useInteractionToken();
+                                Navigator.of(context).pop();
+                                // Gift result now goes directly to interaction log
+                              },
+                              child: Text('Give',
+                                  style: GoogleFonts.cinzel(fontSize: 16)),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -143,6 +172,14 @@ class _GiftingDialogState extends State<GiftingDialog> {
 
   String _predictGiftImpact(
       GameState gameState, Soldier player, Soldier target, InventoryItem item) {
+    // Check family need first (visible even without Omniscient if we assume players know the quest?)
+    // Actually, let's keep predictions gated by Omniscient for consistency, OR make this specific hint visible?
+    // The quest log says "gift supplies". The UI banner says "needs supplies". The prediction confirms it.
+    // Let's allow this specific prediction to override Omniscient check if we want to be generous,
+    // but the banner is already a strong hint. Let's stick to Omniscient gating for now for consistency,
+    // unless the user specifically asked for "feedback".
+    // I will include it in the Omniscient block.
+
     // Only show predictions in Omniscient Mode
     if (!gameState.isOmniscientMode) {
       return '';
@@ -162,7 +199,16 @@ class _GiftingDialogState extends State<GiftingDialog> {
     double justification =
         goodPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
 
-    final bool isAppropriate = (justification > 0) || isBirthday;
+    // Check Family Need (Overrides appropriateness)
+    bool addressesFamilyNeed = false;
+    if (target.hasFamilyNeed &&
+        (item.valueType == ValueType.Supply ||
+            item.valueType == ValueType.Treasure)) {
+      addressesFamilyNeed = true;
+    }
+
+    final bool isAppropriate =
+        (justification > 0) || isBirthday || addressesFamilyNeed;
 
     if (!isAppropriate) {
       return '⚠️ Gift may be inappropriate (no recent good performance)';
@@ -185,16 +231,24 @@ class _GiftingDialogState extends State<GiftingDialog> {
       multiplier *= 1.5;
     }
 
+    // Family Need Multiplier (Same as in InteractionService to be accurate)
+    if (addressesFamilyNeed) {
+      multiplier *= 2.0; // Major boost
+    }
+
     double finalAdmiration = baseAdmiration * multiplier;
     double finalRespect = baseRespect * multiplier;
 
     String bonus = '';
-    if (isBirthday) bonus = ' +Birthday bonus!';
-    if (matchesType && matchesOrigin)
+    if (addressesFamilyNeed) bonus += ' +Family Relief!';
+    if (isBirthday) bonus += ' +Birthday bonus!';
+    if (matchesType && matchesOrigin) {
       bonus += ' Perfect match!';
-    else if (matchesType)
+    } else if (matchesType) {
       bonus += ' Likes this type!';
-    else if (matchesOrigin) bonus += ' Likes this origin!';
+    } else if (matchesOrigin) {
+      bonus += ' Likes this origin!';
+    }
 
     return '✓ +${finalAdmiration.toStringAsFixed(2)} Admiration, +${finalRespect.toStringAsFixed(2)} Respect$bonus';
   }

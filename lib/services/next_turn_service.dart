@@ -133,6 +133,9 @@ class NextTurnService {
       // --- 11.5 NARRATIVE EVENTS (Trade, Tournaments) ---
       await _step11_5_ResolveNarrativeEvents(gameState);
 
+      // --- RECORD HISTORY SNAPSHOT ---
+      gameState.historyService.recordDailySnapshot(gameState);
+
       // --- CHECK GAME OVER CONDITIONS BEFORE SAVE ---
       if (_checkGameOver(gameState)) {
         gameState.setLoading(false);

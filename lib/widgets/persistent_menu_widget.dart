@@ -124,7 +124,6 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
     );
 
     if (shouldQuit == true && mounted) {
-
       Navigator.pushNamedAndRemoveUntil(context, '/mainMenu', (route) => false);
     }
   }
@@ -163,7 +162,6 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
               bottom: 78,
               left: 0,
               right: 0,
-
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: SizedBox(
@@ -262,7 +260,6 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                       ),
                       const SizedBox(width: 8),
 
-
                       TutorialHighlighter(
                         highlightKey: 'open_horde_panel',
                         shape: BoxShape.circle,
@@ -296,8 +293,7 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                         child: _buildMenuButton(
                             icon: Icons.assessment_outlined,
                             tooltip: "Reports",
-                            badgeCount: gameState
-                                .getReportsBadgeCount(),
+                            badgeCount: gameState.getReportsBadgeCount(),
                             onPressed: () {
                               context
                                   .read<TutorialService>()
@@ -309,15 +305,19 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                       // Advisor button placeholder if needed
                       // _buildMenuButton(icon: Icons.people_outline, tooltip: "Advisors", onPressed: () => Navigator.pushNamed(context, '/advisors')),
 
-
                       _buildMenuButton(
                           icon: Icons.flag_outlined,
                           tooltip: "Camp",
                           enabled: canNavigateToCamp,
-                          badgeCount:
-                              gameState.getCampBadgeCount(),
+                          badgeCount: gameState.getCampBadgeCount(),
                           onPressed: () =>
                               Navigator.pushReplacementNamed(context, '/camp')),
+                      _buildMenuButton(
+                          icon: Icons.ssid_chart, // Graph icon
+                          tooltip: "Timelines",
+                          enabled: true,
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/timelines')),
                       _buildMenuButton(
                           icon: Icons.map_outlined,
                           tooltip: "Area Map",

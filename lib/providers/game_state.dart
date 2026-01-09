@@ -29,7 +29,6 @@ import 'package:aravt/models/game_turn.dart';
 import 'package:flutter/foundation.dart';
 import 'package:aravt/services/game_setup_service.dart' as setup_service;
 import 'package:aravt/models/game_event.dart';
-import 'package:aravt/models/inventory_item.dart';
 import 'package:aravt/models/combat_report.dart';
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/services/combat_service.dart';
@@ -53,9 +52,12 @@ import 'package:aravt/models/wealth_event.dart';
 import 'package:aravt/models/culinary_news.dart';
 import 'package:aravt/models/material_flow.dart';
 import 'package:aravt/models/shepherding_report.dart';
+
+import 'package:aravt/models/history_models.dart';
+import 'package:aravt/services/history_service.dart';
+import 'package:aravt/models/pillage_report.dart';
 import 'package:aravt/models/fletching_report.dart';
 import 'package:aravt/models/training_report.dart';
-import 'package:aravt/models/pillage_report.dart';
 
 // Wealth status for dynamic scrap-to-rupee conversion (7-level gradual spectrum)
 enum WealthStatus {
@@ -92,8 +94,7 @@ class GameState with ChangeNotifier {
   List<TournamentResult> tournamentHistory = [];
   List<FutureTournament> upcomingTournaments = [];
   ActiveTournament? activeTournament; //  Track ongoing tournament
-  Map<TournamentEventType, int> currentChampions =
-      {};
+  Map<TournamentEventType, int> currentChampions = {};
 
   List<double> wealthHistory = [];
   List<ResourceReport> resourceReports = [];
@@ -106,6 +107,11 @@ class GameState with ChangeNotifier {
   List<TrainingReport> trainingReports = [];
   List<PillageReport> pillageReports = [];
   //  Resource reports (wood/mining)
+
+  // --- HISTORY / TIMELINES ---
+  final HistoryService historyService = HistoryService();
+  // Proxy getter for UI
+  List<DailySnapshot> get history => historyService.history;
 
   // Narrative Event State
   NarrativeEvent? activeNarrativeEvent;
@@ -260,8 +266,6 @@ class GameState with ChangeNotifier {
   int get totalListenCount {
     return horde.where((s) => s.queuedListenItem != null && !s.isPlayer).length;
   }
-
-
 
   //  UI State for Horde Panel
   bool isHordePanelOpen = false;
@@ -605,7 +609,6 @@ class GameState with ChangeNotifier {
   Map<String, int> unreadReportCounts = {};
 
   //  Legacy set for migration (will be ignored/cleared)
-  Set<String> _legacyViewedReportTabs = {};
 
   int getBadgeCountForFoodSubTab(String subTab) {
     // For specific sub-tabs, we might need granular tracking or just rely on main tab?
@@ -627,16 +630,6 @@ class GameState with ChangeNotifier {
 
   int getBadgeCountForCommerceSubTab(String subTab) {
     return unreadReportCounts['Commerce_$subTab'] ?? 0;
-  }
-
-  bool _isPlayerEvent(GameEvent event) {
-    if (event.relatedSoldierId != null) {
-      return horde.any((s) => s.id == event.relatedSoldierId);
-    }
-    if (event.relatedAravtId != null) {
-      return aravts.any((a) => a.id == event.relatedAravtId);
-    }
-    return true; // Keep general events
   }
 
   bool isPlayerAravtReport(GameEvent event) {
@@ -669,7 +662,7 @@ class GameState with ChangeNotifier {
   }
 
   int getCampBadgeCount() {
-    return 0; 
+    return 0;
   }
 
   void markReportTabViewed(String tabName, {String? subTab}) {
@@ -893,7 +886,6 @@ class GameState with ChangeNotifier {
       eventLog.removeLast();
     }
 
-
     // so the badge reappears (e.g., tournament completion after viewing Games tab)
     if (severity == EventSeverity.critical || severity == EventSeverity.high) {
       final tabName = _getTabNameForCategory(category);
@@ -979,7 +971,7 @@ class GameState with ChangeNotifier {
       final tradeTask = aravt.task as TradeTask;
       communalStash.addAll(tradeTask.cargo);
       _communalHerd.addAll(tradeTask.horses); // Return horses to herd
-      
+
       // Recover resources
       tradeTask.resources.forEach((key, amount) {
         switch (key) {
@@ -1241,7 +1233,6 @@ class GameState with ChangeNotifier {
       garrisonSoldiers = initialStateContainer.garrisonSoldiers;
       garrisonAravts = initialStateContainer.garrisonAravts;
 
-
       communalCattle = initialStateContainer.communalCattle;
       _communalHerd = initialStateContainer.communalHerd;
       _communalMeat = initialStateContainer.communalMeat;
@@ -1297,7 +1288,6 @@ class GameState with ChangeNotifier {
         ),
       ];
 
-
       logEvent(
         "The Great Downsizing Tournament has been announced! You have 7 days to prepare. The weakest Aravt will be exiled.",
         category: EventCategory.games,
@@ -1307,8 +1297,7 @@ class GameState with ChangeNotifier {
       logEvent(
         "The horde gathers on the steppe. A new story begins.",
         category: EventCategory.general,
-        severity: EventSeverity
-            .normal,
+        severity: EventSeverity.normal,
       );
 
       print("[GameState Provider] New game created successfully.");
@@ -2215,8 +2204,7 @@ class GameState with ChangeNotifier {
       'tutorialPermanentlyDismissed': tutorialPermanentlyDismissed,
       'tutorialDismissalCount': tutorialDismissalCount,
       'tutorialStepIndex': tutorialStepIndex,
-      'tutorialCaptainId':
-          tutorialCaptainId, //  Persist tutorial captain
+      'tutorialCaptainId': tutorialCaptainId, //  Persist tutorial captain
       //  Food management
       'communalMilk': _communalMilk,
       'communalCheese': _communalCheese,
@@ -2385,8 +2373,7 @@ class GameState with ChangeNotifier {
         json['tutorialPermanentlyDismissed'] ?? false;
     tutorialDismissalCount = json['tutorialDismissalCount'] ?? 0;
     tutorialStepIndex = json['tutorialStepIndex'] ?? 0;
-    tutorialCaptainId =
-        json['tutorialCaptainId']; //  Load tutorial captain
+    tutorialCaptainId = json['tutorialCaptainId']; //  Load tutorial captain
 
     //  Food management
     _communalMilk = (json['communalMilk'] as num?)?.toDouble() ?? 0.0;

@@ -23,6 +23,8 @@ import 'package:aravt/game_data/item_templates.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/services/tutorial_service.dart';
 import 'package:aravt/screens/area_screen.dart';
+
+import 'screens/timelines_screen.dart';
 import 'package:aravt/screens/region_screen.dart';
 import 'package:aravt/screens/combat_screen.dart';
 import 'package:aravt/screens/load_game_screen.dart';
@@ -200,6 +202,8 @@ class _AravtGameState extends State<AravtGame> {
         '/save_game': (context) => const SaveGameScreen(),
         '/load_game': (context) => const LoadGameScreen(),
         '/settings': (context) => const SettingsScreen(),
+
+        '/timelines': (context) => const TimelinesScreen(),
         '/gameOver': (context) => const GameOverScreen(),
         // --- IN-GAME ROUTES ---
         '/camp': (context) => const CampScreen(),

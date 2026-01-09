@@ -61,6 +61,30 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.soldier.desiresRoleAppointment)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8.0),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: Colors.blue[900]!.withValues(alpha: 0.3),
+                  border: Border.all(color: Colors.blue[700]!),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[300], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "${widget.soldier.name} has petitioned for a formal role. Assigning them a duty (preferably a preferred one in green) will satisfy them.",
+                        style: GoogleFonts.cinzel(
+                            fontSize: 12, color: Colors.blue[100]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Text("Aravt: ${aravt.id}",
                 style: GoogleFonts.cinzel(
                     color: Colors.white,
@@ -130,26 +154,35 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
         horizontalMargin: 10,
         columns: [
           DataColumn(label: Text('Soldier', style: headerStyle)),
-
           ...duties
               .map((d) => DataColumn(label: Text(d.name, style: headerStyle))),
         ],
         rows: soldiers.map((s) {
           return DataRow(cells: [
-            DataCell(Text(s.name,
-                style: GoogleFonts.cinzel(
-                    color: s.isPlayer ? const Color(0xFFE0D5C1) : Colors.white,
-                    fontSize: 12))),
+            DataCell(Row(
+              children: [
+                Text(s.name,
+                    style: GoogleFonts.cinzel(
+                        color:
+                            s.isPlayer ? const Color(0xFFE0D5C1) : Colors.white,
+                        fontSize: 12)),
+                if (s.desiresRoleAppointment)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 4.0),
+                    child: Icon(Icons.star_rate_rounded,
+                        color: Colors.blueAccent, size: 12),
+                  )
+              ],
+            )),
             ...duties.map((duty) {
               final isAssigned = aravt.dutyAssignments[duty] == s.id;
 
-
               Color? cellColor;
-              if (s.preferredDuties.contains(duty))
+              if (s.preferredDuties.contains(duty)) {
                 cellColor = Colors.green.withValues(alpha: 0.3);
-              else if (s.despisedDuties.contains(duty))
+              } else if (s.despisedDuties.contains(duty)) {
                 cellColor = Colors.red.withValues(alpha: 0.3);
-
+              }
 
               bool isDisabled = false;
               if (duty == AravtDuty.lieutenant && s.id == aravt.captainId) {
@@ -166,14 +199,18 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
                     onChanged: isDisabled
                         ? null
                         : (val) {
-                      setState(() {
-                        if (val == true) {
-                          aravt.dutyAssignments[duty] = s.id;
-                        } else if (aravt.dutyAssignments[duty] == s.id) {
-                          aravt.dutyAssignments.remove(duty);
-                        }
-                      });
-                    }),
+                            setState(() {
+                              if (val == true) {
+                                aravt.dutyAssignments[duty] = s.id;
+                                // Clear request flag if assigned
+                                if (s.desiresRoleAppointment) {
+                                  s.desiresRoleAppointment = false;
+                                }
+                              } else if (aravt.dutyAssignments[duty] == s.id) {
+                                aravt.dutyAssignments.remove(duty);
+                              }
+                            });
+                          }),
               ));
             })
           ]);
