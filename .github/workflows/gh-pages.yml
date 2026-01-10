@@ -35,4 +35,4 @@ jobs:
           publish_dir: ./build/web
           publish_branch: gh-pages
           force_orphan: true
-          cname: dashiellrenaud.com
+          cname: aravtgame.com
