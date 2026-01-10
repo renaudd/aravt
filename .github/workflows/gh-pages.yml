@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -23,7 +26,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Web 🏗️
-        run: flutter build web --release --base-href "/"
+        run: flutter build web --release --base-href "/" --no-tree-shake-icons
 
       - name: Deploy to GitHub Pages 🚀
         uses: peaceiris/actions-gh-pages@v3
