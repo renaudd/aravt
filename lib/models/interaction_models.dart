@@ -156,6 +156,8 @@ class InteractionResult {
   final String statChangeSummary;
   final String informationRevealed;
   final InteractionLogEntry logEntry;
+  final bool requiresResponse;
+  final ListenQuestType? listenQuestType;
 
   InteractionResult({
     required this.success,
@@ -163,5 +165,7 @@ class InteractionResult {
     required this.statChangeSummary,
     this.informationRevealed = '',
     required this.logEntry,
+    this.requiresResponse = false,
+    this.listenQuestType,
   });
 }

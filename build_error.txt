@@ -1,0 +1,69 @@
+Resolving dependencies...
+Downloading packages...
+  characters 1.4.0 (1.4.1 available)
+  ffi 2.1.4 (2.1.5 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  google_fonts 6.3.2 (7.0.0 available)
+  lints 3.0.0 (6.0.0 available)
+  matcher 0.12.17 (0.12.18 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  path_provider_foundation 2.4.4 (2.5.1 available)
+  test_api 0.7.7 (0.7.9 available)
+Got dependencies!
+9 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Compiling lib/main.dart for the Web...                          
+Wasm dry run succeeded. Consider building and testing your application with the `--wasm` flag. See docs for more info: https://docs.flutter.dev/platform-integration/web/wasm
+Use --no-wasm-dry-run to disable these warnings.
+This application cannot tree shake icons fonts. It has non-constant instances of IconData at the following locations:
+  - file:///Users/rend/Development/aravt_1/lib/models/area_data.dart:91:13
+  - file:///Users/rend/Development/aravt_1/lib/models/area_data.dart:327:13
+Target web_release_bundle failed: Error: Avoid non-constant invocations of IconData or try to build again with --no-tree-shake-icons.
+#0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
+#1      IconTreeShaker._findConstants (package:flutter_tools/src/build_system/targets/icon_tree_shaker.dart:327:7)
+<asynchronous suspension>
+#2      IconTreeShaker._getIconData (package:flutter_tools/src/build_system/targets/icon_tree_shaker.dart:113:45)
+<asynchronous suspension>
+#3      IconTreeShaker.subsetFont (package:flutter_tools/src/build_system/targets/icon_tree_shaker.dart:181:5)
+<asynchronous suspension>
+#4      copyAssets.<anonymous closure> (package:flutter_tools/src/build_system/targets/assets.dart:151:25)
+<asynchronous suspension>
+#5      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#6      copyAssets (package:flutter_tools/src/build_system/targets/assets.dart:111:3)
+<asynchronous suspension>
+#7      WebReleaseBundle.build (package:flutter_tools/src/build_system/targets/web.dart:528:29)
+<asynchronous suspension>
+#8      _BuildInstance._invokeInternal (package:flutter_tools/src/build_system/build_system.dart:873:9)
+<asynchronous suspension>
+#9      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#10     _BuildInstance.invokeTarget (package:flutter_tools/src/build_system/build_system.dart:811:32)
+<asynchronous suspension>
+#11     FlutterBuildSystem.build (package:flutter_tools/src/build_system/build_system.dart:631:16)
+<asynchronous suspension>
+#12     WebBuilder.buildWeb (package:flutter_tools/src/web/compile.dart:94:34)
+<asynchronous suspension>
+#13     BuildWebCommand.runCommand (package:flutter_tools/src/commands/build_web.dart:296:5)
+<asynchronous suspension>
+#14     FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1559:27)
+<asynchronous suspension>
+#15     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#16     CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+<asynchronous suspension>
+#17     FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:487:9)
+<asynchronous suspension>
+#18     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#19     FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:422:5)
+<asynchronous suspension>
+#20     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+<asynchronous suspension>
+#21     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#22     main (package:flutter_tools/executable.dart:103:3)
+<asynchronous suspension>
+
+Compiling lib/main.dart for the Web...                             16.7s
+Error: Failed to compile application for the Web.

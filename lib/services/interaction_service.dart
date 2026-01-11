@@ -385,13 +385,13 @@ class InteractionService {
     String infoRevealed = "'${queuedItem.message}'";
     String outcomeSummary = "";
     String statChanges = '';
+    bool requiresResponse = false;
 
     // Handle Specific Quest Types
     switch (queuedItem.type) {
       case ListenQuestType.rations:
         outcomeSummary = "They shared concerns about food.";
-        // Logic: If player is captain/leader, could trigger "Increase Rations" option
-        // For now, acknowledgement.
+        requiresResponse = true;
         break;
       case ListenQuestType.horses:
         outcomeSummary = "They reported issues with the herd.";
@@ -417,12 +417,14 @@ class InteractionService {
         }
         break;
       case ListenQuestType.familyStruggling:
-        outcomeSummary = "They confined in you about their family.";
+        outcomeSummary = "They confided in you about their family.";
         target.hasFamilyNeed = true;
+        requiresResponse = true;
         break;
       case ListenQuestType.roleRequest:
         outcomeSummary = "They asked for a specific role.";
         target.desiresRoleAppointment = true;
+        requiresResponse = true;
         break;
       case ListenQuestType.none:
         // Generic handling
@@ -454,6 +456,8 @@ class InteractionService {
       statChangeSummary: statChanges,
       informationRevealed: infoRevealed,
       logEntry: log,
+      requiresResponse: requiresResponse,
+      listenQuestType: queuedItem.type,
     );
   }
 
@@ -492,7 +496,16 @@ class InteractionService {
           goodPerformance.fold(0.0, (prev, e) => prev + e.magnitude);
     }
 
-    final bool isAppropriate = (justification > 0) || isBirthday;
+    // Check Family Need (Overrides appropriateness)
+    bool addressesFamilyNeed = false;
+    if (target.hasFamilyNeed &&
+        (gift.valueType == ValueType.Supply ||
+            gift.valueType == ValueType.Treasure)) {
+      addressesFamilyNeed = true;
+    }
+
+    final bool isAppropriate =
+        (justification > 0) || isBirthday || addressesFamilyNeed;
 
     // 3. Calculate base relationship impact from gift value
     double baseAdmirationGain = (gift.baseValue * 0.01).clamp(0.1, 0.5);
@@ -515,6 +528,12 @@ class InteractionService {
       originMultiplier = 1.5;
     }
 
+    // 6. Apply Family Need Multiplier
+    double familyMultiplier = 1.0;
+    if (addressesFamilyNeed) {
+      familyMultiplier = 2.0; // Major boost for helping family
+    }
+
     final List<Soldier> socialCircle = _getSocialCircle(target, gameState);
     String statChanges = "";
     String outcomeSummary = "";
@@ -522,14 +541,25 @@ class InteractionService {
 
     if (isAppropriate) {
       // Appropriate gift: positive relationship gains
-      double finalAdmiration =
-          baseAdmirationGain * typeMultiplier * originMultiplier;
-      double finalRespect = baseRespectGain * typeMultiplier * originMultiplier;
+      double finalAdmiration = baseAdmirationGain *
+          typeMultiplier *
+          originMultiplier *
+          familyMultiplier;
+      double finalRespect = baseRespectGain *
+          typeMultiplier *
+          originMultiplier *
+          familyMultiplier;
 
       rel.updateAdmiration(finalAdmiration);
       rel.updateRespect(finalRespect);
 
-      if (isBirthday) {
+      if (addressesFamilyNeed) {
+        outcomeSummary =
+            "They were overwhelmed with gratitude for your help with their family!";
+        target.hasFamilyNeed = false; // Need met
+        LoyaltyService.updateLoyalty(
+            target, player.id, 0.2); // Massive loyalty boost
+      } else if (isBirthday) {
         outcomeSummary = "They were delighted by the birthday gift!";
         LoyaltyService.updateLoyalty(target, player.id, 0.1); // Birthday bonus
         if (usedEvent != null) {
@@ -542,7 +572,9 @@ class InteractionService {
       if (gameState.isOmniscientMode) {
         statChanges =
             "${target.name} gains ${finalAdmiration.toStringAsFixed(2)} Admiration, ${finalRespect.toStringAsFixed(2)} Respect.";
-        if (isBirthday) {
+        if (addressesFamilyNeed) {
+          statChanges += " +0.2 Loyalty (Family Relief).";
+        } else if (isBirthday) {
           statChanges += " +0.1 Loyalty (birthday).";
         }
       }
@@ -551,10 +583,14 @@ class InteractionService {
       _applySocialEffect(socialCircle, player.id,
           respect: 0.03, admiration: 0.05);
 
-      if (_random.nextDouble() < 0.6) {
+      if (_random.nextDouble() < 0.6 || addressesFamilyNeed) {
         // Use dialogue generation for more dynamic responses
         String dynamicResponse = _generateDialogue(target, gameState);
-        if (dynamicResponse.isNotEmpty) {
+
+        if (addressesFamilyNeed) {
+          infoRevealed =
+              "'I... I don't know what to say, Captain. This will save my family. I will never forget this.'";
+        } else if (dynamicResponse.isNotEmpty) {
           infoRevealed = "'$dynamicResponse'";
         } else {
           // Fallback to preference-based responses

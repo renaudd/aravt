@@ -1,12 +1,12 @@
 {
-    "name": "aravt_1",
-    "short_name": "aravt_1",
+    "name": "Aravt",
+    "short_name": "Aravt",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#1E1E1E",
+    "theme_color": "#1E1E1E",
+    "description": "Lead your Mongolian horde in this historical strategy game.",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

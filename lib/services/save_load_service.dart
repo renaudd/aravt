@@ -15,6 +15,8 @@
 // services/save_load_service.dart
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:aravt/models/game_date.dart';
 import 'package:aravt/models/save_file_info.dart';
@@ -31,7 +33,8 @@ class SaveLoadService {
   }
 
   /// Gets a File handle for a specific save slot.
-  Future<File> _getSaveFile(String fileName) async {
+  Future<File?> _getSaveFile(String fileName) async {
+    if (kIsWeb) return null;
     final path = await _localPath;
     return File('$path/$fileName');
   }
@@ -57,10 +60,18 @@ class SaveLoadService {
   Future<void> writeSaveFile(
       String fileName, Map<String, dynamic> saveData) async {
     try {
-      final file = await _getSaveFile(fileName);
       final jsonString = json.encode(saveData);
-      await file.writeAsString(jsonString);
-      print("Save successful: $fileName");
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(fileName, jsonString);
+        print("Web Save successful: $fileName");
+      } else {
+        final file = await _getSaveFile(fileName);
+        if (file != null) {
+          await file.writeAsString(jsonString);
+          print("Desktop Save successful: $fileName");
+        }
+      }
     } catch (e) {
       print("Error writing save file $fileName: $e");
       rethrow;
@@ -70,11 +81,18 @@ class SaveLoadService {
   /// Reads a save file and returns the full JSON map.
   Future<Map<String, dynamic>?> readSaveFile(String fileName) async {
     try {
-      final file = await _getSaveFile(fileName);
-      if (await file.exists()) {
-        final jsonString = await file.readAsString();
-        final Map<String, dynamic> data = json.decode(jsonString);
-        return data;
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonString = prefs.getString(fileName);
+        if (jsonString != null) {
+          return json.decode(jsonString);
+        }
+      } else {
+        final file = await _getSaveFile(fileName);
+        if (file != null && await file.exists()) {
+          final jsonString = await file.readAsString();
+          return json.decode(jsonString);
+        }
       }
       return null;
     } catch (e) {
@@ -111,35 +129,54 @@ class SaveLoadService {
   /// their metadata for the "Load Game" screen.
   Future<List<SaveFileInfo>> getSaveFileList() async {
     final List<SaveFileInfo> saveFiles = [];
-    final path = await _localPath;
-    final dir = Directory(path);
-
-    if (!await dir.exists()) {
-      return [];
-    }
-
-    final List<FileSystemEntity> entities = await dir.list().toList();
-
-    for (final entity in entities) {
-      if (entity is File &&
-          entity.path.endsWith(_saveFileExtension) &&
-          entity.path.contains(_saveFileNamePrefix)) {
-        final String fileName = entity.uri.pathSegments.last;
-        try {
-          final jsonString = await entity.readAsString();
-          final Map<String, dynamic> data = json.decode(jsonString);
-
-          if (data.containsKey('meta')) {
-            final Map<String, dynamic> meta = data['meta'];
-            // Add the file's own info to the metadata map
-            meta['fullFileName'] = fileName;
-            meta['fileTimestamp'] =
-                (await entity.lastModified()).toIso8601String();
-
-            saveFiles.add(SaveFileInfo.fromJson(meta));
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys();
+      for (final key in keys) {
+        if (key.startsWith(_saveFileNamePrefix)) {
+          final jsonString = prefs.getString(key);
+          if (jsonString != null) {
+            final data = json.decode(jsonString);
+            if (data.containsKey('meta')) {
+              final meta = data['meta'];
+              meta['fullFileName'] = key;
+              // For web, use a fixed timestamp if not stored, or metadata timestamp
+              meta['fileTimestamp'] =
+                  meta['fileTimestamp'] ?? DateTime.now().toIso8601String();
+              saveFiles.add(SaveFileInfo.fromJson(meta));
+            }
           }
-        } catch (e) {
-          print("Error parsing save file $fileName: $e");
+        }
+      }
+    } else {
+      final path = await _localPath;
+      final dir = Directory(path);
+
+      if (await dir.exists()) {
+        final List<FileSystemEntity> entities = await dir.list().toList();
+
+        for (final entity in entities) {
+          if (entity is File &&
+              entity.path.endsWith(_saveFileExtension) &&
+              entity.path.contains(_saveFileNamePrefix)) {
+            final String fileName = entity.uri.pathSegments.last;
+            try {
+              final jsonString = await entity.readAsString();
+              final Map<String, dynamic> data = json.decode(jsonString);
+
+              if (data.containsKey('meta')) {
+                final Map<String, dynamic> meta = data['meta'];
+                // Add the file's own info to the metadata map
+                meta['fullFileName'] = fileName;
+                meta['fileTimestamp'] =
+                    (await entity.lastModified()).toIso8601String();
+
+                saveFiles.add(SaveFileInfo.fromJson(meta));
+              }
+            } catch (e) {
+              print("Error parsing save file $fileName: $e");
+            }
+          }
         }
       }
     }

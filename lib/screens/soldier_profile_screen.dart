@@ -993,7 +993,11 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
         InteractionService.resolveInquire(gameState, player, target);
         break;
       case InteractionType.listen:
-        InteractionService.resolveListen(gameState, player, target);
+        final result =
+            InteractionService.resolveListen(gameState, player, target);
+        if (result.requiresResponse) {
+          _showResponseDialog(context, result, gameState, player, target);
+        }
         break;
       case InteractionType.gift:
         // Gift interaction handled via _showGiftDialog, not here
@@ -1009,6 +1013,94 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     showDialog(
       context: context,
       builder: (_) => GiftingDialog(gameState: gameState, target: target),
+    );
+  }
+
+  void _showResponseDialog(BuildContext context, InteractionResult result,
+      GameState gameState, Soldier player, Soldier target) {
+    String title = "Respond to ${target.name}";
+    String content = result.informationRevealed;
+    List<Widget> actions = [];
+
+    switch (result.listenQuestType) {
+      case ListenQuestType.familyStruggling:
+        actions = [
+          TextButton(
+            child:
+                Text("I will help your family.", style: GoogleFonts.cinzel()),
+            onPressed: () {
+              target.getRelationship(player.id).updateLoyalty(0.1);
+              target.getRelationship(player.id).updateAdmiration(0.05);
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child:
+                Text("We all have our burdens.", style: GoogleFonts.cinzel()),
+            onPressed: () {
+              target.getRelationship(player.id).updateLoyalty(-0.02);
+              Navigator.of(context).pop();
+            },
+          ),
+        ];
+        break;
+      case ListenQuestType.roleRequest:
+        actions = [
+          TextButton(
+            child: Text("I will consider you for a role.",
+                style: GoogleFonts.cinzel()),
+            onPressed: () {
+              target.getRelationship(player.id).updateLoyalty(0.05);
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text("Continue serving as you are.",
+                style: GoogleFonts.cinzel()),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ];
+        break;
+      case ListenQuestType.rations:
+        actions = [
+          TextButton(
+            child:
+                Text("I will check our stores.", style: GoogleFonts.cinzel()),
+            onPressed: () {
+              target.getRelationship(player.id).updateRespect(0.02);
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text("We must endure for the horde.",
+                style: GoogleFonts.cinzel()),
+            onPressed: () {
+              target.getRelationship(player.id).updateLoyalty(-0.01);
+              target.getRelationship(player.id).updateRespect(0.02);
+              Navigator.of(context).pop();
+            },
+          ),
+        ];
+        break;
+      default:
+        actions = [
+          TextButton(
+            child: Text("Acknowledged.", style: GoogleFonts.cinzel()),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ];
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.brown[900],
+        title: Text(title, style: GoogleFonts.cinzel(color: Colors.white)),
+        content: Text(content, style: GoogleFonts.cinzel(color: Colors.white)),
+        actions: actions,
+      ),
     );
   }
 

@@ -39,7 +39,9 @@ import 'package:aravt/screens/settings_screen.dart';
 import 'package:aravt/screens/game_over_screen.dart';
 import 'package:aravt/screens/pre_combat_screen.dart';
 import 'package:aravt/screens/post_combat_report_screen.dart';
+import 'package:aravt/screens/about_screen.dart';
 import 'package:aravt/models/combat_flow_state.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:aravt/widgets/tutorial_overlay_widget.dart';
 import 'package:aravt/widgets/narrative_overlay_widget.dart';
 import 'package:window_manager/window_manager.dart';
@@ -202,6 +204,7 @@ class _AravtGameState extends State<AravtGame> {
         '/save_game': (context) => const SaveGameScreen(),
         '/load_game': (context) => const LoadGameScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/about': (context) => const AboutScreen(),
 
         '/timelines': (context) => const TimelinesScreen(),
         '/gameOver': (context) => const GameOverScreen(),
@@ -221,7 +224,7 @@ class _AravtGameState extends State<AravtGame> {
         '/preCombat': (context) => const PreCombatScreen(),
         '/postCombat': (context) {
           final report =
-              Provider.of<GameState>(context, listen: false).lastCombatReport;
+              Provider.of<GameState>(context, listen: false).latestCombatReport;
           if (report == null) return const MainMenuScreen(); // Fallback
           return PostCombatReportScreen(report: report);
         },
@@ -291,6 +294,12 @@ class MainMenuScreen extends StatelessWidget {
                         }),
                     const SizedBox(height: 20),
                     _MenuButton(
+                        text: 'ABOUT',
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/about');
+                        }),
+                    const SizedBox(height: 20),
+                    _MenuButton(
                         text: 'EXIT',
                         onPressed: () {
                           if (!kIsWeb &&
@@ -302,6 +311,52 @@ class MainMenuScreen extends StatelessWidget {
                             SystemNavigator.pop();
                           }
                         }),
+                    const SizedBox(height: 48),
+                    // State of Development Section
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'ALPHA DEVELOPMENT',
+                            style: GoogleFonts.cinzel(
+                                color: Colors.amber[100],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Active development in progress. Roadmap includes deeper social systems, trade routes, and expanded map content.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.cinzel(
+                                color: Colors.white70, fontSize: 12),
+                          ),
+                          const SizedBox(height: 12),
+                          InkWell(
+                            onTap: () async {
+                              final Uri url =
+                                  Uri.parse('https://github.com/renaudd/aravt');
+                              if (!await launchUrl(url)) {
+                                debugPrint('Could not launch $url');
+                              }
+                            },
+                            child: Text(
+                              'VIEW ON GITHUB',
+                              style: GoogleFonts.cinzel(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const Spacer(flex: 2),
                   ],
                 ),

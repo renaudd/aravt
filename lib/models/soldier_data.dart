@@ -588,7 +588,7 @@ class Soldier {
     this.imprisonmentNotes,
     this.isInfirm = false,
     this.isExpelled = false,
-    this.plantedEncounters = const [],
+    List<PlantedEncounter>? plantedEncounters,
     this.hasFamilyNeed = false,
     this.desiresRoleAppointment = false,
   })  : headHealthMax = (healthMax * 0.9).clamp(1, 10).round(),
@@ -613,7 +613,8 @@ class Soldier {
         this.performanceLog = performanceLog ?? [],
         this.preferredDuties = preferredDuties ?? [],
         this.despisedDuties = despisedDuties ?? [],
-        this.personalInventory = personalInventory ?? [];
+        this.personalInventory = personalInventory ?? [],
+        this.plantedEncounters = plantedEncounters ?? [];
 
   Map<String, dynamic> toJson() => {
         'id': id,
