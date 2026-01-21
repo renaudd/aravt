@@ -518,6 +518,64 @@ class Soldier {
       patience +
       age ~/ 5;
 
+  double calculateCombatPointValue() {
+    double total = 0;
+
+    // 1. Base Stats
+    total += strength * 2.0;
+    total += courage * 1.5;
+    total += stamina * 1.0;
+    total += intelligence * 0.5;
+
+    // 2. Combat Skills
+    total += swordSkill * 3.0;
+    total += spearSkill * 3.0;
+    total += shieldSkill * 2.0;
+    total += mountedArcherySkill * 4.0;
+    total += longRangeArcherySkill * 2.0;
+    total += horsemanship * 1.5;
+
+    // 3. Equipment
+    for (var item in equippedItems.values) {
+      // Use baseValue as a proxy, adjusted for combat relevance
+      total += item.baseValue * 0.5;
+    }
+
+    // 4. Experience
+    total += (experience / 50).clamp(0.0, 50.0);
+
+    // 5. Attributes & Special Skills
+    if (specialSkills.contains(SpecialSkill.falconer)) total += 15;
+    if (specialSkills.contains(SpecialSkill.surgeon)) total += 10;
+    if (attributes.contains(SoldierAttribute.murderer)) total += 25;
+    if (attributes.contains(SoldierAttribute.glorySeeker)) total += 10;
+    if (attributes.contains(SoldierAttribute.inept)) total -= 20;
+
+    // 6. Health Penalty
+    double currentHealthSum = (headHealthCurrent +
+            bodyHealthCurrent +
+            rightArmHealthCurrent +
+            leftArmHealthCurrent +
+            rightLegHealthCurrent +
+            leftLegHealthCurrent)
+        .toDouble();
+    double maxHealthSum = (headHealthMax +
+            bodyHealthMax +
+            rightArmHealthMax +
+            leftArmHealthMax +
+            rightLegHealthMax +
+            leftLegHealthMax)
+        .toDouble();
+
+    if (maxHealthSum > 0) {
+      double healthRatio = currentHealthSum / maxHealthSum;
+      total *= (0.3 + 0.7 * healthRatio);
+    }
+
+    // Baseline minimum
+    return max(total, 5.0);
+  }
+
   Soldier({
     required this.id,
     required this.aravt,
@@ -1618,6 +1676,8 @@ class SoldierGenerator {
     int? overrideMountedArchery,
     int? overrideSpear,
     int? overrideSword,
+    int? overrideExperience,
+    int? overrideHorsemanship,
     List<SoldierAttribute>? overrideTraits,
     String? overrideFamilyName,
   }) {
@@ -1645,7 +1705,7 @@ class SoldierGenerator {
     int knowledge = overrideKnowledge ?? _generateCoreAttribute(statMean);
     int patience = overridePatience ?? _generateCoreAttribute(statMean);
     int judgment = _generateCoreAttribute(statMean);
-    int horsemanship = _generateCoreAttribute(statMean);
+    int horsemanship = overrideHorsemanship ?? _generateCoreAttribute(statMean);
     int animalHandling = _generateCoreAttribute(statMean);
     int honesty = _generateCoreAttribute(statMean);
     int temperament = overrideTemperament ?? _generateCoreAttribute(statMean);
@@ -1720,11 +1780,14 @@ class SoldierGenerator {
       });
     }
 
-    final experience = _generateExperience(age, adaptability);
+    final experience =
+        (overrideExperience ?? _generateExperience(age, adaptability))
+            .toDouble();
     final exhaustion = _generateExhaustion();
     final stress = _generateStress();
 
-    final startingInjuryType = _generateStartingInjuryType(age, experience);
+    final startingInjuryType =
+        _generateStartingInjuryType(age, experience.toInt());
     String? injuryDesc = _startingInjuriesMap[startingInjuryType];
     int perceptionModifier =
         (startingInjuryType == StartingInjuryType.damagedEyeLeft) ? -3 : 0;

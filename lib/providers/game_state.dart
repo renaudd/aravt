@@ -651,6 +651,8 @@ class GameState with ChangeNotifier {
       'Commerce',
       'Herds',
       'Food',
+      'Hunting',
+      'Fishing',
       'Games',
       'Training',
       'Diplomacy'
@@ -1859,6 +1861,53 @@ class GameState with ChangeNotifier {
       category: EventCategory.combat,
       severity: EventSeverity.high,
     );
+    notifyListeners();
+  }
+
+  void startSimulatorCombat(List<Soldier> teamA, List<Soldier> teamB) {
+    print("Starting Simulator Combat...");
+
+    // 1. Create temporary Aravts
+    final aravtA = Aravt(
+      id: 'sim_aravt_a',
+      name: 'Army A',
+      captainId: teamA.isNotEmpty ? teamA.first.id : 0,
+      soldierIds: teamA.map((s) => s.id).toList(),
+      color: 'blue',
+      currentLocationType: LocationType.poi,
+      currentLocationId: 'simulator',
+      hexCoords: const HexCoordinates(0, 0),
+    );
+
+    final aravtB = Aravt(
+      id: 'sim_aravt_b',
+      name: 'Army B',
+      captainId: teamB.isNotEmpty ? teamB.first.id : 0,
+      soldierIds: teamB.map((s) => s.id).toList(),
+      color: 'red',
+      currentLocationType: LocationType.poi,
+      currentLocationId: 'simulator',
+      hexCoords: const HexCoordinates(0, 0),
+    );
+
+    // 2. Setup ActiveCombatState
+    activeCombat = ActiveCombatState(
+      playerSoldiers: teamA,
+      opponentSoldiers: teamB,
+      playerAravts: [aravtA],
+      opponentAravts: [aravtB],
+    );
+
+    // 3. Initialize CombatSimulator
+    currentCombat = CombatSimulator();
+
+    // 4. Start Combat
+    currentCombat!.startCombat([aravtA], [aravtB], [...teamA, ...teamB], this);
+
+    combatSpeedMultiplier = 1.0;
+    isCombatPaused = false; // Start unpaused for simulator
+    _combatFlowState = CombatFlowState.inCombat;
+
     notifyListeners();
   }
 

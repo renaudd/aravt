@@ -33,6 +33,7 @@ import 'package:aravt/screens/new_game_screen.dart';
 import 'package:aravt/screens/world_map_screen.dart';
 import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'package:aravt/screens/camp_screen.dart';
+import 'package:aravt/screens/combat_simulator_screen.dart';
 import 'package:aravt/screens/global_reports_screen.dart';
 import 'package:aravt/screens/global_inventory_screen.dart';
 import 'package:aravt/screens/settings_screen.dart';
@@ -173,17 +174,20 @@ class _AravtGameState extends State<AravtGame> {
       navigatorKey: navigatorKey,
       theme: ThemeData(
         brightness: Brightness.dark,
-        primaryColor: const Color(0xFFE0D5C1), // Parchment-ish
+        primaryColor: const Color(0xFFEADBBE), // Brighter Parchment
         scaffoldBackgroundColor: const Color(0xFF1a1a1a),
         textTheme:
-            GoogleFonts.cinzelTextTheme(ThemeData.dark().textTheme).apply(
-          bodyColor: const Color(0xFFE0D5C1),
-          displayColor: const Color(0xFFE0D5C1),
+            GoogleFonts.cinzelTextTheme(ThemeData.light().textTheme).apply(
+          bodyColor: const Color(0xFF2D241E), // Deep Espresso
+          displayColor: const Color(0xFF1A1A1A), // Charcoal
         ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.amber,
+          seedColor: const Color(0xFFD4C5A8),
           brightness: Brightness.dark,
-          surface: const Color(0xFF2a2a2a),
+          surface: const Color(0xFF242424),
+          onSurface: const Color(0xFFD4C5A8),
+          primary: const Color(0xFFEADBBE),
+          secondary: const Color(0xFFA68B5B), // Aged Parchment detail
         ),
         useMaterial3: true,
       ),
@@ -214,6 +218,8 @@ class _AravtGameState extends State<AravtGame> {
         '/region': (context) => const RegionScreen(),
         '/world': (context) => const WorldMapScreen(),
         '/reports': (context) => const GlobalReportsScreen(),
+        '/combat_simulator': (context) =>
+            const CombatSimulatorScreen(), // Added route
         '/inventory': (context) => const GlobalInventoryScreen(),
         '/soldier_profile': (context) {
           final soldierId = ModalRoute.of(context)!.settings.arguments as int;
@@ -259,7 +265,7 @@ class MainMenuScreen extends StatelessWidget {
               child: Image.asset(
                 'assets/images/foreground.png',
                 fit: BoxFit.contain,
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 colorBlendMode: BlendMode.darken,
               ),
             ),
@@ -279,6 +285,12 @@ class MainMenuScreen extends StatelessWidget {
                         text: 'NEW GAME',
                         onPressed: () {
                           Navigator.pushNamed(context, '/newGame');
+                        }),
+                    const SizedBox(height: 20),
+                    _MenuButton(
+                        text: 'COMBAT SIMULATOR', // Added menu button
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/combat_simulator');
                         }),
                     const SizedBox(height: 20),
                     _MenuButton(
@@ -316,7 +328,7 @@ class MainMenuScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.white24),
                       ),

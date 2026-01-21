@@ -20,6 +20,7 @@ import 'horde_panel.dart';
 import 'notification_badge.dart'; //  Import notification badge
 import 'tutorial_highlighter.dart'; //  Import highlighter
 import '../services/tutorial_service.dart'; //  Import tutorial service
+import 'package:aravt/widgets/paper_panel.dart';
 // Removed unused screen imports
 
 class PersistentMenuWidget extends StatefulWidget {
@@ -31,6 +32,7 @@ class PersistentMenuWidget extends StatefulWidget {
 
 class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
   bool _isMenuOpen = false;
+  bool _isNavHidden = false;
   // _isHordePanelOpen is now in GameState
 
   Widget _buildMenuButton(
@@ -38,10 +40,11 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
       required String tooltip,
       required VoidCallback onPressed,
       bool enabled = true,
+      bool isActive = false,
       int badgeCount = 0}) {
     //  Added badge count parameter
     return Padding(
-      padding: const EdgeInsets.all(4.0),
+      padding: const EdgeInsets.all(2.0),
       child: Tooltip(
         message: enabled ? tooltip : "$tooltip (Current Screen)",
         child: Stack(
@@ -52,18 +55,38 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
               onTap: enabled ? onPressed : null,
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: enabled
-                      ? Colors.black.withOpacity(0.6)
-                      : Colors.black.withOpacity(0.3),
-                  shape: BoxShape.circle,
+                  color: isActive
+                      ? Colors.amber.withValues(alpha: 0.9)
+                      : (enabled
+                          ? const Color(0xFFEADBBE).withValues(alpha: 0.9)
+                          : const Color(0xFFD4C5A8).withValues(alpha: 0.5)),
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: enabled
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 2,
+                            offset: const Offset(1, 1),
+                          )
+                        ]
+                      : null,
                   border: Border.all(
-                      color: enabled ? Colors.white54 : Colors.white24,
-                      width: 1),
+                      color: isActive
+                          ? Colors.amber.shade800
+                          : (enabled
+                              ? const Color(0xFFA68B5B)
+                              : const Color(0xFF8C734B)),
+                      width: 1.5),
                 ),
                 child: Icon(icon,
-                    color: enabled ? Colors.white : Colors.white54, size: 24),
+                    color: isActive
+                        ? Colors.black
+                        : (enabled
+                            ? const Color(0xFF4A3F35)
+                            : const Color(0xFF7D6E5D)),
+                    size: 22),
               ),
             ),
             //  Add badge if count > 0
@@ -80,12 +103,12 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
       child: TextButton(
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          backgroundColor: Colors.black.withOpacity(0.7),
-          foregroundColor: Colors.white,
+          backgroundColor: const Color(0xFFEADBBE),
+          foregroundColor: const Color(0xFF4A3F35),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            side: BorderSide(color: Colors.white54, width: 1),
+            borderRadius: BorderRadius.circular(4.0),
+            side: const BorderSide(color: Color(0xFFA68B5B), width: 1.5),
           ),
         ),
         child: Text(
@@ -180,7 +203,7 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                         right: 5,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
@@ -209,15 +232,9 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   if (_isMenuOpen)
-                    Container(
+                    PaperPanel(
                       width: 250,
-                      padding: const EdgeInsets.all(8),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white54, width: 1),
-                      ),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -234,127 +251,125 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                             setState(() => _isMenuOpen = false);
                             Navigator.pushNamed(context, '/settings');
                           }),
-                          const Divider(color: Colors.white24, height: 20),
+                          _buildSubMenuButton('Combat Simulator', () {
+                            setState(() => _isMenuOpen = false);
+                            Navigator.pushNamed(context, '/combat_simulator');
+                          }),
+                          const Divider(color: Colors.brown, height: 20),
                           _buildSubMenuButton('Quit to Main Menu',
                               () => _showQuitConfirmationDialog(context)),
                         ],
                       ),
                     ),
-                  Container(
+                  PaperPanel(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.white54, width: 1),
-                    ),
+                    elevation: 4,
+                    irregularity: 2.0,
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(20),
+                          if (!_isNavHidden) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                gameState.currentDate?.toString() ??
+                                    "Loading...",
+                                style: GoogleFonts.cinzel(
+                                    color: const Color(0xFFEADBBE),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
-                            child: Text(
-                              gameState.currentDate?.toString() ?? "Loading...",
-                              style: GoogleFonts.cinzel(
-                                  color: Colors.amber[100],
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold),
+                            const SizedBox(width: 4),
+                            TutorialHighlighter(
+                              highlightKey: 'open_horde_panel',
+                              shape: BoxShape.circle,
+                              child: _buildMenuButton(
+                                  icon: Icons.group,
+                                  tooltip: "Horde",
+                                  isActive: gameState.isHordePanelOpen,
+                                  onPressed: () {
+                                    //  Advance tutorial if highlighted
+                                    context
+                                        .read<TutorialService>()
+                                        .advanceIfHighlighted(context,
+                                            gameState, 'open_horde_panel');
+
+                                    context
+                                        .read<TutorialService>()
+                                        .resetTutorialNavigation();
+
+                                    gameNotifier.toggleHordePanel();
+                                  },
+                                  badgeCount: gameState.totalListenCount),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          TutorialHighlighter(
-                            highlightKey: 'open_horde_panel',
-                            shape: BoxShape.circle,
-                            child: _buildMenuButton(
-                                icon: Icons.group,
-                                tooltip: "Horde",
-                                onPressed: () {
-                                  //  Advance tutorial if highlighted
-                                  context
-                                      .read<TutorialService>()
-                                      .advanceIfHighlighted(context, gameState,
-                                          'open_horde_panel');
-
-                                  context
-                                      .read<TutorialService>()
-                                      .resetTutorialNavigation();
-
-                                  gameNotifier.toggleHordePanel();
-                                },
-                                badgeCount: gameState.totalListenCount),
-                          ),
-
-                          _buildMenuButton(
-                              icon: Icons.inventory_2_outlined,
-                              tooltip: "Inventory",
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, '/inventory')),
-                          TutorialHighlighter(
-                            highlightKey: 'open_reports_tab',
-                            shape: BoxShape.circle,
-                            child: _buildMenuButton(
-                                icon: Icons.assessment_outlined,
-                                tooltip: "Reports",
-                                badgeCount: gameState.getReportsBadgeCount(),
-                                onPressed: () {
-                                  context
-                                      .read<TutorialService>()
-                                      .advanceIfHighlighted(context, gameState,
-                                          'open_reports_tab');
-                                  Navigator.pushNamed(context, '/reports');
-                                }),
-                          ),
-                          // Advisor button placeholder if needed
-                          // _buildMenuButton(icon: Icons.people_outline, tooltip: "Advisors", onPressed: () => Navigator.pushNamed(context, '/advisors')),
-
-                          _buildMenuButton(
-                              icon: Icons.flag_outlined,
-                              tooltip: "Camp",
-                              enabled: canNavigateToCamp,
-                              badgeCount: gameState.getCampBadgeCount(),
-                              onPressed: () => Navigator.pushReplacementNamed(
-                                  context, '/camp')),
-                          _buildMenuButton(
-                              icon: Icons.ssid_chart, // Graph icon
-                              tooltip: "Timelines",
-                              enabled: true,
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, '/timelines')),
-                          _buildMenuButton(
-                              icon: Icons.map_outlined,
-                              tooltip: "Area Map",
-                              enabled: canNavigateToArea,
-                              onPressed: () => Navigator.pushReplacementNamed(
-                                  context, '/area')),
-                          _buildMenuButton(
-                              icon: Icons.travel_explore,
-                              tooltip: "Region Map",
-                              enabled: canNavigateToRegion,
-                              onPressed: () => Navigator.pushReplacementNamed(
-                                  context, '/region')),
-                          _buildMenuButton(
-                              icon: Icons.public,
-                              tooltip: "World Map",
-                              enabled: canNavigateToWorldMap,
-                              onPressed: () => Navigator.pushReplacementNamed(
-                                  context, '/world')),
-
-                          if (gameState.isOmniscienceAllowed)
                             _buildMenuButton(
-                                icon: Icons.auto_stories,
-                                tooltip: gameState.isOmniscientMode
-                                    ? "Omniscience ON"
-                                    : "Omniscience OFF",
-                                onPressed: gameNotifier.toggleOmniscientMode),
-
+                                icon: Icons.inventory_2_outlined,
+                                tooltip: "Inventory",
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/inventory')),
+                            TutorialHighlighter(
+                              highlightKey: 'open_reports_tab',
+                              shape: BoxShape.circle,
+                              child: _buildMenuButton(
+                                  icon: Icons.assessment_outlined,
+                                  tooltip: "Reports",
+                                  badgeCount: gameState.getReportsBadgeCount(),
+                                  onPressed: () {
+                                    context
+                                        .read<TutorialService>()
+                                        .advanceIfHighlighted(context,
+                                            gameState, 'open_reports_tab');
+                                    Navigator.pushNamed(context, '/reports');
+                                  }),
+                            ),
+                            _buildMenuButton(
+                                icon: Icons.flag_outlined,
+                                tooltip: "Camp",
+                                enabled: canNavigateToCamp,
+                                badgeCount: gameState.getCampBadgeCount(),
+                                onPressed: () => Navigator.pushReplacementNamed(
+                                    context, '/camp')),
+                            _buildMenuButton(
+                                icon: Icons.ssid_chart, // Graph icon
+                                tooltip: "Timelines",
+                                enabled: true,
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/timelines')),
+                            _buildMenuButton(
+                                icon: Icons.map_outlined,
+                                tooltip: "Area Map",
+                                enabled: canNavigateToArea,
+                                onPressed: () => Navigator.pushReplacementNamed(
+                                    context, '/area')),
+                            _buildMenuButton(
+                                icon: Icons.travel_explore,
+                                tooltip: "Region Map",
+                                enabled: canNavigateToRegion,
+                                onPressed: () => Navigator.pushReplacementNamed(
+                                    context, '/region')),
+                            _buildMenuButton(
+                                icon: Icons.public,
+                                tooltip: "World Map",
+                                enabled: canNavigateToWorldMap,
+                                onPressed: () => Navigator.pushReplacementNamed(
+                                    context, '/world')),
+                            if (gameState.isOmniscienceAllowed)
+                              _buildMenuButton(
+                                  icon: Icons.auto_stories,
+                                  tooltip: gameState.isOmniscientMode
+                                      ? "Omniscience ON"
+                                      : "Omniscience OFF",
+                                  onPressed: gameNotifier.toggleOmniscientMode),
+                          ],
                           _buildMenuButton(
                               icon: _isMenuOpen ? Icons.close : Icons.menu,
                               tooltip: _isMenuOpen ? "Close Menu" : "Menu",
@@ -363,46 +378,61 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                                   _isMenuOpen = !_isMenuOpen;
                                 });
                               }),
-                          if (gameState.isLoading)
-                            Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Tooltip(
-                                message: "Processing turn...",
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.3),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white24, width: 1),
-                                  ),
-                                  child: const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white54),
+                          if (!_isNavHidden) ...[
+                            if (gameState.isLoading)
+                              Padding(
+                                padding: const EdgeInsets.all(2.0),
+                                child: Tooltip(
+                                  message: "Processing turn...",
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.3),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white24, width: 1),
+                                    ),
+                                    child: const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.0,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white54),
+                                      ),
                                     ),
                                   ),
                                 ),
+                              )
+                            else
+                              TutorialHighlighter(
+                                highlightKey: 'next_turn_button',
+                                shape: BoxShape.circle,
+                                child: _buildMenuButton(
+                                    icon: Icons.play_arrow,
+                                    tooltip: "Next Turn",
+                                    onPressed: () {
+                                      context
+                                          .read<TutorialService>()
+                                          .advanceIfHighlighted(context,
+                                              gameState, 'next_turn_button');
+                                      gameNotifier.advanceToNextTurn();
+                                    }),
                               ),
-                            )
-                          else
-                            TutorialHighlighter(
-                              highlightKey: 'next_turn_button',
-                              shape: BoxShape.circle,
-                              child: _buildMenuButton(
-                                  icon: Icons.play_arrow,
-                                  tooltip: "Next Turn",
-                                  onPressed: () {
-                                    context
-                                        .read<TutorialService>()
-                                        .advanceIfHighlighted(context,
-                                            gameState, 'next_turn_button');
-                                    gameNotifier.advanceToNextTurn();
-                                  }),
-                            ),
+                          ],
+                          // Nav concealment toggle
+                          _buildMenuButton(
+                            icon: _isNavHidden
+                                ? Icons.chevron_left
+                                : Icons.chevron_right,
+                            tooltip: _isNavHidden
+                                ? "Show Navigation"
+                                : "Hide Navigation",
+                            onPressed: () =>
+                                setState(() => _isNavHidden = !_isNavHidden),
+                          ),
                         ],
                       ),
                     ),

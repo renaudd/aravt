@@ -1649,90 +1649,17 @@ class HerdsReportTab extends StatelessWidget {
   }
 }
 
-class FoodReportTab extends StatefulWidget {
+class FoodReportTab extends StatelessWidget {
   final int? soldierId;
   const FoodReportTab({super.key, this.soldierId});
 
   @override
-  State<FoodReportTab> createState() => _FoodReportTabState();
-}
-
-class _FoodReportTabState extends State<FoodReportTab>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        final gameState = context.read<GameState>();
-        String subTab = 'Overview';
-        if (_tabController.index == 1) subTab = 'Fishing';
-        if (_tabController.index == 2) subTab = 'Hunting';
-        gameState.markReportTabViewed('Food', subTab: subTab);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          color: Colors.black54,
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: Colors.amber,
-            tabs: [
-              _buildSubTab('Overview', 0),
-              _buildSubTab(
-                  'Fishing',
-                  context
-                      .watch<GameState>()
-                      .getBadgeCountForFoodSubTab('Fishing')),
-              _buildSubTab(
-                  'Hunting',
-                  context
-                      .watch<GameState>()
-                      .getBadgeCountForFoodSubTab('Hunting')),
-            ],
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _FoodOverviewTab(soldierId: widget.soldierId),
-              FishingReportTab(soldierId: widget.soldierId),
-              HuntingReportTab(soldierId: widget.soldierId),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSubTab(String text, int badgeCount) {
-    return Tab(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(text),
-          const SizedBox(width: 4),
-          NotificationBadge(count: badgeCount),
-        ],
-      ),
-    );
+    return _FoodOverviewTab(soldierId: soldierId);
   }
 }
+
+// FoodReportTab is now simplified to just the Overview.
 
 class _FoodOverviewTab extends StatelessWidget {
   final int? soldierId;

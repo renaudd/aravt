@@ -17,6 +17,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:aravt/widgets/paper_panel.dart';
 
 import '../providers/game_state.dart';
 import '../models/soldier_data.dart';
@@ -87,63 +88,62 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
       return idA.compareTo(idB);
     });
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: _maxHeightPixels ??
-            MediaQuery.of(context).size.height * 0.6, // Default 60%
-      ),
-      decoration: BoxDecoration(
-        color: Colors.grey[900]!.withOpacity(0.95),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border.all(color: const Color(0xFFE0D5C1), width: 2),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag handle area
-          GestureDetector(
-            onVerticalDragUpdate: (details) {
-              setState(() {
-                // Initialize if null
-                _maxHeightPixels ??= context.size?.height ??
-                    (MediaQuery.of(context).size.height * 0.6);
+    return PaperPanel(
+      irregularity: 3.0,
+      elevation: 8.0,
+      padding: EdgeInsets.zero,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: _maxHeightPixels ??
+              MediaQuery.of(context).size.height * 0.6, // Default 60%
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle area
+            GestureDetector(
+              onVerticalDragUpdate: (details) {
+                setState(() {
+                  // Initialize if null
+                  _maxHeightPixels ??= context.size?.height ??
+                      (MediaQuery.of(context).size.height * 0.6);
 
-                // Invert delta because dragging UP increases height
-                _maxHeightPixels = (_maxHeightPixels! - details.delta.dy)
-                    .clamp(150.0, MediaQuery.of(context).size.height * 0.9);
-              });
-            },
-            behavior:
-                HitTestBehavior.translucent, // Catch taps on transparent area
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              alignment: Alignment.center,
-              child: Container(
-                  height: 4,
-                  width: 40,
-                  decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2))),
-            ),
-          ),
-          Flexible(
-
-            fit: FlexFit.loose,
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              itemCount: sortedAravts.length,
-              itemBuilder: (context, index) {
-                return _AravtRow(
-                    aravt: sortedAravts[index],
-                    gameState: gameState,
-                    sprites: _sprites,
-                    vsync: this);
+                  // Invert delta because dragging UP increases height
+                  _maxHeightPixels = (_maxHeightPixels! - details.delta.dy)
+                      .clamp(150.0, MediaQuery.of(context).size.height * 0.9);
+                });
               },
+              behavior:
+                  HitTestBehavior.translucent, // Catch taps on transparent area
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                alignment: Alignment.center,
+                child: Container(
+                    height: 4,
+                    width: 40,
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFA68B5B).withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(2))),
+              ),
             ),
-          ),
-        ],
+            Flexible(
+              fit: FlexFit.loose,
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                itemCount: sortedAravts.length,
+                itemBuilder: (context, index) {
+                  return _AravtRow(
+                      aravt: sortedAravts[index],
+                      gameState: gameState,
+                      sprites: _sprites,
+                      vsync: this);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -199,12 +199,13 @@ class _AravtRowState extends State<_AravtRow> {
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(8),
+          color: const Color(0xFFEADBBE).withOpacity(0.8),
+          borderRadius: BorderRadius.circular(4),
           border: Border.all(
               color: isLeader
-                  ? Colors.amber
-                  : (isPlayer ? const Color(0xFFE0D5C1) : Colors.white24))),
+                  ? Colors.amber[700]!
+                  : (isPlayer ? const Color(0xFFA68B5B) : Colors.black12),
+              width: isLeader || isPlayer ? 2.0 : 1.0)),
       child: Column(
         children: [
           SizedBox(
@@ -271,9 +272,7 @@ class _AravtRowState extends State<_AravtRow> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.cinzel(
-                              color: isPlayer
-                                  ? const Color(0xFFE0D5C1)
-                                  : Colors.white,
+                              color: const Color(0xFF2D241E), // Dark Espresso
                               fontWeight: FontWeight.bold,
                               fontSize: 14)),
                       GestureDetector(
@@ -304,7 +303,8 @@ class _AravtRowState extends State<_AravtRow> {
                     clipBehavior: Clip.none,
                     children: [
                       Icon(_isExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.white54),
+                          color:
+                              const Color(0xFF4A3F35).withValues(alpha: 0.7)),
                       if (widget.aravt.soldierIds.any((id) {
                             final s = widget.gameState.findSoldierById(id);
                             return s != null &&
@@ -327,7 +327,7 @@ class _AravtRowState extends State<_AravtRow> {
           if (_isExpanded)
             Container(
               padding: const EdgeInsets.all(8.0),
-              color: Colors.black87,
+              color: const Color(0xFFDCCFAD).withValues(alpha: 0.5),
               child: Column(
                 children: widget.aravt.soldierIds.map((id) {
                   final s = widget.gameState.findSoldierById(id);
@@ -349,9 +349,8 @@ class _AravtRowState extends State<_AravtRow> {
                         children: [
                           Text(s.name,
                               style: GoogleFonts.cinzel(
-                                  color: s.isPlayer
-                                      ? const Color(0xFFE0D5C1)
-                                      : Colors.white70,
+                                  color:
+                                      const Color(0xFF2D241E), // Dark Espresso
                                   fontSize: 12,
                                   fontWeight: s.isPlayer
                                       ? FontWeight.bold
