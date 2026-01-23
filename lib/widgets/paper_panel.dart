@@ -25,6 +25,8 @@ class PaperPanel extends StatelessWidget {
   final EdgeInsets padding;
   final double? width;
   final double? height;
+  final int seed;
+  final int segmentsPerSide;
 
   const PaperPanel({
     super.key,
@@ -37,6 +39,8 @@ class PaperPanel extends StatelessWidget {
     this.padding = const EdgeInsets.all(16.0),
     this.width,
     this.height,
+    this.seed = 42,
+    this.segmentsPerSide = 20,
   });
 
   @override
@@ -51,9 +55,15 @@ class PaperPanel extends StatelessWidget {
           borderWidth: borderWidth,
           irregularity: irregularity,
           elevation: elevation,
+          seed: seed,
+          segmentsPerSide: segmentsPerSide,
         ),
         child: ClipPath(
-          clipper: _PaperClipper(irregularity: irregularity),
+          clipper: _PaperClipper(
+            irregularity: irregularity,
+            seed: seed,
+            segmentsPerSide: segmentsPerSide,
+          ),
           child: Padding(
             padding: padding,
             child: child,
@@ -66,12 +76,18 @@ class PaperPanel extends StatelessWidget {
 
 class _PaperClipper extends CustomClipper<Path> {
   final double irregularity;
+  final int seed;
+  final int segmentsPerSide;
 
-  _PaperClipper({required this.irregularity});
+  _PaperClipper({
+    required this.irregularity,
+    required this.seed,
+    required this.segmentsPerSide,
+  });
 
   @override
   Path getClip(Size size) {
-    return _generatePaperPath(size, irregularity);
+    return _generatePaperPath(size, irregularity, seed, segmentsPerSide);
   }
 
   @override
@@ -84,6 +100,8 @@ class _PaperPainter extends CustomPainter {
   final double borderWidth;
   final double irregularity;
   final double elevation;
+  final int seed;
+  final int segmentsPerSide;
 
   _PaperPainter({
     required this.color,
@@ -91,11 +109,13 @@ class _PaperPainter extends CustomPainter {
     required this.borderWidth,
     required this.irregularity,
     required this.elevation,
+    required this.seed,
+    required this.segmentsPerSide,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = _generatePaperPath(size, irregularity);
+    final path = _generatePaperPath(size, irregularity, seed, segmentsPerSide);
 
     // Draw shadow
     if (elevation > 0) {
@@ -122,11 +142,10 @@ class _PaperPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-Path _generatePaperPath(Size size, double irregularity) {
+Path _generatePaperPath(
+    Size size, double irregularity, int seed, int segmentsPerSide) {
   final path = Path();
-  final random = Random(42); // Seeded for consistency
-
-  const int segmentsPerSide = 20;
+  final random = Random(seed); // Seeded for consistency
 
   // Top edge
   path.moveTo(0, 0);

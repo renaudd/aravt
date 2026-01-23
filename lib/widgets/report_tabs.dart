@@ -28,6 +28,7 @@ import 'package:aravt/models/culinary_news.dart';
 import 'package:aravt/models/fletching_report.dart';
 import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'package:aravt/widgets/notification_badge.dart';
+import 'package:aravt/widgets/paper_panel.dart';
 import '../screens/post_combat_report_screen.dart';
 import 'dart:math' as math;
 
@@ -140,6 +141,113 @@ Widget _buildLedgerTable(List<_LedgerEntry> entries, BuildContext context) {
 }
 
 // --- COMMON HELPER WIDGETS ---
+// --- CATEGORIZED WRAPPERS ---
+
+class NestedReportCategory extends StatefulWidget {
+  final String categoryName;
+  final List<String> tabNames;
+  final List<Widget> children;
+  final List<IconData> icons;
+
+  const NestedReportCategory({
+    super.key,
+    required this.categoryName,
+    required this.tabNames,
+    required this.children,
+    required this.icons,
+  });
+
+  @override
+  State<NestedReportCategory> createState() => _NestedReportCategoryState();
+}
+
+class _NestedReportCategoryState extends State<NestedReportCategory>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: widget.children.length, vsync: this);
+
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        final gameState = context.read<GameState>();
+        gameState.markReportTabViewed(widget.categoryName,
+            subTab: widget.tabNames[_tabController.index]);
+      }
+    });
+
+    // Mark current subtab as viewed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<GameState>().markReportTabViewed(widget.categoryName,
+          subTab: widget.tabNames[_tabController.index]);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gameState = context.watch<GameState>();
+
+    return Column(
+      children: [
+        Container(
+          color: Colors.black26,
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: Colors.amber,
+            tabAlignment: TabAlignment.start,
+            labelColor: Colors.amber,
+            unselectedLabelColor: Colors.white60,
+            labelStyle:
+                GoogleFonts.cinzel(fontSize: 11, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: GoogleFonts.cinzel(fontSize: 11),
+            tabs: List.generate(widget.tabNames.length, (index) {
+              final subTabBadgeCount =
+                  gameState.getBadgeCountForTab(widget.tabNames[index]);
+              return Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(widget.icons[index], size: 16),
+                        Positioned(
+                          right: -8,
+                          top: -8,
+                          child: NotificationBadge(
+                              count: subTabBadgeCount, size: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(widget.tabNames[index]),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: widget.children,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 BoxDecoration _tabBackground() {
   return const BoxDecoration(
     image: DecorationImage(
@@ -248,28 +356,40 @@ class EventLogTab extends StatelessWidget {
         itemBuilder: (context, index) {
           final event = events[index];
           final isPlayerAravt = gameState.isPlayerAravtReport(event);
-          return Card(
-            color: isPlayerAravt
-                ? Colors.amber.withOpacity(0.2)
-                : Colors.black.withOpacity(0.6),
-            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            borderOnForeground: true,
-            shape: isPlayerAravt
-                ? RoundedRectangleBorder(
-                    side: const BorderSide(color: Colors.amber, width: 1),
-                    borderRadius: BorderRadius.circular(4),
-                  )
-                : null,
-            child: ListTile(
-              leading: Icon(_getIconForEvent(event.category),
-                  color: _getColorForSeverity(event.severity)),
-              title: Text(
-                event.message,
-                style: GoogleFonts.cinzel(color: Colors.white),
-              ),
-              subtitle: Text(
-                event.date.toString(),
-                style: const TextStyle(color: Colors.white70),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            child: PaperPanel(
+              padding: EdgeInsets.zero,
+              irregularity: 2.0,
+              segmentsPerSide: 12,
+              seed: event.hashCode,
+              backgroundColor: isPlayerAravt
+                  ? const Color(0xFFF2ECD8).withValues(alpha: 0.9)
+                  : const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+              borderColor: isPlayerAravt
+                  ? Colors.amber.shade700
+                  : const Color(0xFFE0D5C1).withValues(alpha: 0.3),
+              borderWidth: 1.0,
+              elevation: 2.0,
+              child: ListTile(
+                leading: Icon(_getIconForEvent(event.category),
+                    color: _getColorForSeverity(event.severity)),
+                title: Text(
+                  event.message,
+                  style: GoogleFonts.cinzel(
+                      color: isPlayerAravt
+                          ? const Color(0xFF2D241E)
+                          : Colors.white,
+                      fontSize: 13),
+                ),
+                subtitle: Text(
+                  event.date.toString(),
+                  style: TextStyle(
+                      color: isPlayerAravt
+                          ? const Color(0xFF4A3F35)
+                          : Colors.white70,
+                      fontSize: 11),
+                ),
               ),
             ),
           );
@@ -341,34 +461,44 @@ class CombatReportTab extends StatelessWidget {
         itemCount: reversedReports.length,
         itemBuilder: (context, index) {
           final report = reversedReports[index];
-          return Card(
-            color: Colors.black.withOpacity(0.5),
-            margin: const EdgeInsets.only(bottom: 8.0),
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        PostCombatReportScreen(report: report),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, left: 8.0, right: 8.0),
+            child: PaperPanel(
+              padding: EdgeInsets.zero,
+              irregularity: 2.5,
+              segmentsPerSide: 15,
+              seed: report.hashCode,
+              backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+              borderColor:
+                  _getColorForReport(report.result).withValues(alpha: 0.4),
+              borderWidth: 1.5,
+              elevation: 4.0,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          PostCombatReportScreen(report: report),
+                    ),
+                  );
+                },
+                child: ListTile(
+                  leading: Icon(_getIconForReport(report.result),
+                      color: _getColorForReport(report.result), size: 40),
+                  title: Text(
+                    _getTitleForReport(report.result),
+                    style: GoogleFonts.cinzel(
+                        color: _getColorForReport(report.result),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
-                );
-              },
-            child: ListTile(
-              leading: Icon(_getIconForReport(report.result),
-                  color: _getColorForReport(report.result), size: 40),
-              title: Text(
-                _getTitleForReport(report.result),
-                style: GoogleFonts.cinzel(
-                    color: _getColorForReport(report.result),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+                  subtitle: Text(
+                    "${report.date.toString()}\n${report.playerInitialCount} soldiers vs ${report.enemyInitialCount} enemies",
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ),
               ),
-              subtitle: Text(
-                "${report.date.toString()}\n${report.playerInitialCount} soldiers vs ${report.enemyInitialCount} enemies",
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ),
             ),
           );
         },
@@ -451,12 +581,22 @@ class HealthReportTab extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           itemCount: issues.length,
           itemBuilder: (context, index) {
-            return Card(
-              color: Colors.black.withOpacity(0.6),
-              child: ListTile(
-                leading: const Icon(Icons.local_hospital, color: Colors.red),
-                title: Text(issues[index],
-                    style: GoogleFonts.cinzel(color: Colors.white)),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: PaperPanel(
+                padding: EdgeInsets.zero,
+                irregularity: 2.0,
+                segmentsPerSide: 12,
+                seed: index,
+                backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+                borderColor: Colors.red.withValues(alpha: 0.3),
+                borderWidth: 1.0,
+                elevation: 2.0,
+                child: ListTile(
+                  leading: const Icon(Icons.local_hospital, color: Colors.red),
+                  title: Text(issues[index],
+                      style: GoogleFonts.cinzel(color: Colors.white)),
+                ),
               ),
             );
           },
@@ -484,14 +624,24 @@ class HealthReportTab extends StatelessWidget {
             int injuryCount = s.injuries.length +
                 (s.ailments != null ? 1 : 0) +
                 (s.startingInjury != StartingInjuryType.none ? 1 : 0);
-            return Card(
-              color: Colors.black.withOpacity(0.6),
-              child: ListTile(
-                leading: const Icon(Icons.person, color: Colors.white70),
-                title: Text(s.name,
-                    style: GoogleFonts.cinzel(color: Colors.white)),
-                subtitle: Text("$injuryCount health issues",
-                    style: const TextStyle(color: Colors.white70)),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: PaperPanel(
+                padding: EdgeInsets.zero,
+                irregularity: 2.0,
+                segmentsPerSide: 12,
+                seed: s.hashCode,
+                backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+                borderColor: Colors.white12,
+                borderWidth: 1.0,
+                elevation: 2.0,
+                child: ListTile(
+                  leading: const Icon(Icons.person, color: Colors.white70),
+                  title: Text(s.name,
+                      style: GoogleFonts.cinzel(color: Colors.white)),
+                  subtitle: Text("$injuryCount health issues",
+                      style: const TextStyle(color: Colors.white70)),
+                ),
               ),
             );
           },
@@ -531,8 +681,8 @@ class _CommerceReportTabState extends State<CommerceReportTab> {
           _buildSegmentedControl(),
           Expanded(
             child: _selectedIndex == 0
-                ? const _FinanceView()
-                : const _IndustryView(),
+                ? const FinanceReportTab()
+                : const IndustryReportTab(),
           ),
         ],
       ),
@@ -624,14 +774,14 @@ class _CommerceReportTabState extends State<CommerceReportTab> {
 
 // --- SUB-VIEW 1: FINANCE ---
 
-class _FinanceView extends StatefulWidget {
-  const _FinanceView();
+class FinanceReportTab extends StatefulWidget {
+  const FinanceReportTab({super.key});
 
   @override
-  State<_FinanceView> createState() => _FinanceViewState();
+  State<FinanceReportTab> createState() => _FinanceReportTabState();
 }
 
-class _FinanceViewState extends State<_FinanceView> {
+class _FinanceReportTabState extends State<FinanceReportTab> {
   String _selectedWealthView = 'total'; // total, personal, communal, aravt, npc
 
   @override
@@ -661,56 +811,57 @@ class _FinanceViewState extends State<_FinanceView> {
                   style: TextStyle(color: Colors.white54))));
     }
 
-    return Card(
-      color: Colors.black.withOpacity(0.6),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Wealth History (Last 30 Turns)",
-                    style: GoogleFonts.cinzel(color: Colors.amber)),
-                _buildWealthViewToggle(),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildCurrentWealthSummary(gameState),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 150,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: gameState.wealthHistory.asMap().entries.map((entry) {
-                  bool isLoss = entry.key > 0 &&
-                      entry.value < gameState.wealthHistory[entry.key - 1];
-                  double maxWealth = gameState.wealthHistory.reduce(math.max);
-                  if (maxWealth == 0) maxWealth = 1;
+    return PaperPanel(
+      backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+      borderColor: Colors.amber.withValues(alpha: 0.2),
+      borderWidth: 1.0,
+      irregularity: 3.0,
+      elevation: 6,
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Wealth History (Last 30 Turns)",
+                  style: GoogleFonts.cinzel(color: Colors.amber)),
+              _buildWealthViewToggle(),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildCurrentWealthSummary(gameState),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 150,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: gameState.wealthHistory.asMap().entries.map((entry) {
+                bool isLoss = entry.key > 0 &&
+                    entry.value < gameState.wealthHistory[entry.key - 1];
+                double maxWealth = gameState.wealthHistory.reduce(math.max);
+                if (maxWealth == 0) maxWealth = 1;
 
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                      child: FractionallySizedBox(
-                        heightFactor:
-                            (entry.value / maxWealth).clamp(0.05, 1.0),
-                        alignment: Alignment.bottomCenter,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isLoss ? Colors.red[400] : Colors.green[400],
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(4)),
-                          ),
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    child: FractionallySizedBox(
+                      heightFactor: (entry.value / maxWealth).clamp(0.05, 1.0),
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isLoss ? Colors.red[400] : Colors.green[400],
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(4)),
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                );
+              }).toList(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -988,8 +1139,8 @@ class _FinanceViewState extends State<_FinanceView> {
 
 // --- SUB-VIEW 2: INDUSTRY ---
 
-class _IndustryView extends StatelessWidget {
-  const _IndustryView();
+class IndustryReportTab extends StatelessWidget {
+  const IndustryReportTab({super.key});
 
   @override
   Widget build(BuildContext context) {

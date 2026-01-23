@@ -31,20 +31,16 @@ class GlobalReportsScreen extends StatefulWidget {
 
 class _GlobalReportsScreenState extends State<GlobalReportsScreen>
     with SingleTickerProviderStateMixin {
-  final int _tabCount = 9;
+  final int _tabCount = 5;
   late TabController _tabController;
 
-  // Tab names
+  // Tab names (Categories)
   final List<String> _tabNames = [
-    'Event Log',
-    'Combat',
-    'Health',
-    'Commerce',
-    'Herds',
-    'Food',
-    'Games',
-    'Training',
-    'Diplomacy',
+    'Chronicle',
+    'Treasury',
+    'Provisions',
+    'Military',
+    'World',
   ];
 
   @override
@@ -106,61 +102,91 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: TabBar(
-          controller: _tabController, //  Use our controller
+          controller: _tabController,
           isScrollable: true,
           indicatorColor: Colors.amber,
           labelStyle: GoogleFonts.cinzel(fontWeight: FontWeight.bold),
           unselectedLabelStyle: GoogleFonts.cinzel(),
           tabs: [
-            _buildTab("Event Log", Icons.book,
-                gameState.getBadgeCountForTab("Event Log")),
-            _buildTab("Combat", Icons.sports_kabaddi,
-                gameState.getBadgeCountForTab("Combat")),
-            _buildTab("Health", Icons.local_hospital_outlined,
-                gameState.getBadgeCountForTab("Health")),
-            _buildTab("Commerce", Icons.storefront,
-                gameState.getBadgeCountForTab("Commerce")),
+            _buildTab("Chronicle", Icons.book,
+                gameState.getBadgeCountForTab("Chronicle")),
+            _buildTab("Treasury", Icons.monetization_on,
+                gameState.getBadgeCountForTab("Treasury")),
+            _buildTab("Provisions", Icons.savings,
+                gameState.getBadgeCountForTab("Provisions")),
+            _buildTab("Military", Icons.military_tech,
+                gameState.getBadgeCountForTab("Military")),
             _buildTab(
-                "Herds", Icons.savings, gameState.getBadgeCountForTab("Herds")),
-            _buildTab("Food", Icons.local_dining_outlined,
-                gameState.getBadgeCountForTab("Food")),
-            _buildTab("Hunting", Icons.search,
-                gameState.getBadgeCountForTab("Hunting")),
-            _buildTab("Fishing", Icons.water_outlined,
-                gameState.getBadgeCountForTab("Fishing")),
-            _buildTab("Games", Icons.emoji_events_outlined,
-                gameState.getBadgeCountForTab("Games")),
-            _buildTab("Training", Icons.fitness_center,
-                gameState.getBadgeCountForTab("Training")),
-            _buildTab("Diplomacy", Icons.handshake,
-                gameState.getBadgeCountForTab("Diplomacy")),
+                "World", Icons.public, gameState.getBadgeCountForTab("World")),
           ],
         ),
       ),
       body: Stack(
         children: [
           TabBarView(
-            controller: _tabController, //  Use our controller
+            controller: _tabController,
             children: [
-              EventLogTab(
-                  isOmniscient: gameState.isOmniscientMode, soldierId: null),
-              const CombatReportTab(soldierId: null),
-              const HealthReportTab(soldierId: null),
-              CommerceReportTab(
-                  isOmniscient: gameState.isOmniscientMode, soldierId: null),
-              const HerdsReportTab(soldierId: null),
-              const FoodReportTab(soldierId: null),
-              const HuntingReportTab(soldierId: null),
-              const FishingReportTab(soldierId: null),
-              const GamesReportTab(soldierId: null),
-              const TrainingReportTab(soldierId: null),
+              // 1. Chronicle: Event Log & Combat
+              NestedReportCategory(
+                categoryName: 'Chronicle',
+                tabNames: const ["Event Log", "Combat"],
+                icons: const [Icons.list_alt, Icons.sports_kabaddi],
+                children: [
+                  EventLogTab(
+                      isOmniscient: gameState.isOmniscientMode,
+                      soldierId: null),
+                  const CombatReportTab(soldierId: null),
+                ],
+              ),
+              // 2. Treasury: Finance & Industry
+              const NestedReportCategory(
+                categoryName: 'Treasury',
+                tabNames: ["Finance", "Industry"],
+                icons: [Icons.account_balance_wallet, Icons.build],
+                children: [
+                  FinanceReportTab(),
+                  IndustryReportTab(),
+                ],
+              ),
+              // 3. Provisions: Herds, Food, Hunting, Fishing
+              const NestedReportCategory(
+                categoryName: 'Provisions',
+                tabNames: ["Herds", "Food", "Hunting", "Fishing"],
+                icons: [
+                  Icons.cruelty_free,
+                  Icons.restaurant,
+                  Icons.search,
+                  Icons.water
+                ],
+                children: [
+                  HerdsReportTab(soldierId: null),
+                  FoodReportTab(soldierId: null),
+                  HuntingReportTab(soldierId: null),
+                  FishingReportTab(soldierId: null),
+                ],
+              ),
+              // 4. Military: Health, Training, Games
+              const NestedReportCategory(
+                categoryName: 'Military',
+                tabNames: ["Health", "Training", "Games"],
+                icons: [
+                  Icons.local_hospital,
+                  Icons.fitness_center,
+                  Icons.emoji_events
+                ],
+                children: [
+                  HealthReportTab(soldierId: null),
+                  TrainingReportTab(soldierId: null),
+                  GamesReportTab(soldierId: null),
+                ],
+              ),
+              // 5. The World: Diplomacy
               const DiplomacyReportTab(soldierId: null),
             ],
           ),
           const PersistentMenuWidget(),
         ],
       ),
-      // bottomNavigationBar removed as PersistentMenuWidget is now in Stack
     );
   }
 }

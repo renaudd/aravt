@@ -18,23 +18,47 @@ import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
 import '../services/tutorial_service.dart';
 import '../widgets/grid_portrait_widget.dart';
+import '../widgets/paper_panel.dart';
 
-class TutorialOverlayWidget extends StatelessWidget {
+class TutorialOverlayWidget extends StatefulWidget {
   const TutorialOverlayWidget({super.key});
+
+  @override
+  State<TutorialOverlayWidget> createState() => _TutorialOverlayWidgetState();
+}
+
+class _TutorialOverlayWidgetState extends State<TutorialOverlayWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _arrowController;
+  late Animation<double> _arrowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _arrowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+    _arrowAnimation = Tween<double>(begin: 0, end: 15).animate(
+        CurvedAnimation(parent: _arrowController, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _arrowController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<TutorialService, GameState>(
       builder: (context, tutorial, gameState, child) {
-        // If tutorial is not active or no step is defined, show nothing.
-        // If tutorial is not active or no step is defined, check for resumption
         if (!tutorial.isActive || tutorial.currentStep == null) {
           final currentTurn = gameState.turn.turnNumber;
           if (!gameState.tutorialCompleted &&
               !gameState.tutorialPermanentlyDismissed &&
-              gameState.player != null && // Ensure game is active
-              gameState.tutorialStepIndex >
-                  0 && // Ensure tutorial has started (Step 0 handled by CampScreen)
+              gameState.player != null &&
+              gameState.tutorialStepIndex > 0 &&
               currentTurn > tutorial.lastTurnStarted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               tutorial.startTutorial(context, gameState);
@@ -43,143 +67,141 @@ class TutorialOverlayWidget extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-
         final captain = tutorial.getTutorialCaptain(gameState);
-
-        // [DEBUG] Check why portrait might be missing
-        if (tutorial.isActive && tutorial.currentStep != null) {
-          print("[TUTORIAL OVERLAY] Active. Captain Found: ${captain?.name}");
-        }
-
         final step = tutorial.currentStep!;
-
-        // Visual cue if they are annoyed (dismissal count > 0).
-        // The service increments this count when 'Dismiss' is clicked.
         final isAnnoyed = gameState.tutorialDismissalCount > 0;
 
         return Stack(
           children: [
+            // --- Global Bobbing Red Arrow ---
+            // This is rendered above everything else
+            if (tutorial.highlightPosition != null)
+              Positioned(
+                left: tutorial.highlightPosition!.center.dx - 25,
+                top: tutorial.highlightPosition!.top - 65,
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _arrowAnimation,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, _arrowAnimation.value),
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CustomPaint(
+                            painter: _RedArrowPainter(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
             // --- Floating Captain Portrait (Bottom Left) ---
             Positioned(
               bottom: 0,
-              left: 0, // Hug the left edge
+              left: 0,
               child: Container(
-                // No border or background as requested
                 child: GridPortraitWidget(
                     key: ValueKey(
                         'portrait_${tutorial.captainPortraitIndex}_${tutorial.isShowingAngryPortrait}'),
                     imagePath: tutorial.getCaptainPortraitPath(),
                     gridIndex: tutorial.captainPortraitIndex,
-                    size: 200), // Double size (from 100)
+                    size: 150),
               ),
             ),
 
             // --- Dialogue Box (Bottom Right) ---
             Positioned(
-              bottom: 80, // Above persistent menu
+              bottom: 80,
               right: 16,
-              left:
-                  220, // Leave even more space for portrait, making box narrower
-              child: Material(
-                color: Colors.transparent,
-                elevation: 20,
-                child: Container(
-                  padding: const EdgeInsets.all(8), // Even less padding
-                  decoration: BoxDecoration(
-                    color: isAnnoyed
-                        ? const Color(0xFF2a1a1a).withOpacity(0.95)
-                        : const Color(0xFF1a1a1a).withOpacity(0.95),
-                    border: Border.all(
-                        color: isAnnoyed
-                            ? Colors.red.shade800
-                            : const Color(0xFFE0D5C1),
-                        width: 2),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.7),
-                          blurRadius: 15,
-                          spreadRadius: 5,
-                          offset: const Offset(0, 4))
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(captain?.name ?? "Aravt Captain",
-                          style: GoogleFonts.cinzel(
-                              color: isAnnoyed
-                                  ? Colors.red.shade300
-                                  : const Color(0xFFE0D5C1),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)), // Further reduced font size
-                      const SizedBox(height: 4),
-                      Text(step.text,
-                          style: GoogleFonts.inter(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 12, // Further reduced font size
-                              height: 1.1)),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (!step.isConclude)
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
+              left: 170, // Consistent space for portrait
+              child: PaperPanel(
+                backgroundColor: isAnnoyed
+                    ? const Color(0xFF2D1A1A).withValues(alpha: 0.95)
+                    : const Color(0xFF1A1A1A).withValues(alpha: 0.95),
+                borderColor: isAnnoyed
+                    ? Colors.red.shade900
+                    : const Color(0xFFE0D5C1).withValues(alpha: 0.4),
+                borderWidth: 2.0,
+                irregularity: 3.5,
+                elevation: 12,
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(captain?.name ?? "Aravt Captain",
+                        style: GoogleFonts.cinzel(
+                            color: isAnnoyed
+                                ? Colors.red.shade300
+                                : const Color(0xFFE0D5C1),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(step.text,
+                        style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                            height: 1.1)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (!step.isConclude)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 0),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () =>
+                                tutorial.dismiss(context, gameState),
+                            child: Text("Dismiss",
+                                style: GoogleFonts.cinzel(
+                                    color: Colors.white38, fontSize: 10)),
+                          ),
+                        if (step.isConclude) ...[
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE0D5C1),
+                                foregroundColor: Colors.black,
+                                elevation: 5,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 minimumSize: const Size(0, 0),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () =>
-                                  tutorial.dismiss(context, gameState),
-                              child: Text("Dismiss",
-                                  style: GoogleFonts.cinzel(
-                                      color: Colors.white38, fontSize: 10)),
-                            ),
-                          if (step.isConclude) ...[
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE0D5C1),
-                                  foregroundColor: Colors.black,
-                                  elevation: 5,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  minimumSize: const Size(0, 0),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap),
-                              onPressed: () =>
-                                  tutorial.complete(gameState, success: true),
-                              child: Text("Conclude",
-                                  style: GoogleFonts.cinzel(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10)),
-                            ),
-                          ] else if (step.highlightKey == null) ...[
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE0D5C1),
-                                  foregroundColor: Colors.black,
-                                  elevation: 5,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  minimumSize: const Size(0, 0),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap),
-                              onPressed: () =>
-                                  tutorial.advance(context, gameState),
-                              child: Text("Continue",
-                                  style: GoogleFonts.cinzel(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10)),
-                            ),
-                          ],
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap),
+                            onPressed: () =>
+                                tutorial.complete(gameState, success: true),
+                            child: Text("Conclude",
+                                style: GoogleFonts.cinzel(
+                                    fontWeight: FontWeight.bold, fontSize: 10)),
+                          ),
+                        ] else if (step.highlightKey == null) ...[
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE0D5C1),
+                                foregroundColor: Colors.black,
+                                elevation: 5,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                minimumSize: const Size(0, 0),
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap),
+                            onPressed: () =>
+                                tutorial.advance(context, gameState),
+                            child: Text("Continue",
+                                style: GoogleFonts.cinzel(
+                                    fontWeight: FontWeight.bold, fontSize: 10)),
+                          ),
                         ],
-                      )
-                    ],
-                  ),
+                      ],
+                    )
+                  ],
                 ),
               ),
             ),
@@ -188,4 +210,39 @@ class TutorialOverlayWidget extends StatelessWidget {
       },
     );
   }
+}
+
+class _RedArrowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.red.shade900
+      ..style = PaintingStyle.fill;
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    final path = Path();
+    path.moveTo(size.width * 0.5, size.height);
+    path.lineTo(size.width * 0.05, size.height * 0.45);
+    path.lineTo(size.width * 0.3, size.height * 0.45);
+    path.lineTo(size.width * 0.3, 0);
+    path.lineTo(size.width * 0.7, 0);
+    path.lineTo(size.width * 0.7, size.height * 0.45);
+    path.lineTo(size.width * 0.95, size.height * 0.45);
+    path.close();
+
+    canvas.drawPath(path.shift(const Offset(2, 3)), shadowPaint);
+    canvas.drawPath(path, paint);
+
+    final highlightPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawPath(path, highlightPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

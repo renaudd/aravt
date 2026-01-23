@@ -193,194 +193,197 @@ class _AravtRowState extends State<_AravtRow> {
     final bool canAssign =
         widget.gameState.player?.role == SoldierRole.hordeLeader;
 
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: PaperPanel(
+        padding: EdgeInsets.zero,
+        irregularity: 2.0,
+        segmentsPerSide: 15,
+        seed: widget.aravt.id.hashCode,
+        backgroundColor: const Color(0xFFEADBBE).withValues(alpha: 0.85),
+        borderColor: isLeader
+            ? Colors.amber[700]!
+            : (isPlayer ? const Color(0xFFA68B5B) : Colors.black12),
+        borderWidth: isLeader || isPlayer ? 2.0 : 1.0,
+        elevation: isLeader || isPlayer ? 4.0 : 2.0,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 64,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      //  Advance tutorial if highlighted
+                      if (isPlayer) {
+                        final tutorial = context.read<TutorialService>();
+                        tutorial.advanceIfHighlighted(
+                            context, widget.gameState, 'open_player_profile');
 
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      decoration: BoxDecoration(
-          color: const Color(0xFFEADBBE).withOpacity(0.8),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-              color: isLeader
-                  ? Colors.amber[700]!
-                  : (isPlayer ? const Color(0xFFA68B5B) : Colors.black12),
-              width: isLeader || isPlayer ? 2.0 : 1.0)),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 64,
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    //  Advance tutorial if highlighted
-                    if (isPlayer) {
-                      final tutorial = context.read<TutorialService>();
-                      tutorial.advanceIfHighlighted(
-                          context, widget.gameState, 'open_player_profile');
-
-                      //  Close panel if tutorial is active (requested exception)
-                      if (tutorial.isActive) {
-                        widget.gameState.setHordePanelOpen(false);
+                        //  Close panel if tutorial is active (requested exception)
+                        if (tutorial.isActive) {
+                          widget.gameState.setHordePanelOpen(false);
+                        }
                       }
-                    }
-                    if (captain != null) {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  SoldierProfileScreen(soldierId: captain.id)));
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(6.0),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        isPlayer
-                            ? TutorialHighlighter(
-                                highlightKey: 'open_player_profile',
-                                child: SoldierPortrait(
-                                    index: captain?.portraitIndex ?? 0,
-                                    size: 52,
-                                    backgroundColor: captain?.backgroundColor ??
-                                        Colors.grey),
-                              )
-                            : SoldierPortrait(
-                                index: captain?.portraitIndex ?? 0,
-                                size: 52,
-                                backgroundColor:
-                                    captain?.backgroundColor ?? Colors.grey),
-                        if (captain?.queuedListenItem != null)
-                          const Positioned(
-                            right: -5,
-                            top: -5,
-                            child: NotificationBadge(count: 1),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(captain?.name ?? "Unknown Captain",
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.cinzel(
-                              color: const Color(0xFF2D241E), // Dark Espresso
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14)),
-                      GestureDetector(
-
-                        onTap: canAssign
-                            ? () => _showReassignmentDialog(
-                                context, widget.aravt, widget.gameState)
-                            : null,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2.0),
-
-                          child: _buildAssignmentText(isEditable: canAssign),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: _AravtSpriteProgressBar(
-                      aravt: widget.aravt,
-                      gameState: widget.gameState,
-                      sprites: widget.sprites,
-                      vsync: widget.vsync),
-                ),
-                IconButton(
-                  icon: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Icon(_isExpanded ? Icons.expand_less : Icons.expand_more,
-                          color:
-                              const Color(0xFF4A3F35).withValues(alpha: 0.7)),
-                      if (widget.aravt.soldierIds.any((id) {
-                            final s = widget.gameState.findSoldierById(id);
-                            return s != null &&
-                                s.queuedListenItem != null &&
-                                !s.isPlayer;
-                          }) &&
-                          !_isExpanded)
-                        const Positioned(
-                          right: -2,
-                          top: -2,
-                          child: NotificationBadge(count: 1, size: 10),
-                        ),
-                    ],
-                  ),
-                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                ),
-              ],
-            ),
-          ),
-          if (_isExpanded)
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              color: const Color(0xFFDCCFAD).withValues(alpha: 0.5),
-              child: Column(
-                children: widget.aravt.soldierIds.map((id) {
-                  final s = widget.gameState.findSoldierById(id);
-                  if (s == null) return const SizedBox.shrink();
-                  String duty = "";
-                  widget.aravt.dutyAssignments.forEach((k, v) {
-                    if (v == s.id) duty = k.name;
-                  });
-                  return InkWell(
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) =>
-                                SoldierProfileScreen(soldierId: s.id))),
+                      if (captain != null) {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => SoldierProfileScreen(
+                                    soldierId: captain.id)));
+                      }
+                    },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 4.0, horizontal: 4.0),
-                      child: Row(
+                      padding: const EdgeInsets.all(6.0),
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          Text(s.name,
-                              style: GoogleFonts.cinzel(
-                                  color:
-                                      const Color(0xFF2D241E), // Dark Espresso
-                                  fontSize: 12,
-                                  fontWeight: s.isPlayer
-                                      ? FontWeight.bold
-                                      : FontWeight.normal)),
-                          if (s.queuedListenItem != null)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 8.0),
-                              child: NotificationBadge(count: 1, size: 14),
-                            ),
-                          const Spacer(),
-                          if (duty.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                  color: Colors.blueGrey[900],
-                                  borderRadius: BorderRadius.circular(4)),
-                              child: Text(duty,
-                                  style: GoogleFonts.cinzel(
-                                      color: const Color(0xFFE0D5C1),
-                                      fontSize: 10)),
+                          isPlayer
+                              ? TutorialHighlighter(
+                                  highlightKey: 'open_player_profile',
+                                  child: SoldierPortrait(
+                                      index: captain?.portraitIndex ?? 0,
+                                      size: 52,
+                                      backgroundColor:
+                                          captain?.backgroundColor ??
+                                              Colors.grey),
+                                )
+                              : SoldierPortrait(
+                                  index: captain?.portraitIndex ?? 0,
+                                  size: 52,
+                                  backgroundColor:
+                                      captain?.backgroundColor ?? Colors.grey),
+                          if (captain?.queuedListenItem != null)
+                            const Positioned(
+                              right: -5,
+                              top: -5,
+                              child: NotificationBadge(count: 1),
                             ),
                         ],
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(captain?.name ?? "Unknown Captain",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.cinzel(
+                                color: const Color(0xFF2D241E), // Dark Espresso
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
+                        GestureDetector(
+
+                          onTap: canAssign
+                              ? () => _showReassignmentDialog(
+                                  context, widget.aravt, widget.gameState)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
+
+                            child: _buildAssignmentText(isEditable: canAssign),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: _AravtSpriteProgressBar(
+                        aravt: widget.aravt,
+                        gameState: widget.gameState,
+                        sprites: widget.sprites,
+                        vsync: widget.vsync),
+                  ),
+                  IconButton(
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                            _isExpanded ? Icons.expand_less : Icons.expand_more,
+                            color:
+                                const Color(0xFF4A3F35).withValues(alpha: 0.7)),
+                        if (widget.aravt.soldierIds.any((id) {
+                              final s = widget.gameState.findSoldierById(id);
+                              return s != null &&
+                                  s.queuedListenItem != null &&
+                                  !s.isPlayer;
+                            }) &&
+                            !_isExpanded)
+                          const Positioned(
+                            right: -2,
+                            top: -2,
+                            child: NotificationBadge(count: 1, size: 10),
+                          ),
+                      ],
+                    ),
+                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  ),
+                ],
               ),
-            )
-        ],
+            ),
+            if (_isExpanded)
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                color: const Color(0xFFDCCFAD).withValues(alpha: 0.5),
+                child: Column(
+                  children: widget.aravt.soldierIds.map((id) {
+                    final s = widget.gameState.findSoldierById(id);
+                    if (s == null) return const SizedBox.shrink();
+                    String duty = "";
+                    widget.aravt.dutyAssignments.forEach((k, v) {
+                      if (v == s.id) duty = k.name;
+                    });
+                    return InkWell(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  SoldierProfileScreen(soldierId: s.id))),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4.0, horizontal: 4.0),
+                        child: Row(
+                          children: [
+                            Text(s.name,
+                                style: GoogleFonts.cinzel(
+                                    color: const Color(
+                                        0xFF2D241E), // Dark Espresso
+                                    fontSize: 12,
+                                    fontWeight: s.isPlayer
+                                        ? FontWeight.bold
+                                        : FontWeight.normal)),
+                            if (s.queuedListenItem != null)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8.0),
+                                child: NotificationBadge(count: 1, size: 14),
+                              ),
+                            const Spacer(),
+                            if (duty.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: Colors.blueGrey[900],
+                                    borderRadius: BorderRadius.circular(4)),
+                                child: Text(duty,
+                                    style: GoogleFonts.cinzel(
+                                        color: const Color(0xFFE0D5C1),
+                                        fontSize: 10)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              )
+          ],
+        ),
       ),
     );
   }
@@ -412,22 +415,23 @@ class _AravtRowState extends State<_AravtRow> {
       } else {
         text = "Traveling...";
       }
-      color = Colors.blue[300]!;
+      color = Colors.blue[800]!; // Darker Blue
     } else if (task is AssignedTask) {
       text = task.assignment.name;
 
       if (task.option != null && task.option!.isNotEmpty) {
         text += " (${task.option})";
       }
-      color = Colors.green[300]!;
+      color = Colors.green[800]!; // Darker Green
     } else if (widget.aravt.currentAssignment != AravtAssignment.Rest) {
       text = widget.aravt.currentAssignment.name;
+      color = Colors.black87; // Darker Grey/Black
     } else {
       // Resting
       if (atCamp) {
-        color = Colors.green[300]!; // Available/Present
+        color = Colors.green[800]!; // Darker Green
       } else {
-        color = Colors.white38; // Resting away from camp (or unassigned)
+        color = Colors.black45; // Darker Grey/Black
       }
     }
     return Text(text,
@@ -436,7 +440,7 @@ class _AravtRowState extends State<_AravtRow> {
         style: GoogleFonts.cinzel(
             color: color,
             fontSize: 11,
-
+            fontWeight: FontWeight.bold, // Added bold for better legibility
             decoration:
                 isEditable ? TextDecoration.underline : TextDecoration.none,
             decorationStyle: TextDecorationStyle.dotted));
@@ -933,7 +937,10 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
           detailText,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.cinzel(color: Colors.white70, fontSize: 10),
+          style: GoogleFonts.cinzel(
+              color: const Color(0xFF2D241E), // Dark Espresso
+              fontSize: 10,
+              fontWeight: FontWeight.w600),
         ),
       );
     }
@@ -987,9 +994,10 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
       height: 36,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-          color: Colors.black38,
+          color: Colors.brown
+              .withValues(alpha: 0.15), // Lighter, themed background
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white10)),
+          border: Border.all(color: Colors.brown.withValues(alpha: 0.2))),
       child: Stack(
         alignment: Alignment.centerLeft,
         children: [

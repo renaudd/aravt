@@ -50,11 +50,21 @@ class TutorialService extends ChangeNotifier {
   int? get tutorialSoldierId => _tutorialSoldierId;
   int? get tutorialTabIndex => _tutorialTabIndex;
   bool get shouldOpenHordePanel => _shouldOpenHordePanel;
+  Rect? _highlightPosition;
+  Rect? get highlightPosition => _highlightPosition;
+
+  void updateHighlightPosition(Rect? rect) {
+    if (_highlightPosition != rect) {
+      _highlightPosition = rect;
+      notifyListeners();
+    }
+  }
 
   void resetTutorialNavigation() {
     _tutorialSoldierId = null;
     _tutorialTabIndex = null;
     _shouldOpenHordePanel = false;
+    _highlightPosition = null;
     notifyListeners();
   }
 
@@ -149,6 +159,7 @@ class TutorialService extends ChangeNotifier {
   }
 
   void advance(BuildContext context, GameState gameState) {
+    _highlightPosition = null;
     cyclePortrait(
         angry:
             false); // Cycle to next portrait, will stay angry if already angry
@@ -179,6 +190,7 @@ class TutorialService extends ChangeNotifier {
   }
 
   void dismiss(BuildContext context, GameState gameState) {
+    _highlightPosition = null;
     gameState.tutorialDismissalCount++;
     cyclePortrait(angry: true); // Cycle to next angry portrait
 

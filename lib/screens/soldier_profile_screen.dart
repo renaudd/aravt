@@ -323,7 +323,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     final bool isOmniscient = gameState.isOmniscientMode;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -334,10 +334,10 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildProfilePanel(soldier, gameState),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 _buildInteractionPanel(context, soldier, gameState),
                 if (isOmniscient) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   _buildHiddenStatsPanel(soldier),
                 ],
               ],
@@ -359,7 +359,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
     return UiPanel(
       width: 335,
-      height: 240,
+      height: 210,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,7 +556,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
     return UiPanel(
       width: 250,
-      height: 620,
+      height: 580,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -852,7 +852,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
     return UiPanel(
       width: 335,
-      height: 400,
+      height: 360,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -861,7 +861,7 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
           Text('Log:', style: textStyle.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Container(
-            height: 240, // Fixed height for log
+            height: 210, // Fixed height for log
             decoration: BoxDecoration(
               color: Colors.black.withAlpha((255 * 0.3).round()),
               border: Border.all(
@@ -1224,7 +1224,7 @@ class UiPanel extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: Colors.black.withAlpha((255 * 0.65).round()),
         borderRadius: BorderRadius.circular(8.0),

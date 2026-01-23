@@ -36,23 +36,23 @@ class TutorialHighlighter extends StatefulWidget {
 
 class _TutorialHighlighterState extends State<TutorialHighlighter>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacityAnimation;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-    _opacityAnimation =
-        Tween<double>(begin: 0.2, end: 0.8).animate(_controller);
+    _pulseAnimation =
+        Tween<double>(begin: 0.2, end: 0.8).animate(_pulseController);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -65,13 +65,25 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
 
         if (!isActive) return widget.child;
 
+        // Report position to tutorial service so it can draw global arrow
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+          if (renderBox != null) {
+            final position = renderBox.localToGlobal(Offset.zero);
+            final size = renderBox.size;
+            tutorial.updateHighlightPosition(position & size);
+          }
+        });
+
         return Stack(
           alignment: Alignment.center,
+          clipBehavior: Clip.none,
           children: [
             // Pulsing Glow
             Positioned.fill(
               child: AnimatedBuilder(
-                animation: _opacityAnimation,
+                animation: _pulseAnimation,
                 builder: (context, child) {
                   return Container(
                     padding: widget.padding,
@@ -82,15 +94,15 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
                           : null,
                       border: Border.all(
                         color:
-                            Colors.amber.withOpacity(_opacityAnimation.value),
-                        width: 3,
+                            Colors.amber.withOpacity(_pulseAnimation.value),
+                        width: 4,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.amber
-                              .withOpacity(_opacityAnimation.value * 0.5),
-                          blurRadius: 10,
-                          spreadRadius: 2,
+                              .withOpacity(_pulseAnimation.value * 0.6),
+                          blurRadius: 15,
+                          spreadRadius: 3,
                         )
                       ],
                     ),
@@ -105,3 +117,4 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
     );
   }
 }
+

@@ -54,32 +54,23 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
             InkWell(
               onTap: enabled ? onPressed : null,
               borderRadius: BorderRadius.circular(20),
-              child: Container(
+              child: PaperPanel(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? Colors.amber.withValues(alpha: 0.9)
-                      : (enabled
-                          ? const Color(0xFFEADBBE).withValues(alpha: 0.9)
-                          : const Color(0xFFD4C5A8).withValues(alpha: 0.5)),
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: enabled
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 2,
-                            offset: const Offset(1, 1),
-                          )
-                        ]
-                      : null,
-                  border: Border.all(
-                      color: isActive
-                          ? Colors.amber.shade800
-                          : (enabled
-                              ? const Color(0xFFA68B5B)
-                              : const Color(0xFF8C734B)),
-                      width: 1.5),
-                ),
+                irregularity: 1.2,
+                segmentsPerSide: 8,
+                seed: icon.hashCode + tooltip.hashCode,
+                backgroundColor: isActive
+                    ? Colors.amber.withValues(alpha: 0.9)
+                    : (enabled
+                        ? const Color(0xFFEADBBE).withValues(alpha: 0.9)
+                        : const Color(0xFFD4C5A8).withValues(alpha: 0.5)),
+                borderColor: isActive
+                    ? Colors.amber.shade800
+                    : (enabled
+                        ? const Color(0xFFA68B5B)
+                        : const Color(0xFF8C734B)),
+                borderWidth: 1.5,
+                elevation: enabled ? 2.0 : 0.0,
                 child: Icon(icon,
                     color: isActive
                         ? Colors.black

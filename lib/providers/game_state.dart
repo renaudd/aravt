@@ -625,6 +625,31 @@ class GameState with ChangeNotifier {
   }
 
   int getBadgeCountForTab(String tabName) {
+    // Simplified Categories
+    if (tabName == 'Chronicle') {
+      return (unreadReportCounts['Event Log'] ?? 0) +
+          (unreadReportCounts['Combat'] ?? 0);
+    }
+    if (tabName == 'Treasury') {
+      return (unreadReportCounts['Finance'] ?? 0) +
+          (unreadReportCounts['Industry'] ?? 0) +
+          (unreadReportCounts['Commerce'] ?? 0);
+    }
+    if (tabName == 'Provisions') {
+      return (unreadReportCounts['Food'] ?? 0) +
+          (unreadReportCounts['Herds'] ?? 0) +
+          (unreadReportCounts['Hunting'] ?? 0) +
+          (unreadReportCounts['Fishing'] ?? 0);
+    }
+    if (tabName == 'Military') {
+      return (unreadReportCounts['Health'] ?? 0) +
+          (unreadReportCounts['Training'] ?? 0) +
+          (unreadReportCounts['Games'] ?? 0);
+    }
+    if (tabName == 'World') {
+      return (unreadReportCounts['Diplomacy'] ?? 0);
+    }
+
     return unreadReportCounts[tabName] ?? 0;
   }
 
@@ -670,12 +695,32 @@ class GameState with ChangeNotifier {
   void markReportTabViewed(String tabName, {String? subTab}) {
     if (subTab != null) {
       unreadReportCounts['${tabName}_$subTab'] = 0;
-      // Also potentially decrease parent tab if we were aggregating?
-      // Since we track independently, just clear specific.
+      unreadReportCounts[subTab] = 0; // Legacy support
     } else {
       unreadReportCounts[tabName] = 0;
 
-      // Clear sub-tabs associated with this main tab if necessary
+      // Handle category clearings
+      if (tabName == 'Chronicle') {
+        unreadReportCounts['Event Log'] = 0;
+        unreadReportCounts['Combat'] = 0;
+      } else if (tabName == 'Treasury') {
+        unreadReportCounts['Finance'] = 0;
+        unreadReportCounts['Industry'] = 0;
+        unreadReportCounts['Commerce'] = 0;
+      } else if (tabName == 'Provisions') {
+        unreadReportCounts['Food'] = 0;
+        unreadReportCounts['Herds'] = 0;
+        unreadReportCounts['Hunting'] = 0;
+        unreadReportCounts['Fishing'] = 0;
+      } else if (tabName == 'Military') {
+        unreadReportCounts['Health'] = 0;
+        unreadReportCounts['Training'] = 0;
+        unreadReportCounts['Games'] = 0;
+      } else if (tabName == 'World') {
+        unreadReportCounts['Diplomacy'] = 0;
+      }
+
+      // Legacy sub-tabs
       if (tabName == 'Food') {
         unreadReportCounts['Food_Hunting'] = 0;
         unreadReportCounts['Food_Fishing'] = 0;
