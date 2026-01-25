@@ -28,8 +28,7 @@ class InventoryItem {
   final String iconAssetPath;
   final int spriteIndex;
   final EquipmentSlot? equippableSlot;
-  final String
-      origin;
+  final String origin;
 
   InventoryItem({
     required this.id,
@@ -264,7 +263,6 @@ class Weapon extends Equipment {
       maxCondition: (json['maxCondition'] as num).toDouble(),
       damageType: _damageTypeFromName(json['damageType']),
       baseDamage: (json['baseDamage'] as num).toDouble(),
-
       effectiveRange: (json['effectiveRange'] as num).toDouble(),
       origin: json['origin'] ?? 'Unknown',
     );
@@ -322,7 +320,6 @@ class Armor extends Equipment {
       condition: (json['condition'] as num).toDouble(),
       maxCondition: (json['maxCondition'] as num).toDouble(),
       deflectValue: (json['deflectValue'] as num).toDouble(),
-
       damageReductionValue: (json['damageReductionValue'] as num).toDouble(),
       origin: json['origin'] ?? 'Unknown',
     );
@@ -438,7 +435,6 @@ class Relic extends Equipment {
       slot: equipmentSlotFromName(json['equippableSlot'])!,
       condition: (json['condition'] as num).toDouble(),
       maxCondition: (json['maxCondition'] as num).toDouble(),
-
       bonusDescription: json['bonusDescription'] ?? '',
       origin: json['origin'] ?? 'Unknown',
     );
@@ -610,7 +606,6 @@ class Ammunition extends InventoryItem {
       iconAssetPath: json['iconAssetPath'] ?? '',
       spriteIndex: json['spriteIndex'] ?? 0,
       damageBonus: (json['damageBonus'] as num).toDouble(),
-
       specialEffect: json['specialEffect'] ?? '',
       origin: json['origin'] ?? 'Unknown',
     );

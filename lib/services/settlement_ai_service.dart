@@ -58,7 +58,6 @@ class SettlementAIService {
     } else if (roll < 0.50) {
       settlement.currentGoal = SettlementGoal.ProduceWealth;
     } else if (roll < 0.60) {
-
       // Militia training is abstract, but we can simulate it
       settlement.currentGoal = SettlementGoal.TrainMilitia;
     } else if (roll < 0.70) {

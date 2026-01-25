@@ -58,7 +58,6 @@ class NarrativeScreen extends StatelessWidget {
                   ),
                 ),
 
-
                 if (imagePath != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -77,7 +76,6 @@ class NarrativeScreen extends StatelessWidget {
                   )
                 else
                   const SizedBox(height: 40), // Original spacing if no image
-
 
                 // The main body text of the narrative
                 Padding(

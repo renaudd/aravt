@@ -19,12 +19,10 @@ import '../models/area_data.dart'; // For GameArea and HexCoordinates
 /// Helper to map AreaType to its new tile image path.
 /// Assumes tiles are in 'assets/tiles/'
 String getTileImagePath(GameArea area, {bool isExplored = true}) {
-
   if (!isExplored) {
     // You will need to create a 'fog_tile.png' image in your assets/tiles/ folder
     return 'assets/tiles/fog_tile.png';
   }
-
 
   // Handle special cases first
   if (area.type == AreaType.Settlement) {
@@ -58,5 +56,3 @@ String getTileImagePath(GameArea area, {bool isExplored = true}) {
       return 'assets/tiles/grassland_tile.png';
   }
 }
-
-

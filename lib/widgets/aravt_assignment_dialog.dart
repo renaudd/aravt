@@ -61,7 +61,7 @@ class _AravtAssignmentDialogState extends State<AravtAssignmentDialog> {
   Widget build(BuildContext context) {
     bool canConfirm =
         _selectedAssignment != null && _selectedAravtIds.isNotEmpty;
-    
+
     // For Trade/Emissary, we need to complete configuration
     if (_activeConfig) {
       if (_selectedAssignment == AravtAssignment.Trade) {

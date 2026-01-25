@@ -37,9 +37,7 @@ class SpriteInfo {
 }
 
 class SpriteService {
-
   static final Map<String, ui.Image> _imageCache = {};
-
 
   // Define quality tiers - maps quality string to an index level
   static const List<String> qualityTiers = [
@@ -148,7 +146,6 @@ class SpriteService {
     return _spriteSheetData[itemType];
   }
 
-
   /// Loads a spritesheet image from assets and caches it.
   static Future<ui.Image> loadSpritesheet(String assetPath) async {
     // 1. Check cache
@@ -171,7 +168,6 @@ class SpriteService {
       rethrow;
     }
   }
-
 
   /// Calculates the sprite index based on quality.
   static int getSpriteIndexForQuality(ItemType itemType, String? quality) {

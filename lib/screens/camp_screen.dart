@@ -78,13 +78,13 @@ class _CampScreenState extends State<CampScreen>
     // Defer initialization to after context is available, or use a post-frame callback
     // But we can check GameState here if we have context? No, safest is later.
     // _initSoldiers is async anyway.
-    
+
     // We'll initialize positions in didChangeDependencies or use a flag.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _initBuildingPositions();
         _initSoldiers(); // Load sprites
-        
+
         final gameState = context.read<GameState>();
         final tutorialService = context.read<TutorialService>();
         tutorialService.startTutorial(context, gameState);
@@ -106,7 +106,7 @@ class _CampScreenState extends State<CampScreen>
         _random.nextDouble() * 0.3 + 0.6,
         _random.nextDouble() * 0.15 + 0.70,
       );
-      
+
       gameState.campLayout['Stockade'] = {
         'x': stockadePos.dx,
         'y': stockadePos.dy
@@ -216,8 +216,7 @@ class _CampScreenState extends State<CampScreen>
 
           if (distance < 5.0) {
             soldier.state = SoldierState.waiting;
-            soldier.waitTimer =
-                _random.nextDouble() * 60.0 + 30.0;
+            soldier.waitTimer = _random.nextDouble() * 60.0 + 30.0;
           } else {
             final double currentSpeed = _calculateSpeed(soldier.position.dy);
             final pixelsToMove = currentSpeed * deltaTime;
@@ -261,16 +260,16 @@ class _CampScreenState extends State<CampScreen>
     _controller.dispose();
     super.dispose();
   }
-  
+
   // Z-Sorted Rendering Helper Classes
   // We need to store everything as a RenderItem
-  
+
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
     final Size screenSize = MediaQuery.of(context).size;
     final List<Yurt> yurts = gameState.yurts;
-    
+
     // --- Collect Renderable Items ---
     List<_RenderItem> renderItems = [];
 
@@ -287,39 +286,39 @@ class _CampScreenState extends State<CampScreen>
       // For buildings, the "feet" are at top + height.
       // But we position Top/Left. So y = top + height.
       double topPos = position.dy * screenSize.height - currentYurtHeight;
-      double sortY = topPos + currentYurtHeight; 
+      double sortY = topPos + currentYurtHeight;
 
       renderItems.add(_RenderItem(
         y: sortY,
         builder: () {
           double leftPos =
               position.dx * screenSize.width - (currentYurtWidth / 2);
-            return Positioned(
-              left: leftPos,
-              top: topPos,
-              child: Tooltip(
-                message: yurt.occupantIds.isEmpty
-                    ? 'Empty Yurt'
-                    : 'Occupants: ${yurt.occupantIds.map((id) {
-                        final soldier = gameState.horde.firstWhere(
-                            (s) => s.id == id,
-                            orElse: () => gameState.horde.first);
-                        return soldier.name;
-                      }).join(", ")}',
-                child: GestureDetector(
-                  onTap: () {
-                    if (_controller.isAnimating) _controller.stop();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => YurtDetailScreen(yurtId: yurt.id),
-                      ),
-                    ).then((_) {
-                      if (mounted && !_controller.isAnimating) {
-                        _controller.repeat();
-                      }
-                    });
-                  },
+          return Positioned(
+            left: leftPos,
+            top: topPos,
+            child: Tooltip(
+              message: yurt.occupantIds.isEmpty
+                  ? 'Empty Yurt'
+                  : 'Occupants: ${yurt.occupantIds.map((id) {
+                      final soldier = gameState.horde.firstWhere(
+                          (s) => s.id == id,
+                          orElse: () => gameState.horde.first);
+                      return soldier.name;
+                    }).join(", ")}',
+              child: GestureDetector(
+                onTap: () {
+                  if (_controller.isAnimating) _controller.stop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => YurtDetailScreen(yurtId: yurt.id),
+                    ),
+                  ).then((_) {
+                    if (mounted && !_controller.isAnimating) {
+                      _controller.repeat();
+                    }
+                  });
+                },
                 child: Image.asset(
                   yurt.imagePath,
                   width: currentYurtWidth,
@@ -435,15 +434,15 @@ class _CampScreenState extends State<CampScreen>
           builder: () => Positioned(
             left: soldier.position.dx * screenSize.width - (displayWidth / 2),
             top: feetY - displayHeight,
-                child: SoldierSprite(
-                  spriteSheet: _soldierSpriteSheet!,
-                  frame: soldier.currentFrame,
+            child: SoldierSprite(
+              spriteSheet: _soldierSpriteSheet!,
+              frame: soldier.currentFrame,
               frameWidth: frameWidth,
               frameHeight: frameHeight,
-                  scale: soldier.scale,
+              scale: soldier.scale,
               cols: spriteCols,
-                  isMovingRight: soldier.isMovingRight,
-                ),
+              isMovingRight: soldier.isMovingRight,
+            ),
           ),
         ));
       }
@@ -461,7 +460,7 @@ class _CampScreenState extends State<CampScreen>
           ),
           // Render sorted items
           ...renderItems.map((item) => item.builder()),
-          
+
           Positioned(
             top: 40,
             right: 20,
@@ -472,14 +471,14 @@ class _CampScreenState extends State<CampScreen>
       ),
     );
   }
-  
+
   void _addBuilding(List<_RenderItem> items, Size screenSize, Offset position,
       String imagePath, String label, VoidCallback onTap) {
     double scale = 0.7 + (position.dy * 0.6);
     const double baseWidth = 400.0;
     double width = baseWidth * scale * 0.25;
     double height = width;
-      
+
     double top = position.dy * screenSize.height - height;
     double bottom = top + height;
 

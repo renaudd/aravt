@@ -16,7 +16,6 @@
 import 'inventory_item.dart'; // For TradeTask cargo
 import 'location_data.dart';
 
-
 enum DiplomaticTerm {
   RequestAid,
   OfferTradingAlliance,
@@ -39,7 +38,6 @@ enum DiplomaticTerm {
   DemandTribute, // --- MOVED HERE ---
 }
 
-
 /// This enum defines all possible external tasks an Aravt group can be assigned to.
 enum AravtAssignment {
   // --- Core & Camp Assignments ---
@@ -51,7 +49,6 @@ enum AravtAssignment {
   CareForWounded,
   Defend, // Defend Camp / POI
   Pack, // Pack up camp to move
-
 
   // --- Gathering Assignments ---
   Shepherd, // Was GrazingHerd
@@ -84,7 +81,6 @@ enum AravtAssignment {
   Attack,
   Siege,
 
-
   Travel, // Represents the state of being in a MovingTask
 }
 
@@ -92,7 +88,6 @@ enum AravtAssignment {
 abstract class AravtTask {
   final DateTime startTime;
   final double durationInSeconds; // --- MOVED: Now in base class ---
-
 
   DateTime get expectedEndTime =>
       startTime.add(Duration(seconds: durationInSeconds.toInt()));
@@ -132,12 +127,10 @@ abstract class AravtTask {
 class MovingTask extends AravtTask {
   final GameLocation destination;
 
-
   final AravtAssignment? followUpAssignment;
   final String? followUpAreaId; // For area-level follow-ups (Scout, Patrol)
   final String? followUpPoiId; // For POI-level follow-ups (Hunt, etc.)
   final String? option;
-
 
   @override
   String get description {
@@ -151,7 +144,6 @@ class MovingTask extends AravtTask {
     required this.destination,
     required double durationInSeconds, // Now passed directly
     DateTime? startTime,
-
     this.followUpAssignment,
     this.followUpAreaId,
     this.followUpPoiId,
@@ -168,7 +160,6 @@ class MovingTask extends AravtTask {
         'destinationId': destination.id,
         'durationInSeconds': durationInSeconds,
         'startTime': startTime.toIso8601String(),
-
         'followUpAssignment': followUpAssignment?.name,
         'followUpAreaId': followUpAreaId,
         'followUpPoiId': followUpPoiId,
@@ -184,7 +175,6 @@ class MovingTask extends AravtTask {
       ),
       durationInSeconds: json['durationInSeconds'] as double,
       startTime: DateTime.parse(json['startTime']),
-
       followUpAssignment: json['followUpAssignment'] != null
           ? assignmentFromName(json['followUpAssignment'])
           : null,
@@ -229,10 +219,8 @@ class AssignedTask extends AravtTask {
   @override
   Map<String, dynamic> toJson() => {
         'type': 'assigned',
-
         'areaId': areaId,
         'poiId': poiId,
-
         'assignment': assignment.name,
         'option': option,
         'durationInSeconds': durationInSeconds,
@@ -240,7 +228,6 @@ class AssignedTask extends AravtTask {
       };
 
   factory AssignedTask.fromJson(Map<String, dynamic> json) {
-
     final String? loadedPoiId = json['poiId'] as String?;
     final String? loadedAreaId = json['areaId'] as String?;
 
@@ -260,7 +247,6 @@ class AssignedTask extends AravtTask {
     );
   }
 }
-
 
 class TradeTask extends AravtTask {
   final String targetPoiId;
@@ -319,13 +305,10 @@ class TradeTask extends AravtTask {
   }
 }
 
-
-
 class EmissaryTask extends AravtTask {
   final String targetPoiId;
   final List<DiplomaticTerm> terms;
   final MovingTask movement;
-
 
   EmissaryTask({
     required this.targetPoiId,
@@ -366,8 +349,6 @@ class EmissaryTask extends AravtTask {
   }
 }
 
-
-
 class EscortTask extends AravtTask {
   final String targetAravtGroupId; // The ID of the group being escorted
   // An escort's path and end time are dictated by their target
@@ -400,7 +381,6 @@ class EscortTask extends AravtTask {
     );
   }
 }
-
 
 /// Finds an AravtAssignment by its string name, or returns a fallback.
 AravtAssignment assignmentFromName(String? name,

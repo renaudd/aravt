@@ -169,7 +169,8 @@ class EquippedGearView extends StatelessWidget {
         child: DragTarget<InventoryItem>(
           onWillAccept: (data) => data?.equippableSlot == slot,
           onAccept: (data) {
-            Provider.of<GameState>(context, listen: false).equipItem(data);
+            Provider.of<GameState>(context, listen: false)
+                .equipItemToSoldier(soldier, data);
           },
           builder: (context, candidateData, rejectedData) {
             return Container(

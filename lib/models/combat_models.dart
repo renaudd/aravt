@@ -46,9 +46,7 @@ class Injury {
 
   final bool isTreated;
 
-
   final String inflictedBy;
-
 
   Injury({
     required this.name,

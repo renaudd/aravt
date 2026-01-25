@@ -21,6 +21,8 @@ import 'package:aravt/widgets/report_tabs.dart';
 import 'package:aravt/widgets/training_report_tab.dart';
 import 'package:aravt/widgets/notification_badge.dart';
 import 'package:aravt/widgets/diplomacy_report_tab.dart';
+import 'package:aravt/screens/timelines_screen.dart';
+import 'package:aravt/screens/global_inventory_screen.dart';
 
 class GlobalReportsScreen extends StatefulWidget {
   const GlobalReportsScreen({super.key});
@@ -37,7 +39,7 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
   // Tab names (Categories)
   final List<String> _tabNames = [
     'Chronicle',
-    'Treasury',
+    'Logistics',
     'Provisions',
     'Military',
     'World',
@@ -110,8 +112,8 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
           tabs: [
             _buildTab("Chronicle", Icons.book,
                 gameState.getBadgeCountForTab("Chronicle")),
-            _buildTab("Treasury", Icons.monetization_on,
-                gameState.getBadgeCountForTab("Treasury")),
+            _buildTab("Logistics", Icons.warehouse,
+                gameState.getBadgeCountForTab("Logistics")),
             _buildTab("Provisions", Icons.savings,
                 gameState.getBadgeCountForTab("Provisions")),
             _buildTab("Military", Icons.military_tech,
@@ -126,26 +128,46 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
           TabBarView(
             controller: _tabController,
             children: [
-              // 1. Chronicle: Event Log & Combat
+              // 1. Chronicle: Event Log, Combat, Timelines
               NestedReportCategory(
                 categoryName: 'Chronicle',
-                tabNames: const ["Event Log", "Combat"],
-                icons: const [Icons.list_alt, Icons.sports_kabaddi],
+                tabNames: const ["Event Log", "Combat", "Timeline"],
+                icons: const [
+                  Icons.list_alt,
+                  Icons.sports_kabaddi,
+                  Icons.timeline
+                ],
                 children: [
                   EventLogTab(
                       isOmniscient: gameState.isOmniscientMode,
                       soldierId: null),
                   const CombatReportTab(soldierId: null),
+                  const TimelinesView(),
                 ],
               ),
-              // 2. Treasury: Finance & Industry
-              const NestedReportCategory(
-                categoryName: 'Treasury',
-                tabNames: ["Finance", "Industry"],
-                icons: [Icons.account_balance_wallet, Icons.build],
+              // 2. Logistics: Finance, Industry, Khan, Horde, Global
+              NestedReportCategory(
+                categoryName: 'Logistics',
+                tabNames: const [
+                  "Finance",
+                  "Industry",
+                  "Khan",
+                  "Communal",
+                  "Global"
+                ],
+                icons: const [
+                  Icons.account_balance_wallet,
+                  Icons.build,
+                  Icons.person_outline,
+                  Icons.groups_outlined,
+                  Icons.public_outlined
+                ],
                 children: [
-                  FinanceReportTab(),
-                  IndustryReportTab(),
+                  const FinanceReportTab(),
+                  const IndustryReportTab(),
+                  const PersonalInventoryTab(),
+                  const CommunalInventoryTab(),
+                  GlobalInventoryTab(isOmniscient: gameState.isOmniscientMode),
                 ],
               ),
               // 3. Provisions: Herds, Food, Hunting, Fishing

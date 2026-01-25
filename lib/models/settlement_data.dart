@@ -52,8 +52,7 @@ class Settlement {
   // --- Population & Leadership ---
   String leaderSoldierId;
   List<String> garrisonAravtIds; // Now a list to support multiple units
-  bool
-      hasGeneratedGarrison; //  Track if garrison has been generated
+  bool hasGeneratedGarrison; //  Track if garrison has been generated
   int peasantPopulation;
 
   // --- Agriculture & Industry ---
@@ -105,14 +104,12 @@ class Settlement {
   })  : this.diplomacy = diplomacy ?? {},
         this.garrisonAravtIds = garrisonAravtIds ?? [];
 
-
   // These allow old code to still read 'population' and 'militiaStrength'
   // even though the underlying data structure has changed.
   int get population => peasantPopulation;
   // Note: militiaStrength is now just an estimate based on number of garrison units * 20
   int get militiaStrength => garrisonAravtIds.length * 20;
   int get maxMilitia => peasantPopulation ~/ 4; // 25% rule
-
 
   Map<String, dynamic> toJson() => {
         'id': id,

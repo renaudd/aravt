@@ -89,7 +89,6 @@ class HordeTransitionService {
     leader.role = SoldierRole.soldier; // No longer leader (is dead anyway)
     successor.role = SoldierRole.hordeLeader;
 
-
     if (leader.isPlayer) {
       print(
           "[HordeTransition] Player died. Transferring control to ${successor.name}");
@@ -180,10 +179,9 @@ class HordeTransitionService {
 
     if (playerCamp != null) {
       for (final aravt in gameState.aravts) {
-        if (aravt.hexCoords != null && aravt.hexCoords != playerCamp.position) {
-          int distance = aravt.hexCoords!.distanceTo(playerCamp.position!);
+        if (aravt.hexCoords != playerCamp.position) {
+          int distance = aravt.hexCoords.distanceTo(playerCamp.position);
           double travelSeconds = distance * 86400.0;
-
 
           aravt.task = MovingTask(
             destination: GameLocation.poi(playerCamp.id),

@@ -33,6 +33,7 @@ import 'package:aravt/widgets/profile_tabs/soldier_profile_yurt_panel.dart';
 import 'package:aravt/widgets/gifting_dialog.dart';
 import 'package:aravt/widgets/tutorial_highlighter.dart';
 import 'package:aravt/services/tutorial_service.dart'; //  Import tutorial service
+
 const Map<EquipmentSlot, IconData> _placeholderIconMap = {
   EquipmentSlot.helmet: Icons.headset,
   EquipmentSlot.armor: Icons.shield,
@@ -981,7 +982,6 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
 
   Future<void> _handleInteraction(InteractionType type, GameState gameState,
       Soldier player, Soldier target) async {
-
     switch (type) {
       case InteractionType.scold:
         InteractionService.resolveScold(gameState, player, target);

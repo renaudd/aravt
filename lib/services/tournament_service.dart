@@ -48,7 +48,6 @@ class TournamentService {
       currentStandings: {for (var a in participatingAravts) a.id: 0},
     );
 
-
     for (var aravt in participatingAravts) {
       if (aravt.task != null) {
         print("Cancelling task for Aravt ${aravt.id} due to tournament.");
@@ -803,7 +802,6 @@ class TournamentService {
 
   // --- INDIVIDUAL EVENTS ---
 
-
   ScoreBasedEventResult _runArchery(List<Aravt> aravts, GameState gameState) {
     final Map<int, int> scores = {};
     final List<Soldier> participants = _getAllSoldiers(aravts, gameState);
@@ -836,7 +834,6 @@ class TournamentService {
 
     return ScoreBasedEventResult(scores: scores, rankings: rankings);
   }
-
 
   RaceEventResult _runHorseRace(List<Aravt> aravts, GameState gameState) {
     final List<RaceResultEntry> entries = [];

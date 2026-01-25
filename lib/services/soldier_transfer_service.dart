@@ -48,11 +48,9 @@ class SoldierTransferService {
             soldier, originalAravtId, currentAravtId, gameState);
       }
 
-
       if (soldier.isImprisoned) {
         _applyImprisonmentEffects(soldier, gameState);
       }
-
     }
   }
 
@@ -131,7 +129,6 @@ class SoldierTransferService {
     if (loyaltyChange != 0 || admirationChange != 0) {
       gameState.logEvent(
         "${soldier.name} reflects on their new assignment in ${newAravt?.id ?? 'a new aravt'}.",
-
         severity: (loyaltyChange + admirationChange > 0)
             ? EventSeverity.low
             : EventSeverity.normal,
@@ -139,7 +136,6 @@ class SoldierTransferService {
       );
     }
   }
-
 
   void _applyImprisonmentEffects(Soldier soldier, GameState gameState) {
     if (gameState.player == null) return;
@@ -153,5 +149,4 @@ class SoldierTransferService {
     // TODO: Add logic for starvation/sickness
     // This will be handled in Step 11 (Soldier Updates)
   }
-
 }

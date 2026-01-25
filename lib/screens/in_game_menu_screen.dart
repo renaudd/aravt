@@ -71,7 +71,6 @@ class _InGameMenuScreenState extends State<InGameMenuScreen> {
     );
 
     if (shouldQuit == true) {
-
       // It *only* navigates to the main menu.
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(

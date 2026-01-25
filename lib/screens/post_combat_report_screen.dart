@@ -86,14 +86,10 @@ class _PostCombatReportScreenState extends State<PostCombatReportScreen>
         return;
       }
 
-
       // This is the fix. We call a new function with our decisions.
       gameState.processCombatReport(widget.report, _captiveDecisions);
-
     } else {
-
       gameState.processCombatReport(widget.report, {});
-
     }
   }
 

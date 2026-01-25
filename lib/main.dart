@@ -22,15 +22,13 @@ import 'package:provider/provider.dart';
 import 'package:aravt/game_data/item_templates.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/services/tutorial_service.dart';
-import 'package:aravt/screens/area_screen.dart';
+import 'package:aravt/screens/unified_map_screen.dart';
 
 import 'screens/timelines_screen.dart';
-import 'package:aravt/screens/region_screen.dart';
 import 'package:aravt/screens/combat_screen.dart';
 import 'package:aravt/screens/load_game_screen.dart';
 import 'package:aravt/screens/save_game_screen.dart';
 import 'package:aravt/screens/new_game_screen.dart';
-import 'package:aravt/screens/world_map_screen.dart';
 import 'package:aravt/screens/soldier_profile_screen.dart';
 import 'package:aravt/screens/camp_screen.dart';
 import 'package:aravt/screens/combat_simulator_screen.dart';
@@ -98,8 +96,17 @@ class _AravtGameState extends State<AravtGame> {
   @override
   void initState() {
     super.initState();
-    // Hide status bar for immersive feel
+    // Hide status bar for immersive feel and lock orientation on mobile
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // Lock to landscape only on mobile devices
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+
     final gameState = Provider.of<GameState>(context, listen: false);
     gameState.addListener(_onGameStateChanged);
     _previousCombatState = gameState.combatFlowState;
@@ -214,9 +221,10 @@ class _AravtGameState extends State<AravtGame> {
         '/gameOver': (context) => const GameOverScreen(),
         // --- IN-GAME ROUTES ---
         '/camp': (context) => const CampScreen(),
-        '/area': (context) => const AreaScreen(),
-        '/region': (context) => const RegionScreen(),
-        '/world': (context) => const WorldMapScreen(),
+        '/map': (context) => const UnifiedMapScreen(),
+        '/area': (context) => const UnifiedMapScreen(),
+        '/region': (context) => const UnifiedMapScreen(),
+        '/world': (context) => const UnifiedMapScreen(),
         '/reports': (context) => const GlobalReportsScreen(),
         '/combat_simulator': (context) =>
             const CombatSimulatorScreen(), // Added route

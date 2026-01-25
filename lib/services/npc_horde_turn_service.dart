@@ -20,7 +20,6 @@ import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
 
-
 // Need Aravt
 import 'package:aravt/models/combat_models.dart';
 import 'package:aravt/models/combat_report.dart';
@@ -28,7 +27,6 @@ import 'package:aravt/services/auto_resolve_service.dart';
 import 'package:aravt/services/loot_distribution_service.dart';
 import 'package:aravt/models/assignment_data.dart';
 import 'package:aravt/models/area_data.dart';
-
 
 // Represents the macro-level goal of an entire horde for the turn
 enum NpcHordeGoal {
@@ -47,11 +45,9 @@ enum NpcHordeGoal {
 class NpcHordeTurnService {
   final Random _random = Random();
 
-
   final AutoResolveService _autoResolveService = AutoResolveService();
   final LootDistributionService _lootDistributionService =
       LootDistributionService();
-
 
   Future<void> resolveNpcHordeTurns(GameState gameState) async {
     // We will loop through each NPC horde.
@@ -122,7 +118,6 @@ class NpcHordeTurnService {
 
     // 3. Execute Goal
     switch (goal) {
-
       case NpcHordeGoal.AttackHorde:
         // Find a target's soldier and aravt lists
         List<Soldier>? targetSoldiers;
@@ -197,7 +192,6 @@ class NpcHordeTurnService {
           );
         }
         break;
-
 
       case NpcHordeGoal.RaidSettlement:
         // TODO: Find a nearby settlement to raid

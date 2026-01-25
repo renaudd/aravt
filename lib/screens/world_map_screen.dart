@@ -21,7 +21,6 @@ import '../providers/game_state.dart';
 import '../models/area_data.dart'; // For GameArea and HexCoordinates
 import '../widgets/persistent_menu_widget.dart';
 
-
 import '../widgets/aravt_map_icon.dart';
 import '../widgets/hex_map_tile.dart';
 import '../models/soldier_data.dart';
@@ -35,28 +34,23 @@ class WorldMapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1a1a1a),
-      appBar: AppBar(
-        title: Text('World Map', style: GoogleFonts.cinzel()),
-        backgroundColor: Colors.black.withAlpha((255 * 0.5).round()),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              Navigator.pushReplacementNamed(context, '/region');
-            }
-          },
-        ),
-      ),
-      body: Stack(
-        children: [
-          _buildWorldMap(context),
-          const PersistentMenuWidget(),
-        ],
-      ),
+    return const Scaffold(
+      body: WorldMapView(showMenu: true),
+    );
+  }
+}
+
+class WorldMapView extends StatelessWidget {
+  final bool showMenu;
+  const WorldMapView({super.key, this.showMenu = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildWorldMap(context),
+        if (showMenu) const PersistentMenuWidget(),
+      ],
     );
   }
 
@@ -90,18 +84,15 @@ class WorldMapScreen extends StatelessWidget {
         .where((p) => p.isDiscovered || gameState.isOmniscientMode);
 
     for (var poi in poiList) {
-
       if (poi.type == PoiType.camp) {
-        if (hexArea.type == AreaType.PlayerCamp)
-          continue; // Player camp is handled differently or not shown here
+        if (hexArea.type == AreaType.PlayerCamp) continue;
         if (hexArea.type == AreaType.NpcCamp &&
             !hexArea.isExplored &&
             !gameState.isOmniscientMode) {
-          continue; // Hide NPC camp if not explored
+          continue;
         }
       }
 
-      // Pointy-top POI offset math
       final double poiX = (poi.relativeX - 0.5) * (hexRadius * sqrt(3));
       final double poiY = (poi.relativeY - 0.5) * (hexRadius * 1.5);
 
@@ -123,19 +114,16 @@ class WorldMapScreen extends StatelessWidget {
     return poiWidgets;
   }
 
-  //  Helper to build animated Aravt icons
   List<Widget> _buildAravtIcons(
       GameArea hexArea, double hexRadius, GameState gameState) {
     List<Widget> aravtWidgets = [];
 
-    // Find all player aravts in this specific hex
     final aravtsInHex = gameState.aravts
         .where((aravt) => aravt.hexCoords == hexArea.coordinates)
         .toList();
 
     int i = 0;
     for (var aravt in aravtsInHex) {
-      // Simple offset logic to prevent stacking
       final double aravtX = (i * 0.1 - 0.2) * (hexRadius * sqrt(3));
       final double aravtY = (0.2) * (hexRadius * 1.5);
       i++;
@@ -146,10 +134,9 @@ class WorldMapScreen extends StatelessWidget {
           child: Tooltip(
             message:
                 "Aravt: ${gameState.findSoldierById(aravt.captainId)?.name ?? 'Unknown'}",
-            child: AravtMapIcon(
-              color: 'blue', // TODO: randomize this based on captain/horde
-              scale:
-                  0.75,
+            child: const AravtMapIcon(
+              color: 'blue',
+              scale: 0.75,
             ),
           ),
         ),
@@ -180,7 +167,6 @@ class WorldMapScreen extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Pointy-top layout math
         final double mapHexWidth = qRange + (rRange / 2);
         final double mapHexHeight = rRange * 0.75;
 
@@ -200,17 +186,15 @@ class WorldMapScreen extends StatelessWidget {
           clipBehavior: Clip.hardEdge,
           children: [
             ...allAreas.map((hexArea) {
-            final HexCoordinates coords = hexArea.coordinates;
+              final HexCoordinates coords = hexArea.coordinates;
 
-            // Pointy-top layout positions
-            final double x =
-                centerOffset.dx + hexWidth * (coords.q + coords.r / 2);
-            final double y = centerOffset.dy + hexHeight * 3 / 4 * (coords.r);
+              final double x =
+                  centerOffset.dx + hexWidth * (coords.q + coords.r / 2);
+              final double y = centerOffset.dy + hexHeight * 3 / 4 * (coords.r);
 
-            final bool isExplored =
-                hexArea.isExplored || gameState.isOmniscientMode;
+              final bool isExplored =
+                  hexArea.isExplored || gameState.isOmniscientMode;
 
-              // Determine if this is a neighbor of the caravan (for movement)
               bool isCaravanNeighbor = false;
               if (gameState.isCaravanMode &&
                   gameState.caravanPosition != null) {
@@ -218,100 +202,95 @@ class WorldMapScreen extends StatelessWidget {
                     gameState.caravanPosition!.distanceTo(coords) == 1;
               }
 
-            return Positioned(
-              left: x - (hexWidth / 2),
-              top: y - (hexHeight / 2),
-              width: hexWidth,
-              height: hexHeight,
-              child: GestureDetector(
-
-                onTap: () {
+              return Positioned(
+                left: x - (hexWidth / 2),
+                top: y - (hexHeight / 2),
+                width: hexWidth,
+                height: hexHeight,
+                child: GestureDetector(
+                  onTap: () {
                     if (gameState.isCaravanMode &&
                         gameState.caravanPosition != null) {
                       if (coords == gameState.caravanPosition) {
-                        // Establish Camp
                         _showEstablishCampDialog(context, gameState, coords);
                         return;
                       }
                       if (isCaravanNeighbor) {
-                        // Move Caravan
                         _showMoveCaravanDialog(context, gameState, coords);
                         return;
                       }
                     }
 
-                  if (!isExplored) {
-                    // For unexplored, just select it (maybe show a tooltip)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Unexplored Area. Long press to Scout.',
-                            style: GoogleFonts.cinzel(color: Colors.amber)),
-                        backgroundColor: Colors.blueGrey[900],
-                      ),
-                    );
-                    return;
-                  }
-                  gameState.setCurrentArea(hexArea.coordinates);
-                  Navigator.pushReplacementNamed(context, '/region');
-                },
-
-                onLongPress: () {
-                  _showAreaAssignmentDialog(context, hexArea, gameState);
-                },
-                onSecondaryTap: () {
-                  _showAreaAssignmentDialog(context, hexArea, gameState);
-                },
-                child: Tooltip(
-                  message: isExplored
-                      ? '${hexArea.name} (${hexArea.type.name})'
-                      : 'Unexplored Area',
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        getTileImagePath(hexArea, isExplored: isExplored),
-                        width: hexWidth,
-                        height: hexHeight,
-                        fit: BoxFit.fill,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: hexWidth,
-                            height: hexHeight,
-                            color: Colors.red.shade900,
-                            child:
-                                const Center(child: Icon(Icons.error_outline)),
-                          );
-                        },
-                      ),
-                      if (isExplored)
-                        FittedBox(
-                          fit: BoxFit.contain,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                hexArea.name,
-                                style: GoogleFonts.cinzel(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: hexRadius * 0.3,
-                                  shadows: [
-                                    const Shadow(
-                                        blurRadius: 4, color: Colors.black)
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                    if (!isExplored) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Unexplored Area. Long press to Scout.',
+                              style: GoogleFonts.cinzel(color: Colors.amber)),
+                          backgroundColor: Colors.blueGrey[900],
                         ),
-                      // POI Icons
-                      ..._buildPoiIcons(hexArea, hexRadius, gameState),
-                        // Aravt Icons (Hide if Caravan Mode and at Caravan Pos)
+                      );
+                      return;
+                    }
+                    gameState.setCurrentArea(hexArea.coordinates);
+                    if (showMenu) {
+                      Navigator.pushReplacementNamed(context, '/region');
+                    } else {
+                      gameState.setMapLevel(MapLevel.region);
+                    }
+                  },
+                  onLongPress: () {
+                    _showAreaAssignmentDialog(context, hexArea, gameState);
+                  },
+                  onSecondaryTap: () {
+                    _showAreaAssignmentDialog(context, hexArea, gameState);
+                  },
+                  child: Tooltip(
+                    message: isExplored
+                        ? '${hexArea.name} (${hexArea.type.name})'
+                        : 'Unexplored Area',
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.asset(
+                          getTileImagePath(hexArea, isExplored: isExplored),
+                          width: hexWidth,
+                          height: hexHeight,
+                          fit: BoxFit.fill,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: hexWidth,
+                              height: hexHeight,
+                              color: Colors.red.shade900,
+                              child: const Center(
+                                  child: Icon(Icons.error_outline)),
+                            );
+                          },
+                        ),
+                        if (isExplored)
+                          FittedBox(
+                            fit: BoxFit.contain,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  hexArea.name,
+                                  style: GoogleFonts.cinzel(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: hexRadius * 0.3,
+                                    shadows: [
+                                      const Shadow(
+                                          blurRadius: 4, color: Colors.black)
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ..._buildPoiIcons(hexArea, hexRadius, gameState),
                         if (!gameState.isCaravanMode ||
                             gameState.caravanPosition != coords)
                           ..._buildAravtIcons(hexArea, hexRadius, gameState),
-                      
-                        // Highlight Caravan Neighbors
                         if (isCaravanNeighbor)
                           Container(
                             decoration: BoxDecoration(
@@ -321,29 +300,21 @@ class WorldMapScreen extends StatelessWidget {
                                   width: 2),
                             ),
                           ),
-
-                      // Border
-                      CustomPaint(
-                        painter: HexBorderPainter(
-                          color: (gameState.currentArea?.coordinates ==
-                                  hexArea.coordinates)
-                              ? Colors.yellowAccent
-                              : Colors.white10,
+                        CustomPaint(
+                          painter: HexBorderPainter(
+                            color: (gameState.currentArea?.coordinates ==
+                                    hexArea.coordinates)
+                                ? Colors.yellowAccent
+                                : Colors.white10,
+                          ),
+                          child: Container(),
                         ),
-                        child: Container(),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
+              );
             }),
-
-            // Render Caravan Icon on top?
-            // Actually, rendering it INSIDE the Stack above (per tile) is easier if we want it clipped/positioned correctly.
-            // But "The horde IS represented as a moving caravan".
-            // It should ideally be ON the tile.
-            // I can add it to the generic tile stack above if coords match.
             if (gameState.isCaravanMode && gameState.caravanPosition != null)
               ...allAreas
                   .where((a) => a.coordinates == gameState.caravanPosition)
@@ -359,10 +330,9 @@ class WorldMapScreen extends StatelessWidget {
                   width: hexWidth,
                   height: hexHeight,
                   child: IgnorePointer(
-                    // Taps are handled by the tile underneath
                     child: Center(
                       child: Transform.translate(
-                        offset: Offset(0, 0), // Centered
+                        offset: const Offset(0, 0),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -399,8 +369,6 @@ class WorldMapScreen extends StatelessWidget {
       return;
     }
 
-    // For now, only allow Scouting on unexplored areas from World Map
-    // and maybe Patrol on explored areas.
     final List<Aravt> assignedAravts = gameState.aravts.where((aravt) {
       final task = aravt.task;
       if (task is AssignedTask) {
@@ -450,6 +418,7 @@ class WorldMapScreen extends StatelessWidget {
       },
     );
   }
+
   void _showEstablishCampDialog(
       BuildContext context, GameState gameState, HexCoordinates coords) {
     showDialog(
@@ -462,11 +431,13 @@ class WorldMapScreen extends StatelessWidget {
         backgroundColor: Colors.grey[900],
         actions: [
           TextButton(
-            child: Text("Cancel", style: TextStyle(color: Colors.white54)),
+            child:
+                const Text("Cancel", style: TextStyle(color: Colors.white54)),
             onPressed: () => Navigator.of(ctx).pop(),
           ),
           TextButton(
-            child: Text("Establish", style: TextStyle(color: Colors.amber)),
+            child:
+                const Text("Establish", style: TextStyle(color: Colors.amber)),
             onPressed: () {
               gameState.establishCamp(coords);
               Navigator.of(ctx).pop();
@@ -489,11 +460,12 @@ class WorldMapScreen extends StatelessWidget {
         backgroundColor: Colors.grey[900],
         actions: [
           TextButton(
-            child: Text("Cancel", style: TextStyle(color: Colors.white54)),
+            child:
+                const Text("Cancel", style: TextStyle(color: Colors.white54)),
             onPressed: () => Navigator.of(ctx).pop(),
           ),
           TextButton(
-            child: Text("Move", style: TextStyle(color: Colors.amber)),
+            child: const Text("Move", style: TextStyle(color: Colors.amber)),
             onPressed: () {
               gameState.moveCaravan(coords);
               Navigator.of(ctx).pop();

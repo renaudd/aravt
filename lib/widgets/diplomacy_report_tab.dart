@@ -27,10 +27,10 @@ class DiplomacyReportTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
     // Filter settlements that the player has interacted with or knows about
-    // For now, we show all settlements as "Known Entities" 
+    // For now, we show all settlements as "Known Entities"
     // (We might want to filter by discovery status later)
     final settlements = gameState.settlements;
-    
+
     final diplomacyEvents = gameState.eventLog
         .where((e) => e.category == EventCategory.diplomacy && e.isPlayerKnown)
         .toList();
@@ -61,7 +61,7 @@ class DiplomacyReportTab extends StatelessWidget {
           const SizedBox(height: 20),
           _buildSectionHeader("Diplomatic Reports"),
           if (diplomacyEvents.isEmpty)
-             const Card(
+            const Card(
               color: Colors.black54,
               child: Padding(
                 padding: EdgeInsets.all(16.0),
@@ -71,7 +71,7 @@ class DiplomacyReportTab extends StatelessWidget {
             )
           else
             ...diplomacyEvents.reversed.map((e) => _buildEventCard(e)),
-            
+
           const SizedBox(height: 80), // Pad for bottom menu
         ],
       ),
@@ -92,7 +92,7 @@ class DiplomacyReportTab extends StatelessWidget {
   Widget _buildSettlementCard(Settlement settlement) {
     // Assuming 'Player' is the faction ID we care about for now
     final rel = settlement.getRelationship('Player');
-    
+
     return Card(
       color: Colors.black.withOpacity(0.6),
       margin: const EdgeInsets.only(bottom: 8.0),
@@ -107,7 +107,7 @@ class DiplomacyReportTab extends StatelessWidget {
                 Text(
                   settlement.name,
                   style: GoogleFonts.cinzel(
-                    color: Colors.white, 
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -136,7 +136,8 @@ class DiplomacyReportTab extends StatelessWidget {
         Text(value.toStringAsFixed(1),
             style: TextStyle(
                 color: color, fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }

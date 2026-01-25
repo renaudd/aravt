@@ -20,7 +20,6 @@ import 'dart:math';
 import '../providers/game_state.dart';
 import '../models/area_data.dart'; // For GameArea and HexCoordinates
 import '../widgets/persistent_menu_widget.dart';
-import 'area_screen.dart'; // To navigate to the detailed area view
 
 import '../widgets/hex_map_tile.dart';
 import '../services/ui_assignment_service.dart';
@@ -31,48 +30,36 @@ import '../widgets/aravt_assignment_dialog.dart';
 import '../widgets/aravt_map_icon.dart';
 import '../models/soldier_data.dart';
 
-class RegionScreen extends StatefulWidget {
+class RegionScreen extends StatelessWidget {
   const RegionScreen({super.key});
 
   @override
-  State<RegionScreen> createState() => _RegionScreenState();
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: RegionMapView(showMenu: true),
+    );
+  }
 }
 
-class _RegionScreenState extends State<RegionScreen> {
+class RegionMapView extends StatefulWidget {
+  final bool showMenu;
+  const RegionMapView({super.key, this.showMenu = false});
+
+  @override
+  State<RegionMapView> createState() => _RegionMapViewState();
+}
+
+class _RegionMapViewState extends State<RegionMapView> {
   GameArea? _selectedArea;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1a1a1a),
-      appBar: AppBar(
-        title: Text('Current Region', style: GoogleFonts.cinzel()),
-        backgroundColor: Colors.black.withAlpha((255 * 0.5).round()),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.map_outlined),
-            tooltip: "View World Map",
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/world_map');
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          _buildRegionMap(context),
-          if (_selectedArea != null) _buildInfoPanel(context, _selectedArea!),
-          const PersistentMenuWidget(),
-        ],
-      ),
+    return Stack(
+      children: [
+        _buildRegionMap(context),
+        if (_selectedArea != null) _buildInfoPanel(context, _selectedArea!),
+        if (widget.showMenu) const PersistentMenuWidget(),
+      ],
     );
   }
 
@@ -143,7 +130,6 @@ class _RegionScreenState extends State<RegionScreen> {
 
     int i = 0;
     for (var aravt in aravtsInHex) {
-      // Simple offset logic to prevent stacking
       final double aravtX = (i * 0.1 - 0.2) * (hexRadius * sqrt(3));
       final double aravtY = (0.2) * (hexRadius * 1.5);
       i++;
@@ -154,10 +140,9 @@ class _RegionScreenState extends State<RegionScreen> {
           child: Tooltip(
             message:
                 "Aravt: ${gameState.findSoldierById(aravt.captainId)?.name ?? 'Unknown'}",
-            child: AravtMapIcon(
-              color: 'blue', // TODO: randomize this or base on captain
-              scale:
-                  1.0,
+            child: const AravtMapIcon(
+              color: 'blue',
+              scale: 1.0,
             ),
           ),
         ),
@@ -230,14 +215,14 @@ class _RegionScreenState extends State<RegionScreen> {
               child: GestureDetector(
                 onTap: () {
                   if (_selectedArea?.coordinates == hexArea.coordinates) {
-                    // Second tap on same tile -> Navigate
                     if (!isExplored) return;
                     gameState.setCurrentArea(hexArea.coordinates);
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (ctx) => const AreaScreen()),
-                    );
+                    if (widget.showMenu) {
+                      Navigator.of(context).pushReplacementNamed('/area');
+                    } else {
+                      gameState.setMapLevel(MapLevel.area);
+                    }
                   } else {
-                    // First tap -> Select
                     setState(() {
                       _selectedArea = hexArea;
                     });
@@ -310,11 +295,8 @@ class _RegionScreenState extends State<RegionScreen> {
                             ],
                           ),
                         ),
-                      // POI Icons
                       ..._buildPoiIcons(hexArea, hexRadius, gameState),
-                      // Aravt Icons
                       ..._buildAravtIcons(hexArea, hexRadius, gameState),
-                      // Border
                       CustomPaint(
                         painter: HexBorderPainter(
                           color:
@@ -389,7 +371,6 @@ class _RegionScreenState extends State<RegionScreen> {
               ),
             ],
             const SizedBox(height: 12),
-            // Scout & Patrol Buttons (Multi-Aravt) - Visible to all, but disabled if not leader
             Row(
               children: [
                 Expanded(
@@ -404,7 +385,7 @@ class _RegionScreenState extends State<RegionScreen> {
                               SoldierRole.hordeLeader
                           ? () => _showAreaAssignmentDialog(
                               context, area, gameState, AravtAssignment.Scout)
-                          : null, // Disabled if not leader
+                          : null,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueGrey[700],
                           foregroundColor: Colors.white),
@@ -424,7 +405,7 @@ class _RegionScreenState extends State<RegionScreen> {
                               SoldierRole.hordeLeader
                           ? () => _showAreaAssignmentDialog(
                               context, area, gameState, AravtAssignment.Patrol)
-                          : null, // Disabled if not leader
+                          : null,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueGrey[700],
                           foregroundColor: Colors.white),

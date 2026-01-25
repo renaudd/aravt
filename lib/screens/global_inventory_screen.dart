@@ -17,6 +17,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/inventory_item.dart';
+import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/widgets/item_sprite_widget.dart';
 import 'package:aravt/widgets/persistent_menu_widget.dart';
 import 'package:aravt/widgets/equipped_gear_view.dart';
@@ -24,55 +25,53 @@ import 'package:aravt/widgets/equipped_gear_view.dart';
 class GlobalInventoryScreen extends StatelessWidget {
   const GlobalInventoryScreen({super.key});
 
-  final int _tabCount = 3;
+  @override
+  Widget build(BuildContext context) {
+    return const InventoryView(showMenu: true);
+  }
+}
+
+class InventoryView extends StatelessWidget {
+  final bool showMenu;
+  const InventoryView({super.key, this.showMenu = false});
 
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
 
     return DefaultTabController(
-      length: _tabCount,
+      length: 3,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text("Inventory", style: GoogleFonts.cinzel()),
-          backgroundColor: Colors.black.withOpacity(0.5),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          bottom: TabBar(
-            indicatorColor: Colors.amber,
-            labelStyle: GoogleFonts.cinzel(fontWeight: FontWeight.bold),
-            unselectedLabelStyle: GoogleFonts.cinzel(),
-            tabs: const [
-              Tab(icon: Icon(Icons.person_outline), text: "Personal"),
-              Tab(icon: Icon(Icons.groups_outlined), text: "Communal"),
-              Tab(icon: Icon(Icons.public_outlined), text: "Global"),
-            ],
-          ),
-        ),
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/steppe_background.jpg'),
-              fit: BoxFit.cover,
-              opacity: 0.5,
+        appBar: showMenu
+            ? AppBar(
+                title: Text("Inventory", style: GoogleFonts.cinzel()),
+                backgroundColor: Colors.black.withOpacity(0.5),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                bottom: const TabBar(
+                  indicatorColor: Colors.amber,
+                  tabs: [
+                    Tab(icon: Icon(Icons.person_outline), text: "Khan"),
+                    Tab(icon: Icon(Icons.groups_outlined), text: "Communal"),
+                    Tab(icon: Icon(Icons.public_outlined), text: "Global"),
+                  ],
+                ),
+              )
+            : null,
+        body: Stack(
+          children: [
+            TabBarView(
+              children: [
+                const PersonalInventoryTab(),
+                const CommunalInventoryTab(),
+                GlobalInventoryTab(isOmniscient: gameState.isOmniscientMode),
+              ],
             ),
-          ),
-          child: Stack(
-            children: [
-              TabBarView(
-                children: [
-                  const PersonalInventoryTab(),
-                  const CommunalInventoryTab(),
-                  GlobalInventoryTab(isOmniscient: gameState.isOmniscientMode),
-                ],
-              ),
-              const PersistentMenuWidget(),
-            ],
-          ),
+            if (showMenu) const PersistentMenuWidget(),
+          ],
         ),
-        // bottomNavigationBar removed
       ),
     );
   }
@@ -85,34 +84,49 @@ class PersonalInventoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
-    final player = gameState.player;
+    final khan = gameState.khan;
 
-    if (player == null) {
-      return const Center(child: Text("Player not found"));
+    if (khan == null) {
+      return const Center(child: Text("Khan not found"));
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 80.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: EquippedGearView(soldier: player, isInteractive: true),
-          ),
-          Expanded(child: _buildInventoryList(context, gameState)),
-        ],
+    final bool isPlayerKhan = gameState.isPlayerLeader;
+
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/steppe_background.jpg'),
+          fit: BoxFit.cover,
+          opacity: 0.3,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 80.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child:
+                  EquippedGearView(soldier: khan, isInteractive: isPlayerKhan),
+            ),
+            Expanded(child: _buildInventoryList(context, gameState, khan)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInventoryList(BuildContext context, GameState gameState) {
-    final List<InventoryItem> inventory = gameState.playerInventory;
+  Widget _buildInventoryList(
+      BuildContext context, GameState gameState, Soldier targetSoldier) {
+    final List<InventoryItem> inventory = targetSoldier.personalInventory;
+    final bool isPlayerKhan = gameState.isPlayerLeader;
 
     return DragTarget<InventoryItem>(
       builder: (context, candidateData, rejectedData) {
         final bool isReceiving = candidateData.isNotEmpty &&
-            candidateData.first?.equippableSlot != null;
+            candidateData.first?.equippableSlot != null &&
+            isPlayerKhan;
 
         return Container(
           margin: const EdgeInsets.all(8.0),
@@ -127,7 +141,7 @@ class PersonalInventoryTab extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Text("Personal Inventory",
+                child: Text("${targetSoldier.name}'s Inventory",
                     style:
                         GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
               ),
@@ -160,9 +174,11 @@ class PersonalInventoryTab extends StatelessWidget {
           ),
         );
       },
-      onWillAccept: (item) => item?.equippableSlot != null,
+      onWillAccept: (item) => item?.equippableSlot != null && isPlayerKhan,
       onAccept: (item) {
-        context.read<GameState>().unequipItem(item.equippableSlot!);
+        context
+            .read<GameState>()
+            .unequipItemFromSoldier(targetSoldier, item.equippableSlot!);
       },
     );
   }
@@ -218,42 +234,54 @@ class _CommunalInventoryTabState extends State<CommunalInventoryTab> {
     // Add liquid currency
     totalSupplies += gameState.communalScrap;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE0D5C1)),
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/steppe_background.jpg'),
+          fit: BoxFit.cover,
+          opacity: 0.3,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- Wealth Summary ---
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: const BoxDecoration(
-                border:
-                    Border(bottom: BorderSide(color: Colors.white24, width: 2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE0D5C1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // --- Wealth Summary ---
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(color: Colors.white24, width: 2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildWealthSummary(
+                        Icons.monetization_on,
+                        "Treasure Wealth",
+                        "${totalTreasure.toStringAsFixed(0)} ₹",
+                        Colors.amber),
+                    _buildWealthSummary(
+                        Icons.build,
+                        "Supply Wealth",
+                        "${totalSupplies.toStringAsFixed(0)} §",
+                        Colors.blue[200]!),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildWealthSummary(Icons.monetization_on, "Treasure Wealth",
-                      "${totalTreasure.toStringAsFixed(0)} ₹", Colors.amber),
-                  _buildWealthSummary(
-                      Icons.build,
-                      "Supply Wealth",
-                      "${totalSupplies.toStringAsFixed(0)} §",
-                      Colors.blue[200]!),
-                ],
+              // --- Ledger Table ---
+              Expanded(
+                child: _buildLedgerTable(ledgerEntries, context),
               ),
-            ),
-            // --- Ledger Table ---
-            Expanded(
-              child: _buildLedgerTable(ledgerEntries, context),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -572,44 +600,53 @@ class GlobalInventoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
-            child: Text(
-              isOmniscient ? "Horde Totals (Omniscient)" : "Horde Estimates",
-              style: GoogleFonts.cinzel(
-                color: const Color(0xFFE0D5C1),
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white30),
-              ),
-              child: Center(
-                child: Text(
-                  isOmniscient
-                      ? "Detailed breakdown of every item owned by every soldier would go here."
-                      : "Rough estimates of total fighting strength and supplies based on known information.",
-                  style:
-                      GoogleFonts.cinzel(color: Colors.white70, fontSize: 16),
-                  textAlign: TextAlign.center,
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/steppe_background.jpg'),
+          fit: BoxFit.cover,
+          opacity: 0.3,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
+              child: Text(
+                isOmniscient ? "Horde Totals (Omniscient)" : "Horde Estimates",
+                style: GoogleFonts.cinzel(
+                  color: const Color(0xFFE0D5C1),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white30),
+                ),
+                child: Center(
+                  child: Text(
+                    isOmniscient
+                        ? "Detailed breakdown of every item owned by every soldier would go here."
+                        : "Rough estimates of total fighting strength and supplies based on known information.",
+                    style:
+                        GoogleFonts.cinzel(color: Colors.white70, fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

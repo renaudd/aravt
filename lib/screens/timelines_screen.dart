@@ -17,24 +17,35 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/history_models.dart';
-import 'package:aravt/widgets/persistent_menu_widget.dart';
 
 import 'dart:math' as math;
 
-class TimelinesScreen extends StatefulWidget {
-  const TimelinesScreen({Key? key}) : super(key: key);
+class TimelinesScreen extends StatelessWidget {
+  const TimelinesScreen({super.key});
 
   @override
-  State<TimelinesScreen> createState() => _TimelinesScreenState();
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFF1E1E1E),
+      body: TimelinesView(),
+    );
+  }
+}
+
+class TimelinesView extends StatefulWidget {
+  const TimelinesView({super.key});
+
+  @override
+  State<TimelinesView> createState() => _TimelinesViewState();
 }
 
 enum TimelineLevel { horde, aravt, soldier }
 
-class _TimelinesScreenState extends State<TimelinesScreen> {
+class _TimelinesViewState extends State<TimelinesView> {
   TimelineLevel _currentLevel = TimelineLevel.horde;
   String? _selectedEntityId;
   MetricCategory? _selectedCategory;
-  MetricType? _focusedMetric; 
+  MetricType? _focusedMetric;
 
   double _zoomLevel = 1.0;
 
@@ -44,149 +55,141 @@ class _TimelinesScreenState extends State<TimelinesScreen> {
     final history = gameState.history;
 
     if (history.isEmpty) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF1E1E1E),
-        body: Center(
-          child: Text(
-            "No historical data yet.\nAdvance a turn to begin tracking.",
-            textAlign: TextAlign.center,
-            style: GoogleFonts.cinzel(color: Colors.white70, fontSize: 18),
-          ),
+      return Center(
+        child: Text(
+          "No historical data yet.\nAdvance a turn to begin tracking.",
+          textAlign: TextAlign.center,
+          style: GoogleFonts.cinzel(color: Colors.white70, fontSize: 18),
         ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              onScaleUpdate: (details) {
-                setState(() {
-                  _zoomLevel = (_zoomLevel * details.scale).clamp(0.5, 4.0);
-                });
-              },
-              onTapUp: (details) {
-                _handleTap(details.localPosition, history, context);
-              },
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const ClampingScrollPhysics(),
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width * _zoomLevel,
-                  height: MediaQuery.of(context).size.height,
-                  child: CustomPaint(
-                    painter: TimelineGraphPainter(
-                      history: history,
-                      gameState: gameState,
-                      category: _selectedCategory,
-                      level: _currentLevel,
-                      selectedEntityId: _selectedEntityId,
-                      zoom: _zoomLevel,
-                      focusedMetric: _focusedMetric,
-                    ),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            onScaleUpdate: (details) {
+              setState(() {
+                _zoomLevel = (_zoomLevel * details.scale).clamp(0.5, 4.0);
+              });
+            },
+            onTapUp: (details) {
+              _handleTap(details.localPosition, history, context);
+            },
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * _zoomLevel,
+                height: MediaQuery.of(context).size.height,
+                child: CustomPaint(
+                  painter: TimelineGraphPainter(
+                    history: history,
+                    gameState: gameState,
+                    category: _selectedCategory,
+                    level: _currentLevel,
+                    selectedEntityId: _selectedEntityId,
+                    zoom: _zoomLevel,
+                    focusedMetric: _focusedMetric,
                   ),
                 ),
               ),
             ),
           ),
-
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.black.withOpacity(0.8),
-                  child: Column(
-                    children: [
-                      Row(
+        ),
+        SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.black.withOpacity(0.8),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildLevelSelector(),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back,
-                                color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: FilterChip(
+                              label: Text(
+                                "ALL",
+                                style: GoogleFonts.cinzel(
+                                  fontSize: 12,
+                                  color: _selectedCategory == null
+                                      ? Colors.black
+                                      : Colors.white,
+                                  fontWeight: _selectedCategory == null
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              selected: _selectedCategory == null,
+                              onSelected: (_) => setState(() {
+                                _selectedCategory = null;
+                                _focusedMetric = null;
+                              }),
+                              backgroundColor: Colors.black54,
+                              selectedColor: Colors.white,
+                              checkmarkColor: Colors.black,
+                              side: const BorderSide(
+                                  color: Colors.white, width: 1),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          _buildLevelSelector(),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            Padding(
+                          ...MetricCategory.values.map((cat) {
+                            final isSelected = cat == _selectedCategory;
+                            return Padding(
                               padding: const EdgeInsets.only(right: 8.0),
                               child: FilterChip(
                                 label: Text(
-                                  "ALL",
+                                  cat.label,
                                   style: GoogleFonts.cinzel(
                                     fontSize: 12,
-                                    color: _selectedCategory == null
-                                        ? Colors.black
-                                        : Colors.white,
-                                    fontWeight: _selectedCategory == null
+                                    color:
+                                        isSelected ? Colors.black : cat.color,
+                                    fontWeight: isSelected
                                         ? FontWeight.bold
                                         : FontWeight.normal,
                                   ),
                                 ),
-                                selected: _selectedCategory == null,
+                                selected: isSelected,
                                 onSelected: (_) => setState(() {
-                                  _selectedCategory = null;
-                                  _focusedMetric = null; 
+                                  _selectedCategory = cat;
+                                  _focusedMetric = null;
                                 }),
                                 backgroundColor: Colors.black54,
-                                selectedColor: Colors.white,
+                                selectedColor: cat.color,
                                 checkmarkColor: Colors.black,
-                                side: const BorderSide(
-                                    color: Colors.white, width: 1),
+                                side: BorderSide(color: cat.color, width: 1),
                               ),
-                            ),
-                            ...MetricCategory.values.map((cat) {
-                              final isSelected = cat == _selectedCategory;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: FilterChip(
-                                  label: Text(
-                                    cat.label,
-                                    style: GoogleFonts.cinzel(
-                                      fontSize: 12,
-                                      color:
-                                          isSelected ? Colors.black : cat.color,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                  selected: isSelected,
-                                  onSelected: (_) => setState(() {
-                                    _selectedCategory = cat;
-                                    _focusedMetric = null; 
-                                  }),
-                                  backgroundColor: Colors.black54,
-                                  selectedColor: cat.color,
-                                  checkmarkColor: Colors.black,
-                                  side: BorderSide(color: cat.color, width: 1),
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        ),
+                            );
+                          }).toList(),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                if (_focusedMetric != null)
-                  _buildFocusedMetricOverlay(history, gameState),
-              ],
-            ),
+              ),
+              const Spacer(),
+              if (_focusedMetric != null)
+                _buildFocusedMetricOverlay(history, gameState),
+            ],
           ),
-          const PersistentMenuWidget(),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

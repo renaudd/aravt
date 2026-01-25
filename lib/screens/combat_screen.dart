@@ -25,10 +25,7 @@ import 'package:provider/provider.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/services/combat_service.dart'
-    show CombatSoldier, CombatSimulator;
-import 'package:aravt/models/prisoner_action.dart';
-// import 'package:aravt/models/combat_report.dart'; // Unused
-import 'package:aravt/models/combat_models.dart';
+    show CombatSoldier, CombatSimulator, TerrainType;
 import 'package:aravt/screens/post_combat_report_screen.dart';
 
 class CombatScreen extends StatefulWidget {
@@ -44,6 +41,7 @@ class _CombatScreenState extends State<CombatScreen>
   Timer? _simulationTimer;
   bool _isPlaying = false;
   final Map<String, ui.Image> _spritesheets = {};
+  final Map<String, ui.Image> _terrainSprites = {};
   ui.Image? _battlefieldBackground;
   bool _isLoading = true;
 
@@ -128,7 +126,6 @@ class _CombatScreenState extends State<CombatScreen>
           if (mounted) _spritesheets['${color}_horse_archer_right'] = img;
         }));
 
-
         // Assuming all colors might eventually have them, but you listed specific ones.
         // We'll try loading for all to be safe, handle errors if missing.
         // Actually, let's stick to the ones you listed to avoid 404s if others don't exist yet.
@@ -149,6 +146,19 @@ class _CombatScreenState extends State<CombatScreen>
           }));
         }
       }
+
+      // Load Terrain Sprites
+      final List<String> terrainTypes = ['trees', 'rocks', 'hills'];
+      for (String terrain in terrainTypes) {
+        loadingFutures.add(
+            _loadImage('assets/images/terrain/terrain_$terrain.png')
+                .then((img) {
+          if (mounted) _terrainSprites[terrain] = img;
+        }).catchError((e) {
+          print("Error loading terrain sprite ($terrain): $e");
+        }));
+      }
+
       await Future.wait(loadingFutures);
     } catch (e) {
       print("Error loading assets: $e");
@@ -229,7 +239,6 @@ class _CombatScreenState extends State<CombatScreen>
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
 
-
     if (gameState.combatFlowState == CombatFlowState.postCombat) {
       return _buildPostCombatPanel(context, gameState);
     }
@@ -292,12 +301,18 @@ class _CombatScreenState extends State<CombatScreen>
                     return CustomPaint(
                       painter: BackgroundPainter(_battlefieldBackground,
                           simulator: combatSimulator),
-                      foregroundPainter: BattlefieldPainter(
-                        combatants: currentCombatants,
-                        spritesheets: _spritesheets,
-                        animationValue: _animationController.value,
-                        events:
-                            combatEvents, // Pass events for arrow animations
+                      foregroundPainter: TerrainPainter(
+                        simulator: combatSimulator,
+                        terrainSprites: _terrainSprites,
+                      ),
+                      child: CustomPaint(
+                        foregroundPainter: BattlefieldPainter(
+                          combatants: currentCombatants,
+                          spritesheets: _spritesheets,
+                          animationValue: _animationController.value,
+                          events:
+                              combatEvents, // Pass events for arrow animations
+                        ),
                       ),
                     );
                   },
@@ -512,28 +527,63 @@ class BattlefieldPainter extends CustomPainter {
       canvas.drawImageRect(sheet, srcRect, dstRect, paint);
     }
 
-    // Draw Arrows
-    final arrowPaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    for (final event in events) {
-      if (event.message.contains("shoots at") ||
-          event.message.contains("throws a spear")) {
-        // This is a bit hacky as we don't have exact coordinates in the event yet,
-        // but we can infer them if we add them to the event or combatant.
-        // For now, let's just draw lines between random combatants for effect,
-        // or skip until we have better data.
-        // Better approach: Add position data to CombatEvent.
-      }
-    }
+    // Arrow drawing logic can be added here if needed in the future
   }
 
   @override
   bool shouldRepaint(covariant BattlefieldPainter oldDelegate) {
     return oldDelegate.animationValue != animationValue ||
         !listEquals(oldDelegate.combatants, combatants);
+  }
+}
+
+class TerrainPainter extends CustomPainter {
+  final CombatSimulator simulator;
+  final Map<String, ui.Image> terrainSprites;
+
+  TerrainPainter({required this.simulator, required this.terrainSprites});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (simulator.battlefield.grid.isEmpty) return;
+
+    final Paint paint = Paint()..filterQuality = FilterQuality.low;
+    const double terrainRenderSize = 64.0; // Slightly larger for visibility
+
+    // We only want to draw the FIRST tile of a cluster to avoid massive overlap,
+    // OR we just draw with low opacity.
+    // Actually, drawing every tile is fine if the sprite is translucent or if we skip most.
+
+    for (int x = 0; x < simulator.battlefield.width; x += 3) {
+      for (int y = 0; y < simulator.battlefield.length; y += 3) {
+        final tile = simulator.battlefield.grid[x][y];
+        if (tile.terrain == TerrainType.plains) continue;
+
+        String? spriteKey;
+        if (tile.terrain == TerrainType.trees) spriteKey = 'trees';
+        if (tile.terrain == TerrainType.rocks) spriteKey = 'rocks';
+        if (tile.terrain == TerrainType.hills) spriteKey = 'hills';
+
+        if (spriteKey != null && terrainSprites.containsKey(spriteKey)) {
+          final ui.Image sprite = terrainSprites[spriteKey]!;
+
+          final Rect srcRect = Rect.fromLTWH(
+              0, 0, sprite.width.toDouble(), sprite.height.toDouble());
+          final Rect dstRect = Rect.fromCenter(
+            center: Offset(x.toDouble(), y.toDouble()),
+            width: terrainRenderSize,
+            height: terrainRenderSize,
+          );
+
+          canvas.drawImageRect(sprite, srcRect, dstRect, paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant TerrainPainter oldDelegate) {
+    return false; // Terrain is static once generated
   }
 }
 

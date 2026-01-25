@@ -185,7 +185,7 @@ class _AravtRowState extends State<_AravtRow> {
     final captain = widget.gameState.findSoldierById(widget.aravt.captainId);
 
     // if (captain == null) return const SizedBox.shrink();
-    
+
     final bool isLeader = captain?.role == SoldierRole.hordeLeader;
     final bool isPlayer = captain?.isPlayer ?? false;
 
@@ -219,12 +219,11 @@ class _AravtRowState extends State<_AravtRow> {
                         final tutorial = context.read<TutorialService>();
                         tutorial.advanceIfHighlighted(
                             context, widget.gameState, 'open_player_profile');
-
-                        //  Close panel if tutorial is active (requested exception)
-                        if (tutorial.isActive) {
-                          widget.gameState.setHordePanelOpen(false);
-                        }
                       }
+
+                      // Automatically close horde panel on navigation
+                      widget.gameState.setHordePanelOpen(false);
+
                       if (captain != null) {
                         Navigator.push(
                             context,
@@ -277,14 +276,12 @@ class _AravtRowState extends State<_AravtRow> {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14)),
                         GestureDetector(
-
                           onTap: canAssign
                               ? () => _showReassignmentDialog(
                                   context, widget.aravt, widget.gameState)
                               : null,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 2.0),
-
                             child: _buildAssignmentText(isEditable: canAssign),
                           ),
                         ),
@@ -339,11 +336,16 @@ class _AravtRowState extends State<_AravtRow> {
                       if (v == s.id) duty = k.name;
                     });
                     return InkWell(
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  SoldierProfileScreen(soldierId: s.id))),
+                      onTap: () {
+                        // Automatically close horde panel on navigation
+                        widget.gameState.setHordePanelOpen(false);
+
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    SoldierProfileScreen(soldierId: s.id)));
+                      },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             vertical: 4.0, horizontal: 4.0),
@@ -844,9 +846,7 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: widget.vsync,
-        duration: const Duration(
-            milliseconds: 400))
+        vsync: widget.vsync, duration: const Duration(milliseconds: 400))
       ..repeat();
   }
 

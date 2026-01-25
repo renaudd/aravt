@@ -351,7 +351,6 @@ class GameSetupService {
     final List<GameArea> neighbors =
         _getHexNeighbors(startArea.coordinates, worldMap);
 
-
     neighbors.shuffle(_random);
     GameArea settlementHex = neighbors.removeAt(0);
     _forceSettlement(settlementHex, worldMap);
@@ -372,7 +371,6 @@ class GameSetupService {
         return poi;
       }).toList();
     }
-
 
     List<Soldier> garrisonSoldiers = [];
     List<Aravt> garrisonAravts = [];
@@ -1007,7 +1005,6 @@ class GameSetupService {
         currentLocationId: campId,
         hexCoords: hexCoords,
       ));
-      
 
       if (members.length > 1) {
         // Assign to the second soldier (index 1) as per user request
@@ -1027,7 +1024,7 @@ class GameSetupService {
               candidates.first.id;
         }
       }
-      
+
       colorIndex++;
     }
     return aravts;

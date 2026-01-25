@@ -30,11 +30,9 @@ class NewGameScreen extends StatefulWidget {
 }
 
 class _NewGameScreenState extends State<NewGameScreen> {
-
   String _selectedDifficulty = 'MEDIUM'; // Default difficulty
   bool _allowOmniscience = false; // Controls if the button is available in-game
   bool _isYoloMode = false;
-
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +127,6 @@ class _NewGameScreenState extends State<NewGameScreen> {
       ),
       child: Column(
         children: [
-
           CheckboxListTile(
             title: Text('Allow Omniscient Mode',
                 style: GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
@@ -144,7 +141,6 @@ class _NewGameScreenState extends State<NewGameScreen> {
             activeColor: const Color(0xFFE0D5C1),
             checkColor: Colors.black,
           ),
-
           CheckboxListTile(
             title: Text('YOLO Mode',
                 style: GoogleFonts.cinzel(color: Colors.white, fontSize: 18)),
@@ -170,12 +166,10 @@ class _NewGameScreenState extends State<NewGameScreen> {
       onTap: () {
         final gameState = context.read<GameState>();
 
-
         gameState.initializeNewGame(
             difficulty: _selectedDifficulty,
             enableAutoSave: _isYoloMode,
             allowOmniscience: _allowOmniscience);
-
 
         Navigator.push(
           context,

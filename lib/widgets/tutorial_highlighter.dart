@@ -93,8 +93,7 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
                           ? BorderRadius.circular(8)
                           : null,
                       border: Border.all(
-                        color:
-                            Colors.amber.withOpacity(_pulseAnimation.value),
+                        color: Colors.amber.withOpacity(_pulseAnimation.value),
                         width: 4,
                       ),
                       boxShadow: [
@@ -117,4 +116,3 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
     );
   }
 }
-

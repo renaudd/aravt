@@ -152,8 +152,7 @@ class TournamentResult {
             eventResults.map((k, v) => MapEntry(k.name, v.toJson())),
         'finalAravtStandings': finalAravtStandings,
         'winnerAravtId': winnerAravtId,
-        'dailyReports': dailyReports
-            .map((k, v) => MapEntry(k.toString(), v)),
+        'dailyReports': dailyReports.map((k, v) => MapEntry(k.toString(), v)),
       };
 
   factory TournamentResult.fromJson(Map<String, dynamic> json) {
@@ -234,7 +233,6 @@ class RaceResultEntry {
       );
 }
 
-
 class RaceEventResult extends EventResult {
   final List<RaceResultEntry> entries;
   // We still keep rankings (list of soldier IDs) for easy point calculation
@@ -309,8 +307,7 @@ class WrestlingEventResult extends EventResult {
             .map((r) => WrestlingRound.fromJson(r))
             .toList(),
         rankings: List<int>.from(json['rankings']),
-        firstRoundLoserIds:
-            List<int>.from(json['firstRoundLoserIds'] ?? []),
+        firstRoundLoserIds: List<int>.from(json['firstRoundLoserIds'] ?? []),
       );
 }
 

@@ -29,49 +29,41 @@ class AreaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const Scaffold(
+      body: AreaMapView(showMenu: true),
+    );
+  }
+}
+
+class AreaMapView extends StatelessWidget {
+  final bool showMenu;
+  const AreaMapView({super.key, this.showMenu = false});
+
+  @override
+  Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
     final GameArea? currentArea = gameState.currentArea;
 
     if (currentArea == null) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            'No area selected.',
-            style: GoogleFonts.cinzel(fontSize: 20, color: Colors.white),
-          ),
+      return Center(
+        child: Text(
+          'No area selected.',
+          style: GoogleFonts.cinzel(fontSize: 20, color: Colors.white),
         ),
       );
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(currentArea.name,
-            style: GoogleFonts.cinzel(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.black.withOpacity(0.3),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-      ),
-      body: Stack(
-        children: [
-          // 1. Background Image
-          _buildBackgroundImage(currentArea.backgroundImagePath),
+    return Stack(
+      children: [
+        // 1. Background Image
+        _buildBackgroundImage(currentArea.backgroundImagePath),
 
-          // 2. POI Layout
-          _buildPoiStack(context, currentArea, gameState),
+        // 2. POI Layout
+        _buildPoiStack(context, currentArea, gameState),
 
-          // 3. Persistent Menu
-          const PersistentMenuWidget(),
-        ],
-      ),
+        // 3. Persistent Menu (Optional)
+        if (showMenu) const PersistentMenuWidget(),
+      ],
     );
   }
 
@@ -100,8 +92,6 @@ class AreaScreen extends StatelessWidget {
 
         return Stack(
           children: visiblePois.map((poi) {
-            // Calculate pixel position from relative coordinates
-            // We give a padding of 15% on X and 20% on Y to avoid edges
             final double usableWidth = constraints.maxWidth * 0.7;
             final double usableHeight = constraints.maxHeight * 0.6;
 
@@ -110,11 +100,8 @@ class AreaScreen extends StatelessWidget {
             final double top =
                 (constraints.maxHeight * 0.20) + (usableHeight * poi.relativeY);
             return Positioned(
-              // Position the center of the widget at the calculated (left, top)
-              left: left -
-                  50, // Adjust by half of the widget's assumed width (100)
-              top: top -
-                  50, // Adjust by half of the widget's assumed height (100)
+              left: left - 50,
+              top: top - 50,
               child: _buildPoiWidget(context, poi),
             );
           }).toList(),
@@ -127,13 +114,12 @@ class AreaScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         _showPoiDetailDialog(context, poi);
-        print("Tapped on POI: ${poi.name}");
       },
       child: Tooltip(
         message: poi.name,
         child: SizedBox(
-          width: 100, // Fixed width for the POI widget
-          height: 100, // Fixed height for the POI widget
+          width: 100,
+          height: 100,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -196,7 +182,7 @@ class AreaScreen extends StatelessWidget {
                     }
                   }
                 }
-              : null, // Disable if not leader
+              : null,
         );
       },
     );

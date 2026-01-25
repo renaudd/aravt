@@ -34,7 +34,6 @@ class AravtCaptainService {
     ];
 
     for (var aravt in allAravts) {
-
       // but allow AI to run if player is just a member and captain is NPC.
       final Soldier? captain = gameState.findSoldierById(aravt.captainId);
       if (captain == null || captain.status != SoldierStatus.alive) {

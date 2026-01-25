@@ -74,7 +74,6 @@ class PathfindingService {
   /// Returns a value in "days per hex".
   double calculateTravelCost(
       Aravt aravt, List<Soldier> soldiers, GameArea area) {
-
     double baseCost = _getMovementCost(area);
 
     // --- TODO: Implement modifier logic ---

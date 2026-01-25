@@ -126,8 +126,7 @@ class HuntingService {
     );
   }
 
-  IndividualHuntResult _resolveSoldierHunt(
-      Soldier soldier,
+  IndividualHuntResult _resolveSoldierHunt(Soldier soldier,
       List<Animal> localAnimals, GameState gameState, Aravt aravt) {
     final List<HuntedAnimal> kills = [];
     bool wasInjured = false; // Placeholder for future "boar gores you" logic

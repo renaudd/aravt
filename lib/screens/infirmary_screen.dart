@@ -123,8 +123,7 @@ class InfirmaryScreen extends StatelessWidget {
                         final campPoi =
                             gameState.findPoiByIdWorld('camp-player');
                         if (campPoi != null) {
-                          gameState.assignAravtToPoi(
-                              aravt, campPoi, assignment,
+                          gameState.assignAravtToPoi(aravt, campPoi, assignment,
                               option: option);
                         } else {
                           print(

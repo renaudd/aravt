@@ -190,6 +190,25 @@ class GameDate {
     return "${monthNames[month]} $day, $year at $timeStr";
   }
 
+  String toDateString() {
+    const List<String> monthNames = [
+      "",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ];
+    return "${monthNames[month]} $day, $year";
+  }
+
   String toShortString() {
     final String monthStr = month.toString().padLeft(2, '0');
     final String dayStr = day.toString().padLeft(2, '0');

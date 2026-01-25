@@ -317,7 +317,6 @@ class WorldMapDatabase {
           }
         }
 
-
         if (pois.isEmpty) {
           var offset = _getNextOffset(poiOffsets);
           pois.add(PointOfInterest(

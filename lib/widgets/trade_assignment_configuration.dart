@@ -345,7 +345,7 @@ class _TradeAssignmentConfigurationState
       ),
     );
   }
-  
+
   bool _isResourcesEmpty(bool isSource) {
     if (!isSource)
       return _selectedResources.isEmpty ||

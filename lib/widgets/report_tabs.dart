@@ -651,7 +651,6 @@ class HealthReportTab extends StatelessWidget {
   }
 }
 
-
 // Merges Finance (Treasury) and Industry (Materials)
 class CommerceReportTab extends StatefulWidget {
   final bool isOmniscient;
@@ -1531,7 +1530,6 @@ Widget _buildResourceTile(IconData icon, String label, String value) {
     ),
   );
 }
-
 
 class HerdsReportTab extends StatelessWidget {
   final int? soldierId;

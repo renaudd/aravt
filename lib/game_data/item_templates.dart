@@ -43,7 +43,7 @@ abstract class BaseItemTemplate {
     required this.iconAssetPath,
     this.spriteIndex = 0,
     this.equippableSlot,
-    this.defaultOrigin = 'Unknown', 
+    this.defaultOrigin = 'Unknown',
   });
 
   // Abstract method to be implemented by subclasses

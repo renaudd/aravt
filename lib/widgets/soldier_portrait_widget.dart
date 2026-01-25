@@ -105,7 +105,6 @@ class _SoldierPortraitState extends State<SoldierPortrait> {
 
   @override
   Widget build(BuildContext context) {
-
     return ClipRRect(
       // Use a circular clip for the portrait
       borderRadius: BorderRadius.circular(widget.size / 2),

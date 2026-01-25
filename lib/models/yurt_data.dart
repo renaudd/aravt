@@ -106,5 +106,4 @@ class Yurt {
         return 'assets/images/opulent_yurt.png';
     }
   }
-
 }

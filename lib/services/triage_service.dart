@@ -51,7 +51,6 @@ class TriageService {
     // 2. Gather Surgeons (Player horde only)
     final List<SurgeonWorkload> surgeons = [];
 
-
     for (final soldier in gameState.horde) {
       if (soldier.status == SoldierStatus.alive && // Must be alive
           soldier.specialSkills.contains(SpecialSkill.surgeon)) {
@@ -233,10 +232,8 @@ class TriageService {
   /// Calculates the priority for every patient in the queue.
   void _recalculateAllPriorities(
       List<TriageCase> patients, GameState gameState) {
-
     final Set<int> captainIds =
         gameState.aravts.map((a) => a.captainId).toSet();
-
 
     final int leaderId = gameState.player?.id ?? -1;
 

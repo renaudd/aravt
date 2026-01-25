@@ -44,14 +44,10 @@ class Aravt {
   LocationType currentLocationType;
   String currentLocationId;
 
-
   HexCoordinates hexCoords;
-
-
 
   assign.AravtAssignment? persistentAssignment;
   String? persistentAssignmentLocationId;
-
 
   // --- (Getters: currentAssignment, assignmentLocationId are unchanged) ---
   assign.AravtAssignment get currentAssignment {
@@ -108,7 +104,6 @@ class Aravt {
               for (var duty in AravtDuty.values) duty: captainId,
             };
 
-
   void validateCaptain(List<Soldier> soldiers) {
     final currentCaptain = soldiers.firstWhere((s) => s.id == captainId,
         orElse: () => soldiers.first);
@@ -139,8 +134,7 @@ class Aravt {
         'currentLocationId': currentLocationId,
         'hexCoords': hexCoords.toJson(),
         'persistentAssignment': persistentAssignment?.name,
-        'persistentAssignmentLocationId':
-            persistentAssignmentLocationId,
+        'persistentAssignmentLocationId': persistentAssignmentLocationId,
       };
 
   factory Aravt.fromJson(Map<String, dynamic> json) {
@@ -177,7 +171,6 @@ class Aravt {
           "Warning: Aravt ${json['id']} has no location. Defaulting to $locId.");
     }
 
-
     HexCoordinates coords;
     if (json.containsKey('hexCoords')) {
       coords = HexCoordinates.fromJson(json['hexCoords']);
@@ -187,7 +180,6 @@ class Aravt {
       print(
           "Warning: Aravt ${json['id']} has no hexCoords. Defaulting to (0,0).");
     }
-
 
     return Aravt(
       id: json['id'],
@@ -204,8 +196,7 @@ class Aravt {
       persistentAssignment: json['persistentAssignment'] != null
           ? assign.assignmentFromName(json['persistentAssignment'])
           : null,
-      persistentAssignmentLocationId:
-          json['persistentAssignmentLocationId'],
+      persistentAssignmentLocationId: json['persistentAssignmentLocationId'],
     );
   }
 }
@@ -342,7 +333,6 @@ class HordeData {
     Map<String, RelationshipValues>? diplomacy,
     this.activeMissions = const [],
   }) : this.diplomacy = diplomacy ?? {};
-
 
   Map<String, dynamic> toJson() => {
         'id': id,

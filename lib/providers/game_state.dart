@@ -70,6 +70,8 @@ enum WealthStatus {
   excess // > 120§ per soldier (1:3 conversion)
 }
 
+enum MapLevel { area, region, world }
+
 class ActiveCombatState {
   final List<Soldier> playerSoldiers;
   final List<Soldier> opponentSoldiers;
@@ -139,8 +141,25 @@ class GameState with ChangeNotifier {
 
   GameArea? currentArea;
   Soldier? player;
+
+  /// The current leader of the horde (Noyan).
+  Soldier? get khan => horde.cast<Soldier?>().firstWhere(
+        (s) => s?.role == SoldierRole.hordeLeader,
+        orElse: () => null,
+      );
+
   GameDate? currentDate;
   int? tutorialCaptainId;
+
+  MapLevel _lastMapLevel = MapLevel.area;
+  MapLevel get lastMapLevel => _lastMapLevel;
+
+  void setMapLevel(MapLevel level) {
+    if (_lastMapLevel != level) {
+      _lastMapLevel = level;
+      notifyListeners();
+    }
+  }
 
   //  Method to update player reference (e.g. on death)
   void setPlayer(Soldier newPlayer) {
@@ -628,12 +647,15 @@ class GameState with ChangeNotifier {
     // Simplified Categories
     if (tabName == 'Chronicle') {
       return (unreadReportCounts['Event Log'] ?? 0) +
-          (unreadReportCounts['Combat'] ?? 0);
+          (unreadReportCounts['Combat'] ?? 0) +
+          (unreadReportCounts['History'] ?? 0);
     }
-    if (tabName == 'Treasury') {
+    if (tabName == 'Logistics') {
       return (unreadReportCounts['Finance'] ?? 0) +
           (unreadReportCounts['Industry'] ?? 0) +
-          (unreadReportCounts['Commerce'] ?? 0);
+          (unreadReportCounts['Khan'] ?? 0) +
+          (unreadReportCounts['Communal'] ?? 0) +
+          (unreadReportCounts['Global'] ?? 0);
     }
     if (tabName == 'Provisions') {
       return (unreadReportCounts['Food'] ?? 0) +
@@ -672,8 +694,10 @@ class GameState with ChangeNotifier {
     final mainTabs = [
       'Event Log',
       'Combat',
+      'History',
       'Health',
       'Commerce',
+      'Inventory',
       'Herds',
       'Food',
       'Hunting',
@@ -703,10 +727,13 @@ class GameState with ChangeNotifier {
       if (tabName == 'Chronicle') {
         unreadReportCounts['Event Log'] = 0;
         unreadReportCounts['Combat'] = 0;
-      } else if (tabName == 'Treasury') {
+        unreadReportCounts['History'] = 0;
+      } else if (tabName == 'Logistics') {
         unreadReportCounts['Finance'] = 0;
         unreadReportCounts['Industry'] = 0;
-        unreadReportCounts['Commerce'] = 0;
+        unreadReportCounts['Khan'] = 0;
+        unreadReportCounts['Communal'] = 0;
+        unreadReportCounts['Global'] = 0;
       } else if (tabName == 'Provisions') {
         unreadReportCounts['Food'] = 0;
         unreadReportCounts['Herds'] = 0;
@@ -1775,30 +1802,27 @@ class GameState with ChangeNotifier {
 
   void equipItem(InventoryItem item) {
     if (player == null) return;
+    equipItemToSoldier(player!, item);
+  }
 
-    // Use the player's equip method directly
-    player!.equip(item);
-
-    logEvent("Equipped ${item.name}.",
+  void equipItemToSoldier(Soldier soldier, InventoryItem item) {
+    soldier.equip(item);
+    logEvent("Equipped ${item.name} for ${soldier.name}.",
         category: EventCategory.general, severity: EventSeverity.low);
     notifyListeners();
   }
 
   void unequipItem(EquipmentSlot slot) {
     if (player == null) return;
+    unequipItemFromSoldier(player!, slot);
+  }
 
-    final item = player!.equippedItems[slot];
+  void unequipItemFromSoldier(Soldier soldier, EquipmentSlot slot) {
+    final item = soldier.equippedItems[slot];
     if (item == null) return;
 
-    // Manually unequip since Soldier doesn't have a simple unequip method exposed here easily,
-    // or we can implement one. For now, manual update is safe if we follow logic.
-    // Actually, Soldier might have unequip. Let's check.
-    // Assuming Soldier.equip handles swapping, but unequip needs to be manual or we add unequip to Soldier.
-    // For now, manual:
-    player!.equippedItems.remove(slot);
-    player!.personalInventory.add(item);
-
-    logEvent("Unequipped ${item.name}.",
+    soldier.unequip(slot);
+    logEvent("Unequipped ${item.name} from ${soldier.name}.",
         category: EventCategory.general, severity: EventSeverity.low);
     notifyListeners();
   }

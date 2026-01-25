@@ -80,7 +80,6 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
     }
   }
 
-
   /// This cache is now local to the widget's state to avoid service-level errors.
   /// A better solution would be a proper singleton service, but this will work.
   static final Map<String, ui.Image> _imageCache = {};
@@ -102,7 +101,6 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
     }
   }
 
-
   Future<void> _loadSpriteData() async {
     if (!mounted) return;
     setState(() {
@@ -122,10 +120,8 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
       return;
     }
 
-
     _spriteSourceSize = Size(
         spriteInfo.spriteWidth.toDouble(), spriteInfo.spriteHeight.toDouble());
-
 
     final int spriteIndex = SpriteService.getSpriteIndexForQuality(
         widget.item.itemType, widget.item.quality);
@@ -146,9 +142,7 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
     }
 
     try {
-
       final ui.Image image = await _loadSpritesheet(spriteInfo.assetPath);
-
 
       if (mounted) {
         setState(() {
@@ -198,7 +192,6 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
       );
     }
 
-
     return SizedBox(
       width: widget.size.width,
       height: widget.size.height,
@@ -212,7 +205,6 @@ class _ItemSpriteWidgetState extends State<ItemSpriteWidget> {
         ),
       ),
     );
-
   }
 }
 
@@ -224,7 +216,6 @@ class SpritePainter extends CustomPainter {
   final BoxFit fit;
   final Size spriteSourceSize;
 
-
   SpritePainter({
     required this.image,
     required this.srcRect,
@@ -234,12 +225,10 @@ class SpritePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-
     // This applies BoxFit.contain or BoxFit.cover, preserving aspect ratio
     final FittedSizes fittedSizes = applyBoxFit(fit, spriteSourceSize, size);
     final Rect dstRect = Alignment.center.inscribe(
         fittedSizes.destination, Rect.fromLTWH(0, 0, size.width, size.height));
-
 
     // Draw the specified part of the image onto the canvas
     canvas.drawImageRect(image, srcRect, dstRect, Paint());

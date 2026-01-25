@@ -44,5 +44,6 @@ flutter:
    - assets/images/
    - assets/images/items/
    - assets/images/sprites/
+   - assets/images/terrain/
    - assets/backgrounds/
    - assets/tiles/

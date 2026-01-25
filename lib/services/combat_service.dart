@@ -115,23 +115,48 @@ class BattlefieldState {
 
   void _generateTerrain() {
     final r = Random();
-    for (int x = 0; x < width; ++x) {
-      for (int y = 0; y < length; ++y) {
-        double roll = r.nextDouble();
-        if (roll < 0.02) {
-          grid[x][y].terrain = TerrainType.hills;
-        } else if (roll < 0.04) {
-          grid[x][y].terrain = TerrainType.trees;
+
+    // 1. Generate Clustered Terrain
+    void createCluster(int count, TerrainType type, double chance) {
+      for (int i = 0; i < count; i++) {
+        if (r.nextDouble() < chance) {
+          int centerX = r.nextInt(width);
+          int centerY = r.nextInt(length);
+          int radius = r.nextInt(3) + 2; // Cluster size 2-5
+
+          for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+              int tx = centerX + dx;
+              int ty = centerY + dy;
+              if (tx >= 0 && tx < width && ty >= 0 && ty < length) {
+                // Circular grouping roughly
+                if (dx * dx + dy * dy <= radius * radius) {
+                  grid[tx][ty].terrain = type;
+                }
+              }
+            }
+          }
         }
       }
     }
+
+    createCluster(15, TerrainType.hills, 0.8);
+    createCluster(20, TerrainType.trees, 0.7);
+    createCluster(10, TerrainType.rocks, 0.6);
+
+    // 2. Clear Engagement Zone (Center)
     int centerY = length ~/ 2;
     for (int x = 0; x < width; x++) {
-      for (int y = centerY - 50; y < centerY + 50; y++) {
-        if (y >= 0 && y < length) grid[x][y].terrain = TerrainType.plains;
+      for (int y = centerY - 60; y < centerY + 60; y++) {
+        if (y >= 0 && y < length) {
+          // Leave some sparse hills/trees in center but mostly plains
+          if (r.nextDouble() < 0.95) {
+            grid[x][y].terrain = TerrainType.plains;
+          }
+        }
       }
     }
-    print("Generated terrain.");
+    print("Generated clustered terrain.");
   }
 
   BattlefieldTile? getTile(int x, int y) {
@@ -720,7 +745,6 @@ class CombatSimulator {
     // Losing side attempts to flee
     for (var cs in _allCombatSoldiers) {
       if (cs.teamId != winningTeam && cs.isAlive && !cs.hasFled) {
-
         // Mark them as unconscious so they are picked up by the captives logic in _endCombat
         cs.isUnconscious = true;
         _logMessage("${cs.soldier.name} is surrounded and forced to surrender.",
@@ -1105,8 +1129,8 @@ class CombatSimulator {
 
     if (flees || _random.nextDouble() < 0.1) {
       _logMessage(
-          "${soldier.soldier.name} flight check (Score: ${fleeScore.toStringAsFixed(2)} vs Threshold: ${finalThreshold.toStringAsFixed(2)}). Flees: $flees",
-          isInternal: true,
+          "Flight check: ${(casualtyFactor * 100).toStringAsFixed(0)}% casualties * 0.4 + ${(injuryFactor * 100).toStringAsFixed(0)}% injury * 0.3 + ${(exhaustionFactor * 100).toStringAsFixed(0)}% exhaust * 0.15 + ${(stressFactor * 100).toStringAsFixed(0)}% stress * 0.15 = Score: ${fleeScore.toStringAsFixed(2)} vs Threshold: ${finalThreshold.toStringAsFixed(2)}. Flees: $flees",
+          isInternal: false,
           severity: EventSeverity.low,
           soldierId: soldier.soldier.id);
     }
@@ -1397,9 +1421,18 @@ class CombatSimulator {
       double incomingDamage, DamageType damageType, Weapon weapon,
       {bool blockedByShield = false}) {
     if (!target.isAlive && !target.isUnconscious) return;
+
+    _logMessage(
+        "Incoming damage from ${weapon.name}: ${incomingDamage.toStringAsFixed(1)}",
+        isInternal: false,
+        severity: EventSeverity.low);
+
     HitLocation hitLocation = InjuryService.determineHitLocation();
     _logMessage("Hit location: ${hitLocation.name}",
-        isInternal: true, soldierId: target.soldier.id);
+        isInternal: false,
+        severity: EventSeverity.low,
+        soldierId: target.soldier.id);
+
     Equipment? armor = _getArmorForLocation(target, hitLocation);
     Shield? shield =
         target.soldier.equippedItems[EquipmentSlot.shield] as Shield?;
@@ -1407,25 +1440,29 @@ class CombatSimulator {
     bool deflected = false;
     bool shieldCouldCover =
         (hitLocation == HitLocation.body || hitLocation == HitLocation.leftArm);
+
     if (!blockedByShield &&
         shield != null &&
         shield.condition > 0 &&
         shieldCouldCover) {
       if (_random.nextDouble() < 0.4) {
         _logMessage(
-            "Hit impacts ${target.soldier.name}'s shield instead of ${hitLocation.name}!",
+            "Hit impacts ${target.soldier.name}'s shield instead of ${hitLocation.name}! (Shield Coverage Check)",
             isInternal: false,
             severity: EventSeverity.low,
             soldierId: target.soldier.id);
         _applyConditionHit(shield, amount: 1.0);
+
         if (penetratingDamage <= shield.deflectValue) {
-          _logMessage("The shield deflects the blow!",
+          _logMessage(
+              "The shield deflects the blow! (Damage ${penetratingDamage.toStringAsFixed(1)} <= Deflect ${shield.deflectValue})",
               isInternal: false,
               severity: EventSeverity.low,
               soldierId: target.soldier.id);
           deflected = true;
         } else {
-          _logMessage("The blow penetrates the shield!",
+          _logMessage(
+              "The blow penetrates the shield! (Damage ${penetratingDamage.toStringAsFixed(1)} > Deflect ${shield.deflectValue}). Damage reduced by 30%.",
               isInternal: false,
               severity: EventSeverity.normal,
               soldierId: target.soldier.id);
@@ -1452,31 +1489,34 @@ class CombatSimulator {
       _applyConditionHit(armor);
       if (armor is Armor) {
         if (penetratingDamage <= armor.deflectValue) {
-          _logMessage("The ${armor.name} deflects the blow!",
+          _logMessage(
+              "The ${armor.name} deflects the blow! (Damage ${penetratingDamage.toStringAsFixed(1)} <= Deflect ${armor.deflectValue})",
               isInternal: false,
               severity: EventSeverity.low,
               soldierId: target.soldier.id);
           deflected = true;
         } else {
-          penetratingDamage =
+          double reducedDamage =
               max(0.25, penetratingDamage - armor.damageReductionValue);
           _logMessage(
-              "The blow penetrates the ${armor.name}! Reduced damage: ${penetratingDamage.toStringAsFixed(1)}",
+              "The blow penetrates the ${armor.name}! Damage: ${penetratingDamage.toStringAsFixed(1)} - reduction ${armor.damageReductionValue} = ${reducedDamage.toStringAsFixed(1)}",
               isInternal: false,
               severity: EventSeverity.normal,
               soldierId: target.soldier.id);
+          penetratingDamage = reducedDamage;
         }
       }
     } else if (!deflected) {
-      _logMessage("Direct hit on ${target.soldier.name}'s ${hitLocation.name}!",
+      _logMessage(
+          "Direct hit on ${target.soldier.name}'s ${hitLocation.name}! (No Armor Protection)",
           isInternal: false,
           severity: EventSeverity.normal,
           soldierId: target.soldier.id);
     }
     if (deflected) return;
     _logMessage(
-        "Final penetrating damage to ${hitLocation.name}: ${penetratingDamage.toStringAsFixed(1)}",
-        isInternal: true,
+        "Final penetrating damage: ${penetratingDamage.toStringAsFixed(1)}",
+        isInternal: false,
         soldierId: target.soldier.id);
 
     Injury? injury = InjuryService.calculateInjury(
@@ -1638,8 +1678,8 @@ class CombatSimulator {
     bool success = roll >= requiredRoll;
 
     _logMessage(
-        "${target.soldier.name} attempts to dodge (needs $requiredRoll+, rolls $roll).",
-        isInternal: true,
+        "Dodge calc: 5% base + ${(agilityBonus * 100).toStringAsFixed(0)}% agility - ${(exhaustionPenalty * 100).toStringAsFixed(0)}% exhaust = ${(finalChance * 100).toStringAsFixed(0)}%. Needs $requiredRoll+, rolls $roll.",
+        isInternal: false,
         severity: EventSeverity.low,
         soldierId: target.soldier.id);
 
@@ -1672,8 +1712,8 @@ class CombatSimulator {
     bool success = roll >= requiredRoll;
 
     _logMessage(
-        "${target.soldier.name} attempts to parry (needs $requiredRoll+, rolls $roll).",
-        isInternal: true,
+        "Parry calc: 10% base + ${(skillBonus * 100).toStringAsFixed(0)}% skill + ${(strengthBonus * 100).toStringAsFixed(0)}% str - ${(exhaustionPenalty * 100).toStringAsFixed(0)}% exhaust = ${(finalChance * 100).toStringAsFixed(0)}%. Needs $requiredRoll+, rolls $roll.",
+        isInternal: false,
         severity: EventSeverity.low,
         soldierId: target.soldier.id);
 
@@ -1707,8 +1747,8 @@ class CombatSimulator {
     bool success = roll >= requiredRoll;
 
     _logMessage(
-        "${target.soldier.name} attempts to block (needs $requiredRoll+, rolls $roll).",
-        isInternal: true,
+        "Block calc: ${(baseChance * 100).toStringAsFixed(0)}% base + ${(skillBonus * 100).toStringAsFixed(0)}% skill + ${(strengthBonus * 100).toStringAsFixed(0)}% str - ${(exhaustionPenalty * 100).toStringAsFixed(0)}% exhaust = ${(finalChance * 100).toStringAsFixed(0)}%. Needs $requiredRoll+, rolls $roll.",
+        isInternal: false,
         severity: EventSeverity.low,
         soldierId: target.soldier.id);
 
@@ -1753,8 +1793,8 @@ class CombatSimulator {
     bool failed = roll <= requiredRoll;
 
     _logMessage(
-        "${attacker.soldier.name} exhaustion check (fails on $requiredRoll or less, rolls $roll).",
-        isInternal: true,
+        "Exhaust check: ${(basePotentialCost * 100).toStringAsFixed(0)}% base cost + ${(max(0, attacker.currentExhaustion - 2.0) * 10).toStringAsFixed(0)}% exhaust penalty - ${((attacker.soldier.stamina - 5) * 3).toStringAsFixed(0)}% stamina bonus = Fail chance: ${(failChance * 100).toStringAsFixed(0)}%. Rolls $roll (fails if <= required).",
+        isInternal: false,
         severity: EventSeverity.low,
         soldierId: attacker.soldier.id);
 
@@ -1848,8 +1888,8 @@ class CombatSimulator {
     bool success = roll >= requiredRoll;
 
     _logMessage(
-        "${attacker.soldier.name} attack check (needs $requiredRoll+, rolls $roll).",
-        isInternal: true,
+        "Hit calc: 65% base + ${(skillModifier * 100).toStringAsFixed(0)}% skill - ${(max(0, attacker.currentExhaustion - 2.0) * 2).toStringAsFixed(0)}% exhaust + modifiers (Cover: ${coverModifier.toStringAsFixed(1)}, Range: ${rangeModifier.toStringAsFixed(1)}) = Final: ${(finalHitChance * 100).toStringAsFixed(0)}%. Needs $requiredRoll+, rolls $roll.",
+        isInternal: false,
         severity: EventSeverity.normal,
         soldierId: attacker.soldier.id);
 
@@ -1877,24 +1917,21 @@ class CombatSimulator {
       EventCategory category = EventCategory.combat}) {
     print("[Turn $_turn] $message");
     _combatLog.add("[Turn $_turn] $message");
-    if (!isInternal) {
-      try {
-        _gameState.logEvent(message,
-            category: category,
-            severity: severity,
-            soldierId: soldierId,
-            aravtId: aravtId,
-            isPlayerKnown: (soldierId != null &&
-                    _gameState.horde.any((s) => s.id == soldierId)) ||
-                (aravtId != null &&
-                    _gameState.aravts.any((a) => a.id == aravtId)) ||
-                (soldierId == null &&
-                    aravtId ==
-                        null) // Keep general messages for now, or improve later
-            );
-      } catch (e) {
-        print("!!! Error during GameState logging: $e");
-      }
+
+    // Always log to GameState now to provide technical transparency as requested
+    try {
+      _gameState.logEvent(message,
+          category: category,
+          severity: severity,
+          soldierId: soldierId,
+          aravtId: aravtId,
+          isPlayerKnown: (soldierId != null &&
+                  _gameState.horde.any((s) => s.id == soldierId)) ||
+              (aravtId != null &&
+                  _gameState.aravts.any((a) => a.id == aravtId)) ||
+              (soldierId == null && aravtId == null));
+    } catch (e) {
+      print("!!! Error during GameState logging: $e");
     }
   }
 

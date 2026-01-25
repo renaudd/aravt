@@ -163,8 +163,7 @@ class FishingService {
         final int memberCount = aravt.soldierIds.length;
         final double understrengthFactor = (memberCount / 10.0).clamp(0.0, 1.0);
 
-        double meat =
-            (fish.minMeat +
+        double meat = (fish.minMeat +
             _random.nextDouble() * (fish.maxMeat - fish.minMeat));
         meat *= understrengthFactor;
 
