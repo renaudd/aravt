@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 import 'package:aravt/game_data/item_templates.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/services/tutorial_service.dart';
+import 'package:aravt/services/logger_service.dart';
 import 'package:aravt/screens/unified_map_screen.dart';
 
 import 'screens/timelines_screen.dart';
@@ -49,6 +50,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Required or window_manager
+  await CrashLogger.init();
   ItemDatabase.initialize();
 
   // Window Manager setup for Desktop
@@ -57,9 +59,8 @@ void main() async {
 
     WindowOptions windowOptions = const WindowOptions(
       size: Size(1280, 720),
-      minimumSize: Size(1024, 768), // Increased minimum size
+      minimumSize: Size(1024, 768),
       center: true,
-      backgroundColor: Colors.transparent,
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.normal,
     );
@@ -124,6 +125,7 @@ class _AravtGameState extends State<AravtGame> {
     final gameState = Provider.of<GameState>(context, listen: false);
     final currentCombatState = gameState.combatFlowState;
     final isGameOver = gameState.isGameOver;
+    final wasSimulator = gameState.isSimulatorCombat;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isNavigating) return;
@@ -161,7 +163,13 @@ class _AravtGameState extends State<AravtGame> {
           navigator.popAndPushNamed('/postCombat');
         } else if (currentCombatState == CombatFlowState.none &&
             _previousCombatState == CombatFlowState.postCombat) {
-          navigator.pop();
+          // Check if this was a simulator combat
+          if (wasSimulator) {
+            navigator.pushNamedAndRemoveUntil(
+                '/mainMenu', (Route<dynamic> route) => false);
+          } else {
+            navigator.pop();
+          }
         } else if (currentCombatState == CombatFlowState.none &&
             _previousCombatState == CombatFlowState.preCombat) {
           navigator.pop(); // Player fled/avoided from Pre-Combat

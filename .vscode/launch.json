@@ -2,6 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Flutter → macOS (debug)",
+            "type": "dart",
+            "request": "launch",
+            "program": "lib/main.dart",
+            "deviceId": "macos",
+            "env": {
+                "PATH": "/opt/homebrew/bin:${env:PATH}"
+            }
+        },
+        {
             "name": "Flutter → Chrome (debug)",
             "type": "dart",
             "request": "launch",

@@ -167,11 +167,12 @@ class SettlementAIService {
         default:
           // Default to Patrol or Guard
           if (_random.nextBool()) {
+            final area = gameState.worldMap.values
+                 .where((a) => a.pointsOfInterest.contains(poi))
+                 .firstOrNull;
             aravt.task = AssignedTask(
               assignment: AravtAssignment.Patrol,
-              areaId: gameState.worldMap.values
-                  .firstWhere((a) => a.pointsOfInterest.contains(poi))
-                  .id,
+              areaId: area?.id,
               startTime: gameState.gameDate.toDateTime(),
               durationInSeconds: 8 * 3600.0,
             );

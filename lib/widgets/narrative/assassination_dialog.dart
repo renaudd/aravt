@@ -31,23 +31,23 @@ class AssassinationDialog extends StatelessWidget {
 
     switch (event.type) {
       case NarrativeEventType.assassinationPoison:
-        imagePath = 'images/assassination_poison.png';
+        imagePath = 'assets/images/assassination_poison.png';
         title = 'Poisoning Attempt';
         break;
       case NarrativeEventType.assassinationAccident:
-        imagePath = 'images/assassination_accident.png';
+        imagePath = 'assets/images/assassination_accident.png';
         title = 'Suspicious Accident';
         break;
       case NarrativeEventType.assassinationStrangle:
-        imagePath = 'images/assassination_strangle.png';
+        imagePath = 'assets/images/assassination_strangle.png';
         title = 'Strangulation Attempt';
         break;
       case NarrativeEventType.assassinationConfront:
-        imagePath = 'images/assassination_confront.png';
+        imagePath = 'assets/images/assassination_confront.png';
         title = 'Direct Confrontation';
         break;
       default:
-        imagePath = 'images/assassination_accident.png'; // Fallback
+        imagePath = 'assets/images/assassination_accident.png'; // Fallback
         title = 'Assassination Attempt';
     }
 

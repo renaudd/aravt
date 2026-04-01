@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import 'dart:math';
+import 'package:aravt/services/logger_service.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/soldier_data.dart';
 import 'package:aravt/models/game_event.dart';
@@ -80,82 +81,134 @@ class NextTurnService {
     }
 
     try {
+      CrashLogger.log("--- START TURN ${gameState.turn.turnNumber + 1} ---");
       // --- 7. ARAVT ASSIGNMENTS (Travel, Scout, Patrol, Hunt, etc.) ---
+      CrashLogger.log("START STEP 7: ResolveAravtAssignments");
       await _step7_ResolveAravtAssignments(gameState);
+      CrashLogger.log("END STEP 7.");
 
       // --- 1. ARAVT CAPTAIN AI ---
+      CrashLogger.log("START STEP 1: ResolveAravtCaptainDecisions");
       await _step1_ResolveAravtCaptainDecisions(gameState);
+      CrashLogger.log("END STEP 1.");
 
       // --- 2. HORDE LEADER AI ---
+      CrashLogger.log("START STEP 2: ResolveHordeLeaderDecisions");
       await _step2_ResolveHordeLeaderDecisions(gameState);
+      CrashLogger.log("END STEP 2.");
 
       // --- 3. SOLDIER TRANSFERS ---
+      CrashLogger.log("START STEP 3: ResolveSoldierTransfers");
       await _step3_ResolveSoldierTransfers(gameState);
+      CrashLogger.log("END STEP 3.");
 
       // --- 4. UNASSIGNED ACTIONS ---
+      CrashLogger.log("START STEP 4: ResolveUnassignedActions");
       await _step4_ResolveUnassignedActions(gameState);
+      CrashLogger.log("END STEP 4.");
 
       // --- 5. NEARBY SETTLEMENT AI ---
+      CrashLogger.log("START STEP 5: ResolveSettlementActions");
       await _step5_ResolveSettlementActions(gameState);
+      CrashLogger.log("END STEP 5.");
 
       // --- 6. NEARBY HORDE AI ---
+      CrashLogger.log("START STEP 6: ResolveNearbyHordeActions");
       await _step6_ResolveNearbyHordeActions(gameState);
+      CrashLogger.log("END STEP 6.");
 
       // --- 8. UNAVOIDABLE COMBAT (Phase 1) ---
+      CrashLogger.log("START STEP 8: ResolveUnavoidableCombat");
       await _step8_ResolveUnavoidableCombat(gameState);
+      CrashLogger.log("END STEP 8.");
 
       // --- 9. INVENTORY & NPC COMBAT ---
+      CrashLogger.log("START STEP 9: UpdateInventoriesAndResolveNPCCombat");
       await _step9_UpdateInventoriesAndResolveNPCCombat(gameState);
+      CrashLogger.log("END STEP 9.");
 
       // --- 10. POST-COMBAT SURGERY/TRIAGE ---
+      CrashLogger.log("START STEP 10: ResolvePostCombatTriage");
       await _step10_ResolvePostCombatTriage(gameState);
+      CrashLogger.log("END STEP 10.");
 
       // --- 10.5 DAILY MAINTENANCE (Cook, Equerry) ---
+      CrashLogger.log("START STEP 10.5: ResolveDailyMaintenance");
       await _step10_5_ResolveDailyMaintenance(gameState);
+      CrashLogger.log("END STEP 10.5.");
 
       // --- 10.6 TRAINING & DISCIPLINE (Drill Sergeant, Disciplinarian) ---
+      CrashLogger.log("START STEP 10.6: ResolveTrainingAndDiscipline");
       await _step10_6_ResolveTrainingAndDiscipline(gameState);
+      CrashLogger.log("END STEP 10.6.");
 
       // --- 10.7 MORALE & NARRATIVE (Tuulch, Chaplain) ---
+      CrashLogger.log("START STEP 10.7: ResolveMoraleAndNarrativeRoles");
       await _step10_7_ResolveMoraleAndNarrativeRoles(gameState);
+      CrashLogger.log("END STEP 10.7.");
+      
+      CrashLogger.log("START ResolveListenItems");
       await _resolveListenItems(gameState);
+      CrashLogger.log("END ResolveListenItems.");
 
       // --- 10.8 LEADERSHIP & REPORTS (Lieutenant, Chronicler) ---
+      CrashLogger.log("START STEP 10.8: ResolveLeadershipAndReports");
       await _step10_8_ResolveLeadershipAndReports(gameState);
+      CrashLogger.log("END STEP 10.8.");
 
       // --- 10.9 INFIRMARY (Medic) ---
+      CrashLogger.log("START STEP 10.9: processDailyInfirmary");
       _infirmaryService.processDailyInfirmary(gameState);
+      CrashLogger.log("END STEP 10.9.");
 
       // --- 11. SOLDIER UPDATES (Aging, Health, Birthdays) ---
+      CrashLogger.log("START STEP 11: UpdateSoldiers / cleanupEmptyAravts");
       await _step11_UpdateSoldiers(gameState);
       _cleanupEmptyAravts(gameState);
+      CrashLogger.log("END STEP 11.");
 
       // --- 11.5 NARRATIVE EVENTS (Trade, Tournaments) ---
+      CrashLogger.log("START STEP 11.5: ResolveNarrativeEvents");
       await _step11_5_ResolveNarrativeEvents(gameState);
+      CrashLogger.log("END STEP 11.5.");
 
       // --- RECORD HISTORY SNAPSHOT ---
+      CrashLogger.log("START RECORD HISTORY SNAPSHOT");
       gameState.historyService.recordDailySnapshot(gameState);
+      CrashLogger.log("END RECORD HISTORY SNAPSHOT.");
 
       // --- CHECK GAME OVER CONDITIONS BEFORE SAVE ---
+      CrashLogger.log("START _checkGameOver");
       if (_checkGameOver(gameState)) {
         gameState.setLoading(false);
         return; // Stop turn processing if game ended
       }
+      CrashLogger.log("END _checkGameOver.");
 
       // --- 12. AUTOSAVE ---
+      CrashLogger.log("START STEP 12: Autosave");
       await _step12_Autosave(gameState);
+      CrashLogger.log("END STEP 12.");
 
       // --- 13. PRESENT AVOIDABLE COMBAT ---
+      CrashLogger.log("START STEP 13: PresentAvoidableCombat");
       await _step13_PresentAvoidableCombat(gameState);
+      CrashLogger.log("END STEP 13.");
 
       // --- 14. REPLENISH TOKENS & END ---
+      CrashLogger.log("START STEP 14: ReplenishPlayerTokens");
       _step14_ReplenishPlayerTokens(gameState);
+      CrashLogger.log("END STEP 14.");
 
+      CrashLogger.log("START ADVANCE CLOCK");
       // --- ADVANCE CLOCK (Strictly 1 Day) ---
       gameState.gameDate.nextDay();
       gameState.turn.incrementTurn();
       gameState.communalCattle.resetDailyTracker();
+      CrashLogger.log("END ADVANCE CLOCK.");
+      CrashLogger.log("--- TURN DONE ---");
     } catch (e, stack) {
+      CrashLogger.log("CRITICAL ERROR during Next Turn processing: $e\n$stack");
       print("CRITICAL ERROR during Next Turn processing: $e");
       print(stack);
     } finally {
@@ -171,7 +224,7 @@ class NextTurnService {
   }
 
   Future<void> _step2_ResolveHordeLeaderDecisions(GameState gameState) async {
-    print("Step 2: Resolving Horde Leader decisions...");
+    CrashLogger.log("Inside _step2_ResolveHordeLeaderDecisions: Setting up findLeader...");
 
     // Helper function to find a leader in a list of soldiers
     Soldier? findLeader(List<Soldier> horde) {
@@ -182,6 +235,7 @@ class NextTurnService {
       }
     }
 
+    CrashLogger.log("Inside _step2_ResolveHordeLeaderDecisions: Processing Player Horde...");
     // 1. Player Horde (Run AI only if player is NOT the leader)
     final Soldier? playerHordeLeader = findLeader(gameState.horde);
     // We check the new flag to see if AI should run for player's horde
@@ -189,6 +243,7 @@ class NextTurnService {
         playerHordeLeader != null &&
         gameState.player != null &&
         gameState.player!.id != playerHordeLeader.id) {
+      CrashLogger.log("Inside _step2: Automated player horde leader found: ${playerHordeLeader.id}");
       final playerHordeData = HordeData(
         id: 'player_horde',
         leaderId: playerHordeLeader.id,
@@ -197,12 +252,16 @@ class NextTurnService {
         communalKilosOfMeat: gameState.communalMeat,
         communalKilosOfRice: gameState.communalRice,
       );
+      CrashLogger.log("Inside _step2: Calling hordeAIService for automated player horde");
       await _hordeAIService.resolveHordeLeaderTurn(playerHordeData, gameState);
+      CrashLogger.log("Inside _step2: Finished automated player horde");
     }
 
+    CrashLogger.log("Inside _step2_ResolveHordeLeaderDecisions: Processing NPC Horde 1...");
     // 2. NPC Horde 1
     final Soldier? npc1Leader = findLeader(gameState.npcHorde1);
     if (npc1Leader != null && gameState.npcAravts1.isNotEmpty) {
+      CrashLogger.log("Inside _step2: NPC Horde 1 leader found: ${npc1Leader.id}");
       final npcHorde1Data = HordeData(
         id: 'npc_horde_1',
         leaderId: npc1Leader.id,
@@ -213,12 +272,16 @@ class NextTurnService {
         communalKilosOfMeat: 0,
         communalKilosOfRice: 0,
       );
+      CrashLogger.log("Inside _step2: Calling hordeAIService for NPC Horde 1");
       await _hordeAIService.resolveHordeLeaderTurn(npcHorde1Data, gameState);
+      CrashLogger.log("Inside _step2: Finished NPC Horde 1");
     }
 
+    CrashLogger.log("Inside _step2_ResolveHordeLeaderDecisions: Processing NPC Horde 2...");
     // 3. NPC Horde 2
     final Soldier? npc2Leader = findLeader(gameState.npcHorde2);
     if (npc2Leader != null && gameState.npcAravts2.isNotEmpty) {
+      CrashLogger.log("Inside _step2: NPC Horde 2 leader found: ${npc2Leader.id}");
       final npcHorde2Data = HordeData(
         id: 'npc_horde_2',
         leaderId: npc2Leader.id,
@@ -227,8 +290,11 @@ class NextTurnService {
         communalKilosOfMeat: 0,
         communalKilosOfRice: 0,
       );
+      CrashLogger.log("Inside _step2: Calling hordeAIService for NPC Horde 2");
       await _hordeAIService.resolveHordeLeaderTurn(npcHorde2Data, gameState);
+      CrashLogger.log("Inside _step2: Finished NPC Horde 2");
     }
+    CrashLogger.log("Inside _step2_ResolveHordeLeaderDecisions: Reached end of method.");
   }
 
   Future<void> _step3_ResolveSoldierTransfers(GameState gameState) async {
@@ -514,8 +580,8 @@ class NextTurnService {
         if (a.soldierIds.contains(gameState.player?.id)) return false;
         // Exclude horde leader's aravt
         final leader = gameState.horde
-            .firstWhere((s) => s.role == SoldierRole.hordeLeader);
-        if (a.id == leader.aravt) return false;
+            .where((s) => s.role == SoldierRole.hordeLeader).firstOrNull;
+        if (leader != null && a.id == leader.aravt) return false;
         return true;
       }).toList();
 
@@ -537,17 +603,17 @@ class NextTurnService {
               aravtMembers.sort((a, b) =>
                   (b.strength + b.intelligence + b.ambition)
                       .compareTo(a.strength + a.intelligence + a.ambition));
-              offeredSoldier = aravtMembers.first;
+              offeredSoldier = aravtMembers.firstOrNull ?? captain;
             } else if (gameState.difficulty == 'hard') {
               // Offer WORST soldier
               aravtMembers.sort((a, b) =>
                   (a.strength + a.intelligence + a.ambition)
                       .compareTo(b.strength + b.intelligence + b.ambition));
-              offeredSoldier = aravtMembers.first;
+              offeredSoldier = aravtMembers.firstOrNull ?? captain;
             } else {
               // Medium: Random soldier
-              offeredSoldier =
-                  aravtMembers[_random.nextInt(aravtMembers.length)];
+              offeredSoldier = aravtMembers.isNotEmpty ? 
+                  aravtMembers[_random.nextInt(aravtMembers.length)] : captain;
             }
 
             // 3. Trigger the event
@@ -571,9 +637,9 @@ class NextTurnService {
 
       // 1. Identify Participants: All Player Horde Aravts EXCEPT the Leader's
       final leader =
-          gameState.horde.firstWhere((s) => s.role == SoldierRole.hordeLeader);
-      final participatingAravts =
-          gameState.aravts.where((a) => a.id != leader.aravt).toList();
+          gameState.horde.where((s) => s.role == SoldierRole.hordeLeader).firstOrNull;
+      final participatingAravts = leader != null ? 
+          gameState.aravts.where((a) => a.id != leader.aravt).toList() : gameState.aravts.toList();
 
       if (participatingAravts.isEmpty) {
         print("CRITICAL: No aravts available for tournament.");

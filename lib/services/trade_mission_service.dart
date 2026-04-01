@@ -21,7 +21,8 @@ class TradeMissionService {
       Aravt aravt, List<Soldier> allSoldiers) {
     double capacity = 0.0;
     for (var soldierId in aravt.soldierIds) {
-      final soldier = allSoldiers.firstWhere((s) => s.id == soldierId);
+      final soldier = allSoldiers.where((s) => s.id == soldierId).firstOrNull;
+      if (soldier == null) continue;
       // Base capacity per soldier (minimal)
       capacity += 10.0;
       // Mount capacity

@@ -15,6 +15,7 @@
 import 'dart:math';
 import 'package:aravt/models/horde_data.dart';
 import 'package:aravt/models/soldier_data.dart';
+import 'package:aravt/services/logger_service.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/area_data.dart';
 import 'package:aravt/models/assignment_data.dart';
@@ -42,32 +43,44 @@ class HordeAIService {
 
   Future<void> resolveHordeLeaderTurn(
       HordeData horde, GameState gameState) async {
+    CrashLogger.log("Inside HordeAIService: Entry. Looking up leader ID ${horde.leaderId}");
     final Soldier? leader = gameState.findSoldierById(horde.leaderId);
-    if (leader == null || leader.status != SoldierStatus.alive) return;
+    if (leader == null || leader.status != SoldierStatus.alive) {
+      CrashLogger.log("Inside HordeAIService: Leader is null or not alive. Returning.");
+      return;
+    }
 
     // If player is leader, they manage assignments manually
     if (gameState.player != null && leader.id == gameState.player!.id) {
+      CrashLogger.log("Inside HordeAIService: Leader is player. Returning.");
       return;
     }
 
     // 1. Assess Needs
+    CrashLogger.log("Inside HordeAIService: Assessing Needs...");
     final needs = _assessHordeNeeds(horde, gameState);
 
     // 2. Determine Goals based on Needs & Personality
+    CrashLogger.log("Inside HordeAIService: Determining Goals...");
     final goals = _determineGoals(leader, needs, gameState, horde);
 
     // 3. Get Available Aravts
+    CrashLogger.log("Inside HordeAIService: Getting Available Aravts...");
     final availableAravts = _getAvailableAravts(horde, gameState);
 
     if (availableAravts.isEmpty) {
+      CrashLogger.log("Inside HordeAIService: No Available Aravts. Returning.");
       return;
     }
 
     // 4. Execute Assignments
+    CrashLogger.log("Inside HordeAIService: Executing Assignments...");
     _executeAssignments(leader, horde, availableAravts, goals, gameState);
 
     // 5. Assign Intra-Aravt Duties (Lieutenant, Tuulch)
+    CrashLogger.log("Inside HordeAIService: Assigning Intra-Aravt Duties...");
     _assignIntraAravtDuties(horde, gameState);
+    CrashLogger.log("Inside HordeAIService: Exit.");
   }
 
   void resolveGarrisonAssignments(
@@ -619,48 +632,69 @@ class HordeAIService {
   }
 
   List<Aravt> _getAvailableAravts(HordeData horde, GameState gameState) {
+    CrashLogger.log("Inside _getAvailableAravts: Init");
     List<Aravt> all = (horde.id == 'player_horde')
         ? gameState.aravts
         : (horde.id == 'npc_horde_1'
             ? gameState.npcAravts1
             : gameState.npcAravts2);
 
+    CrashLogger.log("Inside _getAvailableAravts: Getting active tournament");
     final active = gameState.activeTournament;
 
     if (horde.id == 'player_horde') {
+      CrashLogger.log("Inside _getAvailableAravts: Player horde. Running loop.");
       int total = all.length;
       int available = 0;
       int excludedByTournament = 0;
       int excludedByTask = 0;
 
       for (var a in all) {
-        if (active != null && active.participatingAravts.contains(a)) {
+        if (active != null && active.participatingAravts.any((p) => p.id == a.id)) {
           excludedByTournament++;
-        } else if (a.task != null &&
-            (a.task is! AssignedTask ||
-                (a.task as AssignedTask).assignment != AravtAssignment.Rest)) {
-          excludedByTask++;
         } else {
-          available++;
+          final currentTask = a.task;
+          bool busy = false;
+          if (currentTask != null) {
+            if (currentTask is AssignedTask) {
+              if (currentTask.assignment != AravtAssignment.Rest) {
+                busy = true;
+              }
+            } else {
+              busy = true;
+            }
+          }
+          if (busy) {
+            excludedByTask++;
+          } else {
+            available++;
+          }
         }
       }
+      CrashLogger.log("Inside _getAvailableAravts: Finished loop.");
       print(
           "AI DEBUG: Player Horde Availability - Total: $total, Available: $available, ExcludedByTournament: $excludedByTournament, ExcludedByTask: $excludedByTask");
     }
 
-    return all.where((a) {
+    CrashLogger.log("Inside _getAvailableAravts: Filtering all.where()");
+    var filtered = all.where((a) {
       // 1. Check for active tournament participation
-      if (active != null && active.participatingAravts.contains(a)) {
+      if (active != null && active.participatingAravts.any((p) => p.id == a.id)) {
         return false;
       }
       // 2. Check if already assigned (but allow Rest)
-      if (a.task == null) return true;
-      if (a.task is AssignedTask &&
-          (a.task as AssignedTask).assignment == AravtAssignment.Rest)
+      final currentTask = a.task;
+      if (currentTask == null) return true;
+      if (currentTask is AssignedTask &&
+          currentTask.assignment == AravtAssignment.Rest) {
         return true;
+      }
       return false;
-    }).toList()
-      ..shuffle(_random);
+    }).toList();
+    CrashLogger.log("Inside _getAvailableAravts: Shuffling list");
+    filtered.shuffle(_random);
+    CrashLogger.log("Inside _getAvailableAravts: Exiting");
+    return filtered;
   }
 
   _PoiLocation? _findHordeCamp(HordeData horde, GameState gameState) {

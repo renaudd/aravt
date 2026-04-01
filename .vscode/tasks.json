@@ -2,16 +2,15 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "flutter",
-			"command": "flutter",
-			"args": [
-				"build",
-				"aar"
-			],
-			"group": "build",
+			"type": "shell",
+			"command": "./build_macos.sh",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 			"problemMatcher": [],
-			"label": "flutter: flutter build aar",
-			"detail": ""
+			"label": "Build macOS App",
+			"detail": "Runs the custom script to build and automatically sign the macOS application."
 		},
 		{
 			"type": "flutter",
@@ -20,10 +19,7 @@
 				"build",
 				"windows"
 			],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
+			"group": "build",
 			"problemMatcher": [],
 			"label": "flutter: flutter build windows",
 			"detail": ""

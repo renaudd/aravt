@@ -104,6 +104,8 @@ class PointOfInterest {
       maxResources: json['maxResources'] as int?,
       currentResources: json['currentResources'] as int?,
       isSeasonal: json['isSeasonal'] as bool? ?? false,
+      relativeX: (json['relativeX'] as num?)?.toDouble() ?? 0.5,
+      relativeY: (json['relativeY'] as num?)?.toDouble() ?? 0.5,
     );
   }
 
@@ -122,6 +124,8 @@ class PointOfInterest {
       'maxResources': maxResources,
       'currentResources': currentResources,
       'isSeasonal': isSeasonal,
+      'relativeX': relativeX,
+      'relativeY': relativeY,
     };
   }
 

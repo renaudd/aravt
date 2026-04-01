@@ -134,6 +134,7 @@ class GameState with ChangeNotifier {
   // Game Over State
   bool isGameOver = false;
   String? gameOverReason;
+  bool isSimulatorCombat = false; // Add flag to track simulator combat state
 
   // Automation flag for player's horde (before they are leader)
   bool isPlayerHordeAutomated = true;
@@ -566,43 +567,19 @@ class GameState with ChangeNotifier {
   }
 
   Soldier? findSoldierById(int id) {
-    try {
-      return horde.firstWhere((s) => s.id == id);
-    } catch (e) {
-      try {
-        return npcHorde1.firstWhere((s) => s.id == id);
-      } catch (e2) {
-        try {
-          return npcHorde2.firstWhere((s) => s.id == id);
-        } catch (e3) {
-          try {
-            return garrisonSoldiers.firstWhere((s) => s.id == id);
-          } catch (e4) {
-            return null;
-          }
-        }
-      }
-    }
+    for (var s in horde) { if (s.id == id) return s; }
+    for (var s in npcHorde1) { if (s.id == id) return s; }
+    for (var s in npcHorde2) { if (s.id == id) return s; }
+    for (var s in garrisonSoldiers) { if (s.id == id) return s; }
+    return null;
   }
 
   Aravt? findAravtById(String id) {
-    try {
-      return aravts.firstWhere((a) => a.id == id);
-    } catch (e) {
-      try {
-        return npcAravts1.firstWhere((a) => a.id == id);
-      } catch (e2) {
-        try {
-          return npcAravts2.firstWhere((a) => a.id == id);
-        } catch (e3) {
-          try {
-            return garrisonAravts.firstWhere((a) => a.id == id);
-          } catch (e4) {
-            return null;
-          }
-        }
-      }
-    }
+    for (var a in aravts) { if (a.id == id) return a; }
+    for (var a in npcAravts1) { if (a.id == id) return a; }
+    for (var a in npcAravts2) { if (a.id == id) return a; }
+    for (var a in garrisonAravts) { if (a.id == id) return a; }
+    return null;
   }
 
   PointOfInterest? findPoiByIdWorld(String id) {
@@ -616,11 +593,8 @@ class GameState with ChangeNotifier {
   }
 
   Settlement? findSettlementById(String id) {
-    try {
-      return settlements.firstWhere((s) => s.id == id);
-    } catch (e) {
-      return null;
-    }
+    for (var s in settlements) { if (s.id == id) return s; }
+    return null;
   }
 
   //  Notification Badge Tracking
@@ -1935,6 +1909,7 @@ class GameState with ChangeNotifier {
 
   void startSimulatorCombat(List<Soldier> teamA, List<Soldier> teamB) {
     print("Starting Simulator Combat...");
+    isSimulatorCombat = true; // Mark that this is a simulator battle
 
     // 1. Create temporary Aravts
     final aravtA = Aravt(
@@ -2203,6 +2178,7 @@ class GameState with ChangeNotifier {
 
     lastCombatReport = null;
     pendingCombat = null;
+
     _combatFlowState = CombatFlowState.none;
 
     notifyListeners();
