@@ -66,14 +66,16 @@ class EquippedGearView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double panelWidth = 320;
-    const double silhouetteHeight = 400;
-    const double silhouetteWidth = 150;
+    // Reduced for iPhone landscape — was 320 × 450
+    const double panelWidth = 200;
+    const double silhouetteHeight = 250;
+    const double silhouetteWidth = 96;
     const double centerOfSilhouette = panelWidth / 2;
+    const double scale = 0.625; // 200/320
 
     return Container(
       width: panelWidth,
-      height: silhouetteHeight + 50, // Slightly taller for bottom slots
+      height: silhouetteHeight + 32, // Slightly taller for bottom slots
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
@@ -84,7 +86,7 @@ class EquippedGearView extends StatelessWidget {
         children: [
           // Silhouette
           Positioned(
-            top: 20,
+            top: 12,
             left: (panelWidth - silhouetteWidth) / 2,
             child: Opacity(
               opacity: 0.4,
@@ -99,44 +101,45 @@ class EquippedGearView extends StatelessWidget {
             ),
           ),
 
-          // --- SLOTS ---
+          // --- SLOTS (all positions scaled by 0.625) ---
           // Center Column
           _buildSlot(context, EquipmentSlot.helmet,
-              top: 8, left: centerOfSilhouette - 30),
+              top: 5, left: centerOfSilhouette - 19, scale: scale),
           _buildSlot(context, EquipmentSlot.necklace,
-              top: 75, left: centerOfSilhouette - 16),
+              top: 47, left: centerOfSilhouette - 10, scale: scale),
           _buildSlot(context, EquipmentSlot.armor,
-              top: 110, left: centerOfSilhouette - 30),
+              top: 69, left: centerOfSilhouette - 19, scale: scale),
           _buildSlot(context, EquipmentSlot.undergarments,
-              top: 200, left: centerOfSilhouette - 30),
+              top: 125, left: centerOfSilhouette - 19, scale: scale),
           _buildSlot(context, EquipmentSlot.boots,
-              top: 360, left: centerOfSilhouette - 24),
+              top: 225, left: centerOfSilhouette - 15, scale: scale),
 
           // Left Column (Weapons)
-          _buildSlot(context, EquipmentSlot.longBow, top: 8, left: 8),
-          _buildSlot(context, EquipmentSlot.shortBow, top: 145, left: 8),
-          _buildSlot(context, EquipmentSlot.spear, top: 250, left: 8),
+          _buildSlot(context, EquipmentSlot.longBow, top: 5, left: 5, scale: scale),
+          _buildSlot(context, EquipmentSlot.shortBow, top: 91, left: 5, scale: scale),
+          _buildSlot(context, EquipmentSlot.spear, top: 156, left: 5, scale: scale),
 
           // Inner Left (Melee)
-          _buildSlot(context, EquipmentSlot.melee, top: 160, left: 70),
+          _buildSlot(context, EquipmentSlot.melee, top: 100, left: 44, scale: scale),
 
           // Right Column (Off-hand/Accessories)
-          _buildSlot(context, EquipmentSlot.gauntlets, top: 115, right: 60),
-          _buildSlot(context, EquipmentSlot.shield, top: 172, right: 40),
-          _buildSlot(context, EquipmentSlot.ring, top: 242, right: 70),
-          _buildSlot(context, EquipmentSlot.trophy, top: 8, right: 8),
+          _buildSlot(context, EquipmentSlot.gauntlets, top: 72, right: 38, scale: scale),
+          _buildSlot(context, EquipmentSlot.shield, top: 108, right: 25, scale: scale),
+          _buildSlot(context, EquipmentSlot.ring, top: 151, right: 44, scale: scale),
+          _buildSlot(context, EquipmentSlot.trophy, top: 5, right: 5, scale: scale),
 
           // Bottom (Mount)
-          _buildSlot(context, EquipmentSlot.mount, bottom: 8, right: 8),
+          _buildSlot(context, EquipmentSlot.mount, bottom: 5, right: 5, scale: scale),
         ],
       ),
     );
   }
 
   Widget _buildSlot(BuildContext context, EquipmentSlot slot,
-      {double? top, double? bottom, double? left, double? right}) {
+      {double? top, double? bottom, double? left, double? right, double scale = 1.0}) {
     final item = soldier.equippedItems[slot];
-    final size = _kSlotDimensions[slot]!;
+    final rawSize = _kSlotDimensions[slot]!;
+    final size = Size(rawSize.width * scale, rawSize.height * scale);
 
     Widget slotWidget = Container(
       width: size.width,

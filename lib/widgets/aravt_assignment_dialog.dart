@@ -74,17 +74,20 @@ class _AravtAssignmentDialogState extends State<AravtAssignmentDialog> {
     }
 
     return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       backgroundColor: Colors.grey[900]?.withValues(alpha: 0.95),
       title: Text(
         _selectedAssignment == null
             ? widget.title
             : "Assign to: ${_selectedAssignment!.name}",
         style: GoogleFonts.cinzel(
-            color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
       ),
       content: SingleChildScrollView(
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.4,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.80,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +154,7 @@ class _AravtAssignmentDialogState extends State<AravtAssignmentDialog> {
                         GoogleFonts.cinzel(color: Colors.white, fontSize: 16)),
                 const SizedBox(height: 8),
                 SizedBox(
-                  height: 250,
+                  height: 160,
                   child: ListView(
                     children: widget.availableAravts.map((aravt) {
                       return CheckboxListTile(
@@ -257,7 +260,7 @@ class _AravtAssignmentDialogState extends State<AravtAssignmentDialog> {
   Widget _buildConfigurationStep(BuildContext context) {
     if (_selectedAssignment == AravtAssignment.Trade) {
       return SizedBox(
-        height: 400, // Fixed height for the complex widget
+        height: 300, // Fixed height for the complex widget
         child: TradeAssignmentConfiguration(
           selectedAravtIds: _selectedAravtIds.toList(),
           onOptionsChanged: (json) {
@@ -281,7 +284,7 @@ class _AravtAssignmentDialogState extends State<AravtAssignmentDialog> {
               style: GoogleFonts.cinzel(color: Colors.white, fontSize: 16)),
           const SizedBox(height: 8),
           SizedBox(
-            height: 250,
+            height: 160,
             child: ListView(
               children: DiplomaticTerm.values.map((term) {
                 return CheckboxListTile(

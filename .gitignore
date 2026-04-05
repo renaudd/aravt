@@ -49,3 +49,4 @@ app.*.map.json
 *.exe
 *.zip
 assets/images/battlefield_background_huge.png
+*.dmg

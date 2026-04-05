@@ -52,6 +52,15 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
 
   @override
   void dispose() {
+    // Clear the arrow if we were the highlighted element — prevents a stale
+    // red arrow floating over a different screen after navigation.
+    try {
+      final tutorial = context.read<TutorialService>();
+      if (tutorial.isActive &&
+          tutorial.currentStep?.highlightKey == widget.highlightKey) {
+        tutorial.updateHighlightPosition(null);
+      }
+    } catch (_) {}
     _pulseController.dispose();
     super.dispose();
   }
@@ -65,10 +74,14 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
 
         if (!isActive) return widget.child;
 
-        // Report position to tutorial service so it can draw global arrow
+        // Report this widget's screen position to the tutorial service.
+        // Steps that have a screenAnchor will use that instead of this rect
+        // to place the arrow, but the service still needs a non-null value
+        // to trigger the arrow in the overlay.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+          final RenderBox? renderBox =
+              context.findRenderObject() as RenderBox?;
           if (renderBox != null) {
             final position = renderBox.localToGlobal(Offset.zero);
             final size = renderBox.size;
@@ -93,13 +106,13 @@ class _TutorialHighlighterState extends State<TutorialHighlighter>
                           ? BorderRadius.circular(8)
                           : null,
                       border: Border.all(
-                        color: Colors.amber.withOpacity(_pulseAnimation.value),
+                        color: Colors.amber.withValues(alpha: _pulseAnimation.value),
                         width: 4,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.amber
-                              .withOpacity(_pulseAnimation.value * 0.6),
+                              .withValues(alpha: _pulseAnimation.value * 0.6),
                           blurRadius: 15,
                           spreadRadius: 3,
                         )

@@ -94,8 +94,12 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
       padding: EdgeInsets.zero,
       child: Container(
         constraints: BoxConstraints(
+          // Panel sits at bottom:0 in its Positioned parent. Nav widget (~78px)
+          // overlaps the bottom, so we cap height at screenHeight-78 so the
+          // panel content ends flush with the top of the nav widget.
           maxHeight: _maxHeightPixels ??
-              MediaQuery.of(context).size.height * 0.6, // Default 60%
+              (MediaQuery.of(context).size.height - 78).clamp(
+                  200.0, MediaQuery.of(context).size.height * 0.85),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -110,7 +114,11 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
 
                   // Invert delta because dragging UP increases height
                   _maxHeightPixels = (_maxHeightPixels! - details.delta.dy)
-                      .clamp(150.0, MediaQuery.of(context).size.height * 0.9);
+                      .clamp(
+                          120.0,
+                          (MediaQuery.of(context).size.height - 78)
+                              .clamp(200.0,
+                                  MediaQuery.of(context).size.height * 0.85));
                 });
               },
               behavior:
@@ -194,7 +202,7 @@ class _AravtRowState extends State<_AravtRow> {
         widget.gameState.player?.role == SoldierRole.hordeLeader;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: PaperPanel(
         padding: EdgeInsets.zero,
         irregularity: 2.0,
@@ -209,7 +217,7 @@ class _AravtRowState extends State<_AravtRow> {
         child: Column(
           children: [
             SizedBox(
-              height: 64,
+              height: 48,
               child: Row(
                 children: [
                   GestureDetector(
@@ -242,14 +250,14 @@ class _AravtRowState extends State<_AravtRow> {
                                   highlightKey: 'open_player_profile',
                                   child: SoldierPortrait(
                                       index: captain?.portraitIndex ?? 0,
-                                      size: 52,
+                                      size: 38,
                                       backgroundColor:
                                           captain?.backgroundColor ??
                                               Colors.grey),
                                 )
                               : SoldierPortrait(
                                   index: captain?.portraitIndex ?? 0,
-                                  size: 52,
+                                  size: 38,
                                   backgroundColor:
                                       captain?.backgroundColor ?? Colors.grey),
                           if (captain?.queuedListenItem != null)
@@ -272,9 +280,9 @@ class _AravtRowState extends State<_AravtRow> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.cinzel(
-                                color: const Color(0xFF2D241E), // Dark Espresso
+                                color: const Color(0xFF2D241E),
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14)),
+                                fontSize: 12)),
                         GestureDetector(
                           onTap: canAssign
                               ? () => _showReassignmentDialog(
@@ -348,7 +356,7 @@ class _AravtRowState extends State<_AravtRow> {
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            vertical: 4.0, horizontal: 4.0),
+                            vertical: 2.0, horizontal: 4.0),
                         child: Row(
                           children: [
                             Text(s.name,
@@ -1010,22 +1018,27 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
                       color: Colors.blueGrey.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(18))),
             ),
-          // Destination Icon
+          // Destination Icon — wrapped in Tooltip to show location name on tap/hover
           if (iconPosFactor > 0)
             Align(
               alignment: Alignment(iconPosFactor * 2 - 1.0, 0.0),
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: Icon(
-                  destIcon ?? Icons.location_on,
-                  size: 14,
-                  color: Colors.amber,
+              child: Tooltip(
+                message: destName ?? '',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: const Duration(seconds: 3),
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Icon(
+                    destIcon ?? Icons.location_on,
+                    size: 14,
+                    color: Colors.amber,
+                  ),
                 ),
               ),
             ),

@@ -25,8 +25,17 @@ class TutorialStepData {
   final String? requiredRoute;
   final String? highlightKey; //  Key for UI highlighting
   final bool isConclude; //  Whether this is the final step
+  /// When set, the overlay draws the red arrow at this fractional screen
+  /// position (Alignment coords: -1,-1 = top-left, 1,1 = bottom-right)
+  /// instead of tracking the widget's render-box position.  Use this for
+  /// buttons that live inside Transform.scale widgets whose coordinates are
+  /// unreliable via localToGlobal.
+  final Alignment? screenAnchor;
   TutorialStepData(this.text,
-      {this.requiredRoute, this.highlightKey, this.isConclude = false});
+      {this.requiredRoute,
+      this.highlightKey,
+      this.isConclude = false,
+      this.screenAnchor});
 }
 
 class TutorialService extends ChangeNotifier {
@@ -84,16 +93,16 @@ class TutorialService extends ChangeNotifier {
     // 1. Profile (Horde) -> Direct to Player Profile
     TutorialStepData(
         "You are the captain of the Third Aravt. Press your profile icon to inspect your own file.",
-        requiredRoute: '/camp', // Horde panel is in camp
+        requiredRoute: '/camp',
         highlightKey: 'open_player_profile'),
     // 2. Navigation (Profile) -> Direct to Next
     TutorialStepData(
         "Now, press the navigate next button to cycle through the members of your aravt.",
         requiredRoute: null,
         highlightKey: 'navigate_next_soldier'),
-    // 3. Inquire (Profile) -> Direct to Inquire
+    // 3. Inquire (Profile) -> Highlight only the Inquire button
     TutorialStepData(
-        "Get to know your men. Use the 'Inquire' button to learn of their traits and history.",
+        "Get to know your men. Use the 'Inquire' button to uncover a soldier's traits and history. Each interaction costs a token.",
         requiredRoute: null,
         highlightKey: 'inquire_soldier'),
     // 4. Aravt Tab (Profile) -> Direct to Aravt Tab
@@ -103,15 +112,22 @@ class TutorialService extends ChangeNotifier {
     TutorialStepData(
         "This is where you can assign duties to your men. You won't want to keep all these responsibilities to yourself. When you're done, hit the Next Turn button to advance to the next day.",
         requiredRoute: null,
-        highlightKey: 'next_turn_button'),
+        highlightKey: 'next_turn_button',
+        // Bottom-right corner: the play button is the rightmost item in the nav bar
+        screenAnchor: const Alignment(0.98, 0.92)),
     // 6. Open Horde Panel Again
     TutorialStepData("Open the horde panel again.",
-        requiredRoute: '/camp', highlightKey: 'open_horde_panel'),
+        requiredRoute: '/camp',
+        highlightKey: 'open_horde_panel',
+        // Horde button is the first icon in the nav bar, near bottom-right
+        screenAnchor: const Alignment(0.60, 0.92)),
     // 7. Reports Tab
     TutorialStepData(
         "Now you can see what our leader has assigned each aravt to do. Click on the Reports Tab.",
         requiredRoute: null,
-        highlightKey: 'open_reports_tab'),
+        highlightKey: 'open_reports_tab',
+        // Reports button is the second icon in the nav bar
+        screenAnchor: const Alignment(0.68, 0.92)),
     // 8. Conclude
     TutorialStepData(
         "Every assignment will produce a report upon completion. Study them to identify who deserves to be praised or scolded. You'll want to make the other captains respect you if you expect them to call you Khan some day.",
@@ -192,10 +208,13 @@ class TutorialService extends ChangeNotifier {
   void dismiss(BuildContext context, GameState gameState) {
     _highlightPosition = null;
     gameState.tutorialDismissalCount++;
-    cyclePortrait(angry: true); // Cycle to next angry portrait
+    cyclePortrait(angry: true);
 
-    // Apply penalty based on dismissal count
-    double penalty = -0.2; // Default
+    // Remember the current turn — the tutorial won't re-activate until the
+    // player advances at least one turn.
+    _lastTurnStarted = gameState.turn.turnNumber;
+
+    double penalty = -0.2;
     if (gameState.tutorialDismissalCount == 1)
       penalty = -0.35;
     else if (gameState.tutorialDismissalCount == 2)
@@ -209,12 +228,24 @@ class TutorialService extends ChangeNotifier {
       _isActive = false;
       notifyListeners();
     } else {
-      // Advance to next step so they don't see the same one again
+      // Advance past the current step so the same dialogue doesn't reappear.
       gameState.tutorialStepIndex++;
       _currentIndex = gameState.tutorialStepIndex;
       _isActive = false;
       notifyListeners();
     }
+  }
+
+  /// Silently deactivates the tutorial without any game-state side effects.
+  /// Call this when the player quits to the main menu so the dialogue
+  /// doesn't bleed into a new session.
+  void deactivateForQuit() {
+    _isActive = false;
+    _highlightPosition = null;
+    _tutorialSoldierId = null;
+    _tutorialTabIndex = null;
+    _shouldOpenHordePanel = false;
+    notifyListeners();
   }
 
   void complete(GameState gameState, {required bool success}) {
@@ -269,7 +300,6 @@ class TutorialService extends ChangeNotifier {
     if (gameState.tutorialStepIndex == 1) {
       _shouldOpenHordePanel = true;
       notifyListeners();
-      // Stay on Camp Screen for Horde Panel
       final currentRoute = ModalRoute.of(context)?.settings.name;
       if (currentRoute != '/camp') {
         if (navigatorKey.currentState?.canPop() ?? false) {
@@ -284,37 +314,22 @@ class TutorialService extends ChangeNotifier {
       if (gameState.player != null) {
         _tutorialSoldierId = gameState.player!.id;
         notifyListeners();
-        print(
-            "[TUTORIAL] Navigating to Player Profile: ${gameState.player!.id}");
         navigatorKey.currentState
             ?.pushNamed('/soldier_profile', arguments: gameState.player!.id);
       }
       return;
     } else if (gameState.tutorialStepIndex == 3 ||
         gameState.tutorialStepIndex == 4) {
-      // Only perform automatic navigation if resuming.
-      // If advancing, we want the user to manually click.
-      if (!isResume) {
-        print(
-            "[TUTORIAL] Skipping auto-navigation for step ${gameState.tutorialStepIndex} (advance)");
-        return;
-      }
+      // Steps 3–4 take place on a soldier profile; on resume navigate there.
+      if (!isResume) return;
 
-      // Navigate to Second Soldier Profile
       if (gameState.player != null) {
         final aravt = gameState.findAravtById(gameState.player!.aravt);
         if (aravt != null && aravt.soldierIds.length > 1) {
-          // Find a soldier that isn't the player
           final secondSoldierId =
               aravt.soldierIds.firstWhere((id) => id != gameState.player!.id);
           _tutorialSoldierId = secondSoldierId;
-
-          // if (gameState.tutorialStepIndex == 4) {
-          //   _tutorialTabIndex = 1; // Aravt Tab
-          // }
           notifyListeners();
-          print(
-              "[TUTORIAL] Navigating to Second Soldier Profile: $secondSoldierId, Tab: $_tutorialTabIndex");
           navigatorKey.currentState
               ?.pushNamed('/soldier_profile', arguments: secondSoldierId);
         }

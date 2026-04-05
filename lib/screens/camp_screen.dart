@@ -54,8 +54,8 @@ class _CampScreenState extends State<CampScreen>
   static const double spriteFps = 12.0;
   static const double minSoldierSpeed = 1.0; // Slowest at the top
   static const double maxSoldierSpeed = 4.0; // Fastest at the bottom
-  static const double minSoldierScale = 0.03; // Smaller in background
-  static const double maxSoldierScale = 0.15;
+  static const double minSoldierScale = 0.03 * 0.75; // 25% smaller than original
+  static const double maxSoldierScale = 0.15 * 0.75; // 25% smaller than original
 
   // Camp bounds (normalized coordinates)
   static const double minX = 0.1;
@@ -274,7 +274,7 @@ class _CampScreenState extends State<CampScreen>
     List<_RenderItem> renderItems = [];
 
     // 1. Yurts
-    const double baseYurtWidth = 820.0;
+    const double baseYurtWidth = 820.0 * 0.75; // 25% smaller
     for (var yurt in yurts) {
       final position = yurt.position ?? const Offset(0.5, 0.6);
       final scale = yurt.scale ?? 0.1;
@@ -375,7 +375,7 @@ class _CampScreenState extends State<CampScreen>
                 cy + math.sin(angle) * distance * 0.5; // Flattened circle
 
             // Sort Y is the horse's feet (hy + 15 approx for size 30)
-            double horseSize = 30.0; // Increased size (was 20)
+            double horseSize = 22.5; // 25% smaller than original 30
 
             renderItems.add(_RenderItem(
               y: hy + horseSize,
@@ -475,7 +475,7 @@ class _CampScreenState extends State<CampScreen>
   void _addBuilding(List<_RenderItem> items, Size screenSize, Offset position,
       String imagePath, String label, VoidCallback onTap) {
     double scale = 0.7 + (position.dy * 0.6);
-    const double baseWidth = 400.0;
+    const double baseWidth = 400.0 * 0.75; // 25% smaller
     double width = baseWidth * scale * 0.25;
     double height = width;
 

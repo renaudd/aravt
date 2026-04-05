@@ -19,7 +19,7 @@ import 'package:provider/provider.dart';
 import '../providers/game_state.dart';
 import '../models/yurt_data.dart';
 import '../models/soldier_data.dart';
-import '../widgets/soldier_portrait_widget.dart'; // To display occupant portraits
+import '../widgets/soldier_portrait_widget.dart';
 import '../screens/soldier_profile_screen.dart';
 
 class YurtDetailScreen extends StatelessWidget {
@@ -34,15 +34,14 @@ class YurtDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
     final List<Soldier> allSoldiers = gameState.horde;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     final Yurt yurt;
     try {
-      // Assuming gameState.yurts holds the list of all yurts
       yurt = gameState.yurts.firstWhere((y) => y.id == yurtId);
     } catch (e) {
-      // Fallback if the yurtId is invalid
       return Scaffold(
-        appBar: AppBar(title: Text("Error")),
+        appBar: AppBar(title: const Text("Error")),
         body: Center(
           child: Text("Error: Yurt with ID $yurtId not found.",
               style: GoogleFonts.cinzel()),
@@ -52,68 +51,65 @@ class YurtDetailScreen extends StatelessWidget {
 
     final List<Soldier> yurtOccupants = _getOccupants(yurt, allSoldiers);
 
-    // final Horde currentHorde = Horde(...)
-
     return Scaffold(
       body: Stack(
         children: [
-          // Background Image
+          // Background
           Positioned.fill(
             child: Image.asset('assets/images/steppe_background.jpg',
                 fit: BoxFit.cover),
           ),
-          // Back Button
-          Positioned(
-            top: 40,
-            left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
 
-          // Main Content
-          Center(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 40.0, vertical: 80.0),
-              child: UiPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Yurt Image and Title
-                    Text(
-                      '${yurt.quality.name} Yurt (${yurt.id})',
-                      style: GoogleFonts.cinzel(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 20),
-                    Image.asset(
-                      yurt.imagePath,
-                      height: 150, // Adjust size as needed
-                      fit: BoxFit.contain,
-                    ),
-                    const Divider(color: Colors.white54, height: 40),
+          // Scrollable main content — avoids overflow on small screens.
+          // Uses SingleChildScrollView + Column (mainAxisSize.min) instead of
+          // Expanded + ListView so the panel shrinks to fit its content and
+          // the whole thing scrolls when it doesn't fit.
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 48, 20, 24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: UiPanel(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Title
+                        Text(
+                          '${yurt.quality.name} Yurt (${yurt.id})',
+                          style: GoogleFonts.cinzel(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
 
-                    // Occupants List Header
-                    Text(
-                      'Occupants (${yurtOccupants.length})',
-                      style: GoogleFonts.cinzel(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
+                        // Yurt image — capped at 30% screen height so it
+                        // never dominates on a small landscape phone.
+                        Image.asset(
+                          yurt.imagePath,
+                          height: (screenHeight * 0.30).clamp(80.0, 180.0),
+                          fit: BoxFit.contain,
+                        ),
+                        const Divider(color: Colors.white54, height: 28),
 
-                    // Occupants List
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: yurtOccupants.length,
-                        itemBuilder: (context, index) {
-                          final soldier = yurtOccupants[index];
-                          return ListTile(
+                        // Occupants header
+                        Text(
+                          'Occupants (${yurtOccupants.length})',
+                          style: GoogleFonts.cinzel(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Occupant rows — no Expanded/ListView needed;
+                        // Column expands naturally and the outer
+                        // SingleChildScrollView handles overflow.
+                        ...yurtOccupants.map(
+                          (soldier) => ListTile(
                             leading: GestureDetector(
                               onTap: () {
                                 Navigator.push(
@@ -127,7 +123,7 @@ class YurtDetailScreen extends StatelessWidget {
                               },
                               child: SoldierPortrait(
                                 index: soldier.portraitIndex,
-                                size: 50.0,
+                                size: 46.0,
                                 backgroundColor: soldier.backgroundColor,
                               ),
                             ),
@@ -135,7 +131,7 @@ class YurtDetailScreen extends StatelessWidget {
                               soldier.name,
                               style: GoogleFonts.cinzel(
                                   color: soldier.isPlayer
-                                      ? Color(0xFFE0D5C1)
+                                      ? const Color(0xFFE0D5C1)
                                       : Colors.white,
                                   fontWeight: FontWeight.bold),
                             ),
@@ -143,13 +139,23 @@ class YurtDetailScreen extends StatelessWidget {
                               'Role: ${soldier.role.name} | Aravt: ${soldier.aravt}',
                               style: GoogleFonts.cinzel(color: Colors.white70),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
+            ),
+          ),
+
+          // Back button pinned top-left, above scroll content
+          Positioned(
+            top: 40,
+            left: 20,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         ],
@@ -158,27 +164,22 @@ class YurtDetailScreen extends StatelessWidget {
   }
 }
 
-// --- Helper Functions (Moved outside the class) ---
+// --- Helper Functions ---
 
-// Helper function to find Soldier objects from IDs
 List<Soldier> _getOccupants(Yurt yurt, List<Soldier> allSoldiers) {
   return yurt.occupantIds
       .map((id) => allSoldiers.firstWhere((s) => s.id == id,
-          orElse: () =>
-              _createUnknownSoldier(id, yurt.id))) // Find soldier by ID
+          orElse: () => _createUnknownSoldier(id, yurt.id)))
       .toList();
 }
 
-// Fallback in case an ID doesn't match (Copied from your code)
 Soldier _createUnknownSoldier(int id, String yurtId) {
-  // This is a placeholder. Ideally, your data generation ensures valid IDs.
   DateTime defaultBirthDate =
       DateTime(SoldierGenerator.gameStartYear - 25, 1, 1);
   Soldier unknown = Soldier(
       id: id,
       aravt: 'Unknown',
       name: 'Unknown Soldier [$id]',
-      // Provide defaults for ALL required fields in your Soldier constructor
       firstName: 'Unknown',
       familyName: 'Soldier',
       placeOrTribeOfOrigin: '?',
@@ -186,7 +187,7 @@ Soldier _createUnknownSoldier(int id, String yurtId) {
       religionType: ReligionType.none,
       religionIntensity: ReligionIntensity.normal,
       dateOfBirth: defaultBirthDate,
-      zodiac: Zodiac.dog, // SoldierGenerator._getZodiac(defaultBirthDate.year),
+      zodiac: Zodiac.dog,
       backgroundColor: Colors.grey,
       age: 25,
       yearsWithHorde: 0,
@@ -195,8 +196,7 @@ Soldier _createUnknownSoldier(int id, String yurtId) {
       startingInjury: StartingInjuryType.none,
       exhaustion: 0,
       stress: 0,
-      equippedItems: {}, // ADDED this required field
-
+      equippedItems: {},
       ambition: 3,
       courage: 3,
       strength: 3,
@@ -226,27 +226,14 @@ Soldier _createUnknownSoldier(int id, String yurtId) {
       attributes: [],
       fungibleRupees: 20,
       fungibleScrap: 39,
-      // horses: [],
-      // bows: [],
-      // swords: [],
-      // spears: [],
-      // helmets: [],
-      // armorItems: [],
-      // gauntlets: [],
-      // boots: [],
-      // relics: [],
-
-      //suppliesWealth: 0,
-      //treasureWealth: 0,
       kilosOfMeat: 0,
       kilosOfRice: 0,
-      portraitIndex: 0 // Default portrait
-      );
+      portraitIndex: 0);
   print("Warning: Could not find soldier with ID $id for yurt $yurtId");
   return unknown;
 }
 
-// --- Reusable UiPanel (Copied from your code) ---
+// --- Reusable UiPanel ---
 class UiPanel extends StatelessWidget {
   final Widget child;
   const UiPanel({super.key, required this.child});
@@ -254,9 +241,9 @@ class UiPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20.0), // Increased padding
+      padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.75), // Slightly darker
+        color: Colors.black.withOpacity(0.75),
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.0),
       ),

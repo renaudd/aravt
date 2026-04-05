@@ -137,85 +137,181 @@ class _SoldierProfileAravtPanelState extends State<SoldierProfileAravtPanel> {
   }
 
   Widget _buildEditableDutyMatrix(Aravt aravt, List<Soldier> soldiers) {
-    final duties = AravtDuty.values;
-    // Slightly larger font for horizontal headers
+    const duties = AravtDuty.values;
+
+    // Full duty names — staggered header renders them without clipping
+    const Map<AravtDuty, String> dutyFullName = {
+      AravtDuty.medic: 'Medic',
+      AravtDuty.chronicler: 'Chronicler',
+      AravtDuty.cook: 'Cook',
+      AravtDuty.tuulch: 'Tuulch',
+      AravtDuty.disciplinarian: 'Disciplinarian',
+      AravtDuty.chaplain: 'Chaplain',
+      AravtDuty.drillSergeant: 'Drill Sergeant',
+      AravtDuty.lieutenant: 'Lieutenant',
+      AravtDuty.equerry: 'Equerry',
+    };
+
     final headerStyle = GoogleFonts.cinzel(
         color: const Color(0xFFE0D5C1),
         fontWeight: FontWeight.bold,
-        fontSize: 11);
+        fontSize: 9);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        headingRowHeight: 40,
-        dataRowMinHeight: 48,
-        dataRowMaxHeight: 48,
-        columnSpacing: 25,
-        horizontalMargin: 10,
-        columns: [
-          DataColumn(label: Text('Soldier', style: headerStyle)),
-          ...duties
-              .map((d) => DataColumn(label: Text(d.name, style: headerStyle))),
-        ],
-        rows: soldiers.map((s) {
-          return DataRow(cells: [
-            DataCell(Row(
+    return LayoutBuilder(builder: (context, constraints) {
+      final double totalWidth = constraints.maxWidth;
+      // Name column ~27%; remaining split evenly across 9 duty columns
+      final double nameColWidth = totalWidth * 0.27;
+      final double dutyColWidth = (totalWidth - nameColWidth) / duties.length;
+
+      // Staggered two-row header: even-indexed duties in the top half,
+      // odd-indexed in the bottom half.  Each label uses OverflowBox so the
+      // full name is visible even though the column is narrower than the text;
+      // because adjacent columns live in opposite rows they never collide.
+      Widget headerRow() {
+        const double rowHalf = 18.0; // half-height per stagger row
+        const double totalHeaderH = rowHalf * 2;
+
+        return SizedBox(
+          height: totalHeaderH,
+          child: Row(
+            children: [
+              // Soldier label — aligned to the centre of the full header height
+              SizedBox(
+                width: nameColWidth,
+                height: totalHeaderH,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Soldier', style: headerStyle),
+                ),
+              ),
+              ...duties.asMap().entries.map((entry) {
+                final int i = entry.key;
+                final AravtDuty d = entry.value;
+                final bool isTop = i.isEven;
+                return SizedBox(
+                  width: dutyColWidth,
+                  height: totalHeaderH,
+                  child: Align(
+                    alignment:
+                        isTop ? Alignment.topCenter : Alignment.bottomCenter,
+                    child: OverflowBox(
+                      // Allow the text to be up to 3× the column width;
+                      // neighbours are in the opposite row so no collision.
+                      maxWidth: dutyColWidth * 3,
+                      maxHeight: rowHalf,
+                      alignment: Alignment.center,
+                      child: Text(
+                        dutyFullName[d] ?? d.name,
+                        style: headerStyle,
+                        textAlign: TextAlign.center,
+                        softWrap: false,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      }
+
+      Widget dataRow(Soldier s) => Container(
+            decoration: const BoxDecoration(
+              border:
+                  Border(top: BorderSide(color: Colors.white12, width: 0.5)),
+            ),
+            child: Row(
               children: [
-                Text(s.name,
-                    style: GoogleFonts.cinzel(
-                        color:
-                            s.isPlayer ? const Color(0xFFE0D5C1) : Colors.white,
-                        fontSize: 12)),
-                if (s.desiresRoleAppointment)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4.0),
-                    child: Icon(Icons.star_rate_rounded,
-                        color: Colors.blueAccent, size: 12),
-                  )
+                SizedBox(
+                  width: nameColWidth,
+                  height: 36,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            s.name,
+                            style: GoogleFonts.cinzel(
+                                color: s.isPlayer
+                                    ? const Color(0xFFE0D5C1)
+                                    : Colors.white,
+                                fontSize: 10),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (s.desiresRoleAppointment)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 2.0),
+                            child: Icon(Icons.star_rate_rounded,
+                                color: Colors.blueAccent, size: 10),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                ...duties.map((duty) {
+                  final isAssigned = aravt.dutyAssignments[duty] == s.id;
+                  Color? cellColor;
+                  if (s.preferredDuties.contains(duty)) {
+                    cellColor = Colors.green.withValues(alpha: 0.3);
+                  } else if (s.despisedDuties.contains(duty)) {
+                    cellColor = Colors.red.withValues(alpha: 0.3);
+                  }
+                  final isDisabled =
+                      duty == AravtDuty.lieutenant && s.id == aravt.captainId;
+
+                  return SizedBox(
+                    width: dutyColWidth,
+                    height: 36,
+                    child: Container(
+                      color: cellColor,
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Checkbox(
+                          value: isAssigned,
+                          activeColor: const Color(0xFFE0D5C1),
+                          checkColor: Colors.black,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          onChanged: isDisabled
+                              ? null
+                              : (val) {
+                                  setState(() {
+                                    if (val == true) {
+                                      aravt.dutyAssignments[duty] = s.id;
+                                      if (s.desiresRoleAppointment) {
+                                        s.desiresRoleAppointment = false;
+                                      }
+                                    } else if (aravt.dutyAssignments[duty] ==
+                                        s.id) {
+                                      aravt.dutyAssignments.remove(duty);
+                                    }
+                                  });
+                                },
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ],
-            )),
-            ...duties.map((duty) {
-              final isAssigned = aravt.dutyAssignments[duty] == s.id;
+            ),
+          );
 
-              Color? cellColor;
-              if (s.preferredDuties.contains(duty)) {
-                cellColor = Colors.green.withValues(alpha: 0.3);
-              } else if (s.despisedDuties.contains(duty)) {
-                cellColor = Colors.red.withValues(alpha: 0.3);
-              }
-
-              bool isDisabled = false;
-              if (duty == AravtDuty.lieutenant && s.id == aravt.captainId) {
-                isDisabled = true;
-              }
-
-              return DataCell(Container(
-                color: cellColor,
-                alignment: Alignment.center,
-                child: Checkbox(
-                    value: isAssigned,
-                    activeColor: const Color(0xFFE0D5C1),
-                    checkColor: Colors.black,
-                    onChanged: isDisabled
-                        ? null
-                        : (val) {
-                            setState(() {
-                              if (val == true) {
-                                aravt.dutyAssignments[duty] = s.id;
-                                // Clear request flag if assigned
-                                if (s.desiresRoleAppointment) {
-                                  s.desiresRoleAppointment = false;
-                                }
-                              } else if (aravt.dutyAssignments[duty] == s.id) {
-                                aravt.dutyAssignments.remove(duty);
-                              }
-                            });
-                          }),
-              ));
-            })
-          ]);
-        }).toList(),
-      ),
-    );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          headerRow(),
+          const Divider(color: Colors.white24, height: 6),
+          ...soldiers.map((s) => dataRow(s)),
+          // Buffer so the last row scrolls fully clear of the nav widget
+          const SizedBox(height: 80),
+        ],
+      );
+    });
   }
 }

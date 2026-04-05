@@ -102,7 +102,10 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
             color: Colors.transparent,
             child: Container(
               width: MediaQuery.of(context).size.width * 0.85,
-              constraints: const BoxConstraints(maxWidth: 500),
+              constraints: BoxConstraints(
+                maxWidth: 500,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: const Color(0xFF222222),
@@ -112,10 +115,11 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
                       color: Colors.black87, blurRadius: 20, spreadRadius: 5)
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // --- HEADER (Captain Portrait & Name) ---
                   Row(
                     children: [
@@ -312,6 +316,7 @@ class _NarrativeOverlayWidgetState extends State<NarrativeOverlayWidget> {
           ),
         ),
       ),
+    ),
     );
   }
 

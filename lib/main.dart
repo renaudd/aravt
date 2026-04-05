@@ -101,6 +101,8 @@ class _AravtGameState extends State<AravtGame> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     // Lock to landscape only on mobile devices
+    // Allow both left/right landscape so physically flipping the device 180°
+    // (upside-down landscape) still works, but 90° portrait turns do nothing.
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
@@ -262,6 +264,16 @@ class MainMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final bool isCompact = screenHeight < 500; // Landscape iPhone
+
+    // Adaptive sizing for compact (landscape phone) vs large screens
+    final double titleHeight = isCompact ? screenHeight * 0.18 : screenHeight * 0.15;
+    final double bigGap = isCompact ? 12.0 : 48.0;
+    final double smallGap = isCompact ? 10.0 : 20.0;
+    final double buttonWidth = isCompact ? 240.0 : 280.0;
+    final double buttonHeight = isCompact ? 42.0 : 55.0;
+    final double buttonFontSize = isCompact ? 16.0 : 20.0;
+    final double verticalPadding = isCompact ? 8.0 : 24.0;
 
     return Scaffold(
       body: Container(
@@ -286,107 +298,126 @@ class MainMenuScreen extends StatelessWidget {
               ),
             ),
             Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 2),
-                    Image.asset(
-                      'assets/images/title.png',
-                      height: screenHeight * 0.15,
-                    ),
-                    const Spacer(flex: 3),
-                    _MenuButton(
-                        text: 'NEW GAME',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/newGame');
-                        }),
-                    const SizedBox(height: 20),
-                    _MenuButton(
-                        text: 'COMBAT SIMULATOR', // Added menu button
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/combat_simulator');
-                        }),
-                    const SizedBox(height: 20),
-                    _MenuButton(
-                        text: 'LOAD GAME',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/load_game');
-                        }),
-                    const SizedBox(height: 20),
-                    _MenuButton(
-                        text: 'SETTINGS',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/settings');
-                        }),
-                    const SizedBox(height: 20),
-                    _MenuButton(
-                        text: 'ABOUT',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/about');
-                        }),
-                    const SizedBox(height: 20),
-                    _MenuButton(
-                        text: 'EXIT',
-                        onPressed: () {
-                          if (!kIsWeb &&
-                              (Platform.isWindows ||
-                                  Platform.isLinux ||
-                                  Platform.isMacOS)) {
-                            exit(0);
-                          } else {
-                            SystemNavigator.pop();
-                          }
-                        }),
-                    const SizedBox(height: 48),
-                    // State of Development Section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'ALPHA DEVELOPMENT',
-                            style: GoogleFonts.cinzel(
-                                color: Colors.amber[100],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Active development in progress. Roadmap includes deeper social systems, trade routes, and expanded map content.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.cinzel(
-                                color: Colors.white70, fontSize: 12),
-                          ),
-                          const SizedBox(height: 12),
-                          InkWell(
-                            onTap: () async {
-                              final Uri url =
-                                  Uri.parse('https://github.com/renaudd/aravt');
-                              if (!await launchUrl(url)) {
-                                debugPrint('Could not launch $url');
-                              }
-                            },
-                            child: Text(
-                              'VIEW ON GITHUB',
-                              style: GoogleFonts.cinzel(
-                                  color: Colors.blueAccent,
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline,
-                                  fontSize: 14),
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: verticalPadding),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/title.png',
+                          height: titleHeight,
+                        ),
+                        SizedBox(height: bigGap),
+                        _MenuButton(
+                            text: 'NEW GAME',
+                            width: buttonWidth,
+                            height: buttonHeight,
+                            fontSize: buttonFontSize,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/newGame');
+                            }),
+                        SizedBox(height: smallGap),
+                        _MenuButton(
+                            text: 'COMBAT SIMULATOR',
+                            width: buttonWidth,
+                            height: buttonHeight,
+                            fontSize: buttonFontSize,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/combat_simulator');
+                            }),
+                        SizedBox(height: smallGap),
+                        _MenuButton(
+                            text: 'LOAD GAME',
+                            width: buttonWidth,
+                            height: buttonHeight,
+                            fontSize: buttonFontSize,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/load_game');
+                            }),
+                        SizedBox(height: smallGap),
+                        _MenuButton(
+                            text: 'SETTINGS',
+                            width: buttonWidth,
+                            height: buttonHeight,
+                            fontSize: buttonFontSize,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/settings');
+                            }),
+                        SizedBox(height: smallGap),
+                        _MenuButton(
+                            text: 'ABOUT',
+                            width: buttonWidth,
+                            height: buttonHeight,
+                            fontSize: buttonFontSize,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/about');
+                            }),
+                        if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) ...[
+                          SizedBox(height: smallGap),
+                          _MenuButton(
+                              text: 'EXIT',
+                              width: buttonWidth,
+                              height: buttonHeight,
+                              fontSize: buttonFontSize,
+                              onPressed: () {
+                                exit(0);
+                              }),
+                        ],
+                        // Hide the alpha section on very compact screens to avoid crowding
+                        if (!isCompact) ...[
+                          SizedBox(height: bigGap),
+                          // State of Development Section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'ALPHA DEVELOPMENT',
+                                  style: GoogleFonts.cinzel(
+                                      color: Colors.amber[100],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Active development in progress. Roadmap includes deeper social systems, trade routes, and expanded map content.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.cinzel(
+                                      color: Colors.white70, fontSize: 12),
+                                ),
+                                const SizedBox(height: 12),
+                                InkWell(
+                                  onTap: () async {
+                                    final Uri url =
+                                        Uri.parse('https://github.com/renaudd/aravt');
+                                    if (!await launchUrl(url)) {
+                                      debugPrint('Could not launch $url');
+                                    }
+                                  },
+                                  child: Text(
+                                    'VIEW ON GITHUB',
+                                    style: GoogleFonts.cinzel(
+                                        color: Colors.blueAccent,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                        fontSize: 14),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    const Spacer(flex: 2),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -400,16 +431,25 @@ class MainMenuScreen extends StatelessWidget {
 class _MenuButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
+  final double width;
+  final double height;
+  final double fontSize;
 
-  const _MenuButton({required this.text, required this.onPressed});
+  const _MenuButton({
+    required this.text,
+    required this.onPressed,
+    this.width = 280.0,
+    this.height = 55.0,
+    this.fontSize = 20.0,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: 280,
-        height: 55,
+        width: width,
+        height: height,
         decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/button_background.png'),
@@ -421,7 +461,7 @@ class _MenuButton extends StatelessWidget {
             text,
             style: GoogleFonts.cinzel(
               color: const Color(0xFFE0D5C1),
-              fontSize: 20,
+              fontSize: fontSize,
               fontWeight: FontWeight.w700,
               letterSpacing: 2.5,
               shadows: [
