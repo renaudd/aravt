@@ -77,11 +77,12 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
     final panelHeight =
         context.select<GameState, double?>((s) => s.hordePanelHeight);
 
-    // Only do the heavy sorting if it's open or we have to
+    // Use the optimized soldier cache from GameState for sorting captains
     List<Aravt> sortedAravts = List.from(aravts);
+    final gs = context.read<GameState>();
     sortedAravts.sort((a, b) {
-      final capA = context.read<GameState>().findSoldierById(a.captainId);
-      final capB = context.read<GameState>().findSoldierById(b.captainId);
+      final capA = gs.findSoldierById(a.captainId);
+      final capB = gs.findSoldierById(b.captainId);
 
       // 1. Horde Leader always first
       if (capA?.role == SoldierRole.hordeLeader) return -1;

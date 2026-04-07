@@ -205,6 +205,7 @@ class NextTurnService {
       gameState.gameDate.nextDay();
       gameState.turn.incrementTurn();
       gameState.communalCattle.resetDailyTracker();
+      gameState.rebuildCaches();
       CrashLogger.log("END ADVANCE CLOCK.");
       CrashLogger.log("--- TURN DONE ---");
     } catch (e, stack) {

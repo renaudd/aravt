@@ -235,52 +235,48 @@ class _TutorialOverlayWidgetState extends State<TutorialOverlayWidget>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              if (!step.isConclude)
-                                TextButton(
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: const Size(0, 0),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  onPressed: () =>
-                                      tutorial.dismiss(context, gameState),
-                                  child: Text("Dismiss",
-                                      style: GoogleFonts.cinzel(
-                                          color: Colors.white38,
-                                          fontSize: 10)),
+                              // 1. DISMISS BUTTON (Always available)
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(0, 0),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                              if (step.isConclude) ...[
-                                const SizedBox(width: 8),
+                                onPressed: () =>
+                                    tutorial.dismiss(context, gameState),
+                                child: Text("Dismiss",
+                                    style: GoogleFonts.cinzel(
+                                        color: Colors.white38, fontSize: 10)),
+                              ),
+                              const Spacer(),
+
+                              // 2. CONCLUDE BUTTON (Only on isConclude steps)
+                              if (step.isConclude)
                                 ElevatedButton(
+                                  onPressed: () {
+                                    tutorial.complete(gameState, success: true);
+                                  },
                                   style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          const Color(0xFFE0D5C1),
-                                      foregroundColor: Colors.black,
-                                      elevation: 3,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      minimumSize: const Size(0, 0),
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap),
-                                  onPressed: () => tutorial.complete(
-                                      gameState,
-                                      success: true),
-                                  child: Text("Conclude",
+                                    backgroundColor: Colors.amber[700],
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 8),
+                                    elevation: 8,
+                                  ),
+                                  child: Text('CONCLUDE TUTORIAL',
                                       style: GoogleFonts.cinzel(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 10)),
-                                ),
-                              ] else if (step.highlightKey == null) ...[
-                                const SizedBox(width: 8),
+                                          fontSize: 12)),
+                                )
+                              // 3. CONTINUE BUTTON (On screen-anchor or static steps)
+                              else if (step.highlightKey == null)
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          const Color(0xFFE0D5C1),
+                                      backgroundColor: const Color(0xFFE0D5C1),
                                       foregroundColor: Colors.black,
                                       elevation: 3,
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
+                                          horizontal: 12, vertical: 6),
                                       minimumSize: const Size(0, 0),
                                       tapTargetSize:
                                           MaterialTapTargetSize.shrinkWrap),
@@ -289,9 +285,8 @@ class _TutorialOverlayWidgetState extends State<TutorialOverlayWidget>
                                   child: Text("Continue",
                                       style: GoogleFonts.cinzel(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 10)),
+                                          fontSize: 11)),
                                 ),
-                              ],
                             ],
                           ),
                         ],

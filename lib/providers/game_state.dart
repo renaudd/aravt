@@ -144,6 +144,48 @@ class GameState with ChangeNotifier {
   GameArea? currentArea;
   Soldier? player;
 
+  // --- LOOKUP CACHES (Performance) ---
+  final Map<int, Soldier> _soldierCache = {};
+  final Map<String, PointOfInterest> _poiCache = {};
+  final Map<String, Aravt> _aravtCache = {};
+
+  void rebuildCaches() {
+    _soldierCache.clear();
+    _aravtCache.clear();
+    for (var s in horde) {
+      _soldierCache[s.id] = s;
+    }
+    for (var a in aravts) {
+      _aravtCache[a.id] = a;
+    }
+    for (var a in npcAravts1) {
+      _aravtCache[a.id] = a;
+    }
+    for (var a in npcAravts2) {
+      _aravtCache[a.id] = a;
+    }
+    for (var a in garrisonAravts) {
+      _aravtCache[a.id] = a;
+    }
+    // NPC soldiers
+    for (var s in npcHorde1) {
+      _soldierCache[s.id] = s;
+    }
+    for (var s in npcHorde2) {
+      _soldierCache[s.id] = s;
+    }
+    for (var s in garrisonSoldiers) {
+      _soldierCache[s.id] = s;
+    }
+
+    _poiCache.clear();
+    for (var area in worldMap.values) {
+      for (var poi in area.pointsOfInterest) {
+        _poiCache[poi.id] = poi;
+      }
+    }
+  }
+
   /// The current leader of the horde (Noyan).
   Soldier? get khan => horde.cast<Soldier?>().firstWhere(
         (s) => s?.role == SoldierRole.hordeLeader,
@@ -589,25 +631,56 @@ class GameState with ChangeNotifier {
   }
 
   Soldier? findSoldierById(int id) {
-    for (var s in horde) { if (s.id == id) return s; }
-    for (var s in npcHorde1) { if (s.id == id) return s; }
-    for (var s in npcHorde2) { if (s.id == id) return s; }
-    for (var s in garrisonSoldiers) { if (s.id == id) return s; }
+    if (_soldierCache.containsKey(id)) return _soldierCache[id];
+    // Fallback if cache missed
+    for (var s in horde) {
+      if (s.id == id) {
+        _soldierCache[id] = s;
+        return s;
+      }
+    }
     return null;
   }
 
-  Aravt? findAravtById(String id) {
-    for (var a in aravts) { if (a.id == id) return a; }
-    for (var a in npcAravts1) { if (a.id == id) return a; }
-    for (var a in npcAravts2) { if (a.id == id) return a; }
-    for (var a in garrisonAravts) { if (a.id == id) return a; }
+  Aravt? findAravtById(String? id) {
+    if (id == null) return null;
+    if (_aravtCache.containsKey(id)) return _aravtCache[id];
+    // Fallback
+    for (var a in aravts) {
+      if (a.id == id) {
+        _aravtCache[id] = a;
+        return a;
+      }
+    }
+    for (var a in npcAravts1) {
+      if (a.id == id) {
+        _aravtCache[id] = a;
+        return a;
+      }
+    }
+    for (var a in npcAravts2) {
+      if (a.id == id) {
+        _aravtCache[id] = a;
+        return a;
+      }
+    }
+    for (var a in garrisonAravts) {
+      if (a.id == id) {
+        _aravtCache[id] = a;
+        return a;
+      }
+    }
     return null;
   }
 
   PointOfInterest? findPoiByIdWorld(String id) {
+    if (_poiCache.containsKey(id)) return _poiCache[id];
+
+    // Fallback if cache missed
     for (final area in worldMap.values) {
       final poi = area.findPoiById(id);
       if (poi != null) {
+        _poiCache[id] = poi;
         return poi;
       }
     }
@@ -1373,6 +1446,7 @@ class GameState with ChangeNotifier {
       );
 
       print("[GameState Provider] New game created successfully.");
+      rebuildCaches();
       notifyListeners();
     } catch (e, stackTrace) {
       print("ERROR initializing new game: $e");
@@ -1584,6 +1658,7 @@ class GameState with ChangeNotifier {
         _validateAndFixHordeHierarchy();
         logEvent("Game Loaded: ${player?.name}",
             category: EventCategory.system, severity: EventSeverity.high);
+        rebuildCaches();
         setLoading(false);
         return true;
       } else {
