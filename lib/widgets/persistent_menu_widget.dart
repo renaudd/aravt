@@ -35,6 +35,7 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
   bool _isMenuOpen = false;
   bool _isNavCollapsed = false;
   // _isHordePanelOpen is now in GameState
+  static const double defaultPanelHeight = 350.0;
 
   Widget _buildMenuButton(
       {required IconData icon,
@@ -174,42 +175,34 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
       child: Stack(
         children: [
           //  Horde Panel Overlay
-          //  Horde Panel Overlay (Non-blocking, positioned above menu)
-          if (gameState.isHordePanelOpen)
-            Positioned(
-              bottom: 0, // extend to screen edge; nav widget overlay sits on top
-              left: 0,
-              right: 0,
-              // No 'top' — the panel expands upward as needed
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: SizedBox(
-                  width: min(600, screenSize.width * 0.95),
-                  child: Stack(
-                    children: [
-                      const HordePanel(),
-                      // Close button
-                      Positioned(
-                        top: 5,
-                        right: 5,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.close,
-                                color: Colors.white, size: 20),
-                            onPressed: () =>
-                                gameNotifier.setHordePanelOpen(false),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+          //  Animated Horde Panel Overlay
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            left: 0,
+            right: 0,
+            height: (gameState.hordePanelHeight ?? defaultPanelHeight),
+            bottom: gameState.isHordePanelOpen
+                ? 0
+                : -(gameState.hordePanelHeight ?? defaultPanelHeight),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: min(600, screenSize.width * 0.95),
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    if (gameState.isHordePanelOpen)
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      )
+                  ],
                 ),
+                child: const RepaintBoundary(child: HordePanel()),
               ),
             ),
+          ),
 
           //  Menu Buttons (Always on top)
           Positioned(

@@ -71,12 +71,17 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final gameState = context.watch<GameState>();
-    List<Aravt> sortedAravts = List.from(gameState.aravts);
+    final aravts = context.select<GameState, List<Aravt>>((s) => s.aravts);
+    final isHordePanelOpen =
+        context.select<GameState, bool>((s) => s.isHordePanelOpen);
+    final panelHeight =
+        context.select<GameState, double?>((s) => s.hordePanelHeight);
 
+    // Only do the heavy sorting if it's open or we have to
+    List<Aravt> sortedAravts = List.from(aravts);
     sortedAravts.sort((a, b) {
-      final capA = gameState.findSoldierById(a.captainId);
-      final capB = gameState.findSoldierById(b.captainId);
+      final capA = context.read<GameState>().findSoldierById(a.captainId);
+      final capB = context.read<GameState>().findSoldierById(b.captainId);
 
       // 1. Horde Leader always first
       if (capA?.role == SoldierRole.hordeLeader) return -1;
@@ -97,9 +102,10 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
           // Panel sits at bottom:0 in its Positioned parent. Nav widget (~78px)
           // overlaps the bottom, so we cap height at screenHeight-78 so the
           // panel content ends flush with the top of the nav widget.
-          maxHeight: _maxHeightPixels ??
-              (MediaQuery.of(context).size.height - 78).clamp(
-                  200.0, MediaQuery.of(context).size.height * 0.85),
+          maxHeight: (panelHeight ??
+                  _maxHeightPixels ??
+                  (MediaQuery.of(context).size.height - 78))
+              .clamp(120.0, MediaQuery.of(context).size.height * 0.85),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -107,19 +113,22 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
             // Drag handle area
             GestureDetector(
               onVerticalDragUpdate: (details) {
-                setState(() {
-                  // Initialize if null
-                  _maxHeightPixels ??= context.size?.height ??
-                      (MediaQuery.of(context).size.height * 0.6);
+                final gameState = context.read<GameState>();
+                // Initialize if null
+                double currentHeight = gameState.hordePanelHeight ??
+                    _maxHeightPixels ??
+                    (MediaQuery.of(context).size.height * 0.6);
 
-                  // Invert delta because dragging UP increases height
-                  _maxHeightPixels = (_maxHeightPixels! - details.delta.dy)
-                      .clamp(
-                          120.0,
-                          (MediaQuery.of(context).size.height - 78)
-                              .clamp(200.0,
-                                  MediaQuery.of(context).size.height * 0.85));
+                // Invert delta because dragging UP increases height
+                double newHeight = (currentHeight - details.delta.dy).clamp(
+                    120.0,
+                    (MediaQuery.of(context).size.height - 78).clamp(
+                        200.0, MediaQuery.of(context).size.height * 0.85));
+
+                setState(() {
+                  _maxHeightPixels = newHeight;
                 });
+                gameState.setHordePanelHeight(newHeight);
               },
               behavior:
                   HitTestBehavior.translucent, // Catch taps on transparent area
@@ -144,8 +153,8 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
                 itemBuilder: (context, index) {
                   return _AravtRow(
                       aravt: sortedAravts[index],
-                      gameState: gameState,
                       sprites: _sprites,
+                      isPanelOpen: isHordePanelOpen,
                       vsync: this);
                 },
               ),
@@ -171,14 +180,14 @@ class _HordePanelState extends State<HordePanel> with TickerProviderStateMixin {
 
 class _AravtRow extends StatefulWidget {
   final Aravt aravt;
-  final GameState gameState;
   final Map<String, ui.Image> sprites;
+  final bool isPanelOpen;
   final TickerProvider vsync;
 
   const _AravtRow(
       {required this.aravt,
-      required this.gameState,
       required this.sprites,
+      required this.isPanelOpen,
       required this.vsync});
 
   @override
@@ -190,7 +199,8 @@ class _AravtRowState extends State<_AravtRow> {
 
   @override
   Widget build(BuildContext context) {
-    final captain = widget.gameState.findSoldierById(widget.aravt.captainId);
+    final gameState = context.read<GameState>();
+    final captain = gameState.findSoldierById(widget.aravt.captainId);
 
     // if (captain == null) return const SizedBox.shrink();
 
@@ -198,8 +208,7 @@ class _AravtRowState extends State<_AravtRow> {
     final bool isPlayer = captain?.isPlayer ?? false;
 
     //  Check if player has authority to assign tasks
-    final bool canAssign =
-        widget.gameState.player?.role == SoldierRole.hordeLeader;
+    final bool canAssign = gameState.player?.role == SoldierRole.hordeLeader;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -226,11 +235,11 @@ class _AravtRowState extends State<_AravtRow> {
                       if (isPlayer) {
                         final tutorial = context.read<TutorialService>();
                         tutorial.advanceIfHighlighted(
-                            context, widget.gameState, 'open_player_profile');
+                            context, gameState, 'open_player_profile');
                       }
 
                       // Automatically close horde panel on navigation
-                      widget.gameState.setHordePanelOpen(false);
+                      gameState.setHordePanelOpen(false);
 
                       if (captain != null) {
                         Navigator.push(
@@ -286,11 +295,12 @@ class _AravtRowState extends State<_AravtRow> {
                         GestureDetector(
                           onTap: canAssign
                               ? () => _showReassignmentDialog(
-                                  context, widget.aravt, widget.gameState)
+                                  context, widget.aravt, gameState)
                               : null,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 2.0),
-                            child: _buildAssignmentText(isEditable: canAssign),
+                            child: _buildAssignmentText(
+                                gameState: gameState, isEditable: canAssign),
                           ),
                         ),
                       ],
@@ -300,7 +310,7 @@ class _AravtRowState extends State<_AravtRow> {
                     flex: 4,
                     child: _AravtSpriteProgressBar(
                         aravt: widget.aravt,
-                        gameState: widget.gameState,
+                        isPanelOpen: widget.isPanelOpen,
                         sprites: widget.sprites,
                         vsync: widget.vsync),
                   ),
@@ -313,7 +323,7 @@ class _AravtRowState extends State<_AravtRow> {
                             color:
                                 const Color(0xFF4A3F35).withValues(alpha: 0.7)),
                         if (widget.aravt.soldierIds.any((id) {
-                              final s = widget.gameState.findSoldierById(id);
+                              final s = gameState.findSoldierById(id);
                               return s != null &&
                                   s.queuedListenItem != null &&
                                   !s.isPlayer;
@@ -337,7 +347,7 @@ class _AravtRowState extends State<_AravtRow> {
                 color: const Color(0xFFDCCFAD).withValues(alpha: 0.5),
                 child: Column(
                   children: widget.aravt.soldierIds.map((id) {
-                    final s = widget.gameState.findSoldierById(id);
+                    final s = gameState.findSoldierById(id);
                     if (s == null) return const SizedBox.shrink();
                     String duty = "";
                     widget.aravt.dutyAssignments.forEach((k, v) {
@@ -346,7 +356,7 @@ class _AravtRowState extends State<_AravtRow> {
                     return InkWell(
                       onTap: () {
                         // Automatically close horde panel on navigation
-                        widget.gameState.setHordePanelOpen(false);
+                        gameState.setHordePanelOpen(false);
 
                         Navigator.push(
                             context,
@@ -398,7 +408,8 @@ class _AravtRowState extends State<_AravtRow> {
     );
   }
 
-  Widget _buildAssignmentText({required bool isEditable}) {
+  Widget _buildAssignmentText(
+      {required GameState gameState, required bool isEditable}) {
     String text = "Resting";
     Color color = Colors.white38;
     final task = widget.aravt.task;
@@ -406,15 +417,7 @@ class _AravtRowState extends State<_AravtRow> {
     // Check if at camp for resting color
     bool atCamp = false;
     // Find Camp Coordinates
-    HexCoordinates? campCoords;
-    for (var area in widget.gameState.worldMap.values) {
-      if (area.pointsOfInterest.any((p) => p.id == 'camp-player')) {
-        campCoords = area.pointsOfInterest
-            .firstWhere((p) => p.id == 'camp-player')
-            .position;
-        break;
-      }
-    }
+    HexCoordinates? campCoords = gameState.playerCampPosition;
     if (campCoords != null && widget.aravt.hexCoords == campCoords) {
       atCamp = true;
     }
@@ -834,12 +837,12 @@ class _AravtRowState extends State<_AravtRow> {
 
 class _AravtSpriteProgressBar extends StatefulWidget {
   final Aravt aravt;
-  final GameState gameState;
+  final bool isPanelOpen;
   final Map<String, ui.Image> sprites;
   final TickerProvider vsync;
   const _AravtSpriteProgressBar(
       {required this.aravt,
-      required this.gameState,
+      required this.isPanelOpen,
       required this.sprites,
       required this.vsync});
   @override
@@ -854,8 +857,23 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: widget.vsync, duration: const Duration(milliseconds: 400))
-      ..repeat();
+        vsync: widget.vsync, duration: const Duration(milliseconds: 400));
+
+    if (widget.isPanelOpen) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AravtSpriteProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPanelOpen != oldWidget.isPanelOpen) {
+      if (widget.isPanelOpen) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+      }
+    }
   }
 
   @override
@@ -866,16 +884,9 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Find Camp Coordinates
-    HexCoordinates? campCoords;
-    for (var area in widget.gameState.worldMap.values) {
-      if (area.pointsOfInterest.any((p) => p.id == 'camp-player')) {
-        campCoords = area.pointsOfInterest
-            .firstWhere((p) => p.id == 'camp-player')
-            .position;
-        break;
-      }
-    }
+    final gameState = context.watch<GameState>();
+    // 1. Get Cached Camp Coordinates
+    HexCoordinates? campCoords = gameState.playerCampPosition;
 
     // 2. Determine State
     final task = widget.aravt.task;
@@ -889,12 +900,12 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
     if (isMoving) {
       final mt = task as MovingTask;
       if (mt.destination.type == LocationType.poi) {
-        final poi = widget.gameState.findPoiByIdWorld(mt.destination.id);
+        final poi = gameState.findPoiByIdWorld(mt.destination.id);
         destPos = poi?.position;
         destIcon = poi?.icon;
         destName = poi?.name;
       } else {
-        final area = widget.gameState.worldMap[mt.destination.id];
+        final area = gameState.worldMap[mt.destination.id];
         destPos = area?.coordinates;
         destIcon = area?.icon;
         destName = area?.name;
@@ -902,12 +913,12 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
     } else if (isAssigned) {
       final at = task as AssignedTask;
       if (at.poiId != null) {
-        final poi = widget.gameState.findPoiByIdWorld(at.poiId!);
+        final poi = gameState.findPoiByIdWorld(at.poiId!);
         destPos = poi?.position;
         destIcon = poi?.icon;
         destName = poi?.name;
       } else if (at.areaId != null) {
-        final area = widget.gameState.worldMap[at.areaId!];
+        final area = gameState.worldMap[at.areaId!];
         destPos = area?.coordinates;
         destIcon = area?.icon;
         destName = area?.name;
@@ -969,7 +980,7 @@ class _AravtSpriteProgressBarState extends State<_AravtSpriteProgressBar> {
 
     if (isMoving) {
       final mt = task as MovingTask;
-      DateTime now = widget.gameState.gameDate.toDateTime();
+      DateTime now = gameState.gameDate.toDateTime();
       double totalSec = mt.durationInSeconds;
       double elapsedSec = now.difference(mt.startTime).inSeconds.toDouble();
       double progress = (elapsedSec / totalSec).clamp(0.0, 1.0);

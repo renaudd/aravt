@@ -934,40 +934,45 @@ class _FinanceReportTabState extends State<FinanceReportTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader("Recent Wealth Events"),
-        ...events.map((event) => Card(
-              color: Colors.black.withOpacity(0.5),
-              margin: const EdgeInsets.only(bottom: 8.0),
-              child: ListTile(
-                leading: Icon(
-                  event.isGain ? Icons.arrow_upward : Icons.arrow_downward,
-                  color: event.isGain ? Colors.green : Colors.red,
-                ),
-                title: Text(event.description,
-                    style: const TextStyle(color: Colors.white)),
-                subtitle: Text(
-                    "${event.date.toShortString()} - ${event.type.name}",
-                    style: const TextStyle(color: Colors.white54)),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (event.rupeesChange != 0)
-                      Text(
-                          "${event.rupeesChange > 0 ? '+' : ''}${event.rupeesChange.toStringAsFixed(0)} ₹",
-                          style: TextStyle(
-                              color: event.rupeesChange > 0
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontWeight: FontWeight.bold)),
-                    if (event.scrapChange != 0)
-                      Text(
-                          "${event.scrapChange > 0 ? '+' : ''}${event.scrapChange.toStringAsFixed(0)} scrap",
-                          style: TextStyle(
-                              color: event.scrapChange > 0
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontSize: 11)),
-                  ],
+        ...events.map((event) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: PaperPanel(
+                backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+                borderColor: Colors.amber.withValues(alpha: 0.1),
+                elevation: 1,
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: Icon(
+                    event.isGain ? Icons.arrow_upward : Icons.arrow_downward,
+                    color: event.isGain ? Colors.green : Colors.red,
+                  ),
+                  title: Text(event.description,
+                      style: GoogleFonts.cinzel(color: Colors.white, fontSize: 13)),
+                  subtitle: Text(
+                      "${event.date.toShortString()} - ${event.type.name}",
+                      style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (event.rupeesChange != 0)
+                        Text(
+                            "${event.rupeesChange > 0 ? '+' : ''}${event.rupeesChange.toStringAsFixed(0)} ₹",
+                            style: TextStyle(
+                                color: event.rupeesChange > 0
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold)),
+                      if (event.scrapChange != 0)
+                        Text(
+                            "${event.scrapChange > 0 ? '+' : ''}${event.scrapChange.toStringAsFixed(0)} scrap",
+                            style: TextStyle(
+                                color: event.scrapChange > 0
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontSize: 11)),
+                    ],
+                  ),
                 ),
               ),
             )),
@@ -1938,33 +1943,30 @@ class _FoodOverviewTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader("Culinary News"),
-        ...news.map((item) => Card(
-              color: Colors.black.withOpacity(0.5),
-              margin: const EdgeInsets.only(bottom: 8.0),
-              child: ListTile(
-                leading: Icon(_getCulinaryIcon(item.type),
-                    color: _getCulinaryColor(item.type)),
-                title: Text(item.description,
-                    style: const TextStyle(color: Colors.white)),
-                subtitle: Text(item.date.toShortString(),
-                    style: const TextStyle(color: Colors.white54)),
-                trailing: item.qualityRating != null
-                    ? Text("${item.qualityRating}/10",
-                        style: GoogleFonts.cinzel(
-                            color: Colors.amber, fontWeight: FontWeight.bold))
-                    : null,
+        ...news.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: PaperPanel(
+                backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+                borderColor: Colors.amber.withValues(alpha: 0.1),
+                elevation: 1,
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: Icon(_getCulinaryIcon(item.type),
+                      color: _getCulinaryColor(item.type)),
+                  title: Text(item.description,
+                      style: GoogleFonts.cinzel(color: Colors.white, fontSize: 13)),
+                  subtitle: Text(item.date.toShortString(),
+                      style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  trailing: item.qualityRating != null
+                      ? Text("${item.qualityRating}/10",
+                          style: GoogleFonts.cinzel(
+                              color: Colors.amber, fontWeight: FontWeight.bold))
+                      : null,
+                ),
               ),
             )),
       ],
     );
-  }
-
-  IconData _getFoodIcon(String name) {
-    if (name.contains("Meat")) return Icons.restaurant;
-    if (name.contains("Milk")) return Icons.water_drop;
-    if (name.contains("Cheese")) return Icons.food_bank;
-    if (name.contains("Grain") || name.contains("Rice")) return Icons.grass;
-    return Icons.fastfood;
   }
 
   IconData _getCulinaryIcon(CulinaryEventType type) {
@@ -2050,46 +2052,51 @@ class HuntingReportTab extends StatelessWidget {
             displayPelts = soldierResult.totalPelts;
           }
 
-          return Card(
-            color: Colors.black.withOpacity(0.6),
-            child: ExpansionTile(
-              leading: const Icon(Icons.explore, color: Colors.green),
-              title: Text(
-                  "${report.aravtName} hunted at ${report.locationName}",
-                  style: GoogleFonts.cinzel(color: Colors.white)),
-              subtitle: Text(
-                  "${report.date.toShortString()} - Yield: ${displayMeat.toStringAsFixed(1)} kg meat, $displayPelts pelts",
-                  style: const TextStyle(color: Colors.white70)),
-              children: report.individualResults.map((res) {
-                if (soldierId != null && res.soldierId != soldierId)
-                  return const SizedBox.shrink();
-                return InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            SoldierProfileScreen(soldierId: res.soldierId),
-                      ),
-                    );
-                  },
-                  child: ListTile(
-                    title: Text(res.soldierName,
-                        style: const TextStyle(
-                            color: Colors.amber, fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                        res.kills.isEmpty
-                            ? "Caught nothing."
-                            : res.kills
-                                .map(
-                                    (k) => "${k.animalName} (${k.meatYield}kg)")
-                                .join(", "),
-                        style: const TextStyle(color: Colors.white70)),
-                    trailing: res.wasInjured
-                        ? const Icon(Icons.local_hospital, color: Colors.red)
-                        : null,
-                  ),
-                );
-              }).toList(),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: PaperPanel(
+              padding: EdgeInsets.zero,
+              backgroundColor: Colors.black.withOpacity(0.6),
+              borderColor: Colors.green.withOpacity(0.2),
+              child: ExpansionTile(
+                leading: const Icon(Icons.explore, color: Colors.green),
+                title: Text(
+                    "${report.aravtName} hunted at ${report.locationName}",
+                    style: GoogleFonts.cinzel(color: Colors.white)),
+                subtitle: Text(
+                    "${report.date.toShortString()} - Yield: ${displayMeat.toStringAsFixed(1)} kg meat, $displayPelts pelts",
+                    style: const TextStyle(color: Colors.white70)),
+                children: report.individualResults.map((res) {
+                  if (soldierId != null && res.soldierId != soldierId)
+                    return const SizedBox.shrink();
+                  return InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              SoldierProfileScreen(soldierId: res.soldierId),
+                        ),
+                      );
+                    },
+                    child: ListTile(
+                      title: Text(res.soldierName,
+                          style: const TextStyle(
+                              color: Colors.amber, fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                          res.kills.isEmpty
+                              ? "Caught nothing."
+                              : res.kills
+                                  .map(
+                                      (k) => "${k.animalName} (${k.meatYield}kg)")
+                                  .join(", "),
+                          style: const TextStyle(color: Colors.white70)),
+                      trailing: res.wasInjured
+                          ? const Icon(Icons.local_hospital, color: Colors.red)
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           );
         },
@@ -2353,11 +2360,19 @@ class GamesReportTab extends StatelessWidget {
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Text(entry.value,
-                            style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                fontFamily: 'Courier')), // Monospace fallback
+                        child: PaperPanel(
+                          backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+                          borderColor: Colors.amber.withValues(alpha: 0.2),
+                          elevation: 2.0,
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text(
+                            entry.value,
+                            style: GoogleFonts.cinzel(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ),
                       ),
                     ],
                   );
@@ -2461,7 +2476,16 @@ class GamesReportTab extends StatelessWidget {
             ...result.dailyReports.entries.map((entry) {
               final isLatest =
                   entry.key == result.dailyReports.keys.reduce(math.max);
-              return _buildParsedReport(entry.key, entry.value, isLatest);
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                child: PaperPanel(
+                  backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+                  borderColor: Colors.amber.withValues(alpha: 0.2),
+                  elevation: 2.0,
+                  padding: EdgeInsets.zero,
+                  child: _buildParsedReport(entry.key, entry.value, isLatest),
+                ),
+              );
             }),
           ],
         ],
@@ -2646,10 +2670,10 @@ class GamesReportTab extends StatelessWidget {
         children.add(_buildDataTable(headers, rows));
       }
     } else {
-      // Fallback to text for Wrestling/Buzkashi
+      // Fallback for Wrestling/Buzkashi
       children.add(Text(reportText,
-          style: const TextStyle(
-              color: Colors.white70, fontSize: 12, fontFamily: 'Courier')));
+          style: GoogleFonts.cinzel(
+              color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)));
     }
 
     return ExpansionTile(

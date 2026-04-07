@@ -40,6 +40,9 @@ import 'package:aravt/screens/game_over_screen.dart';
 import 'package:aravt/screens/pre_combat_screen.dart';
 import 'package:aravt/screens/post_combat_report_screen.dart';
 import 'package:aravt/screens/about_screen.dart';
+import 'package:aravt/screens/loading_screen.dart';
+import 'package:aravt/screens/privacy_policy_screen.dart';
+import 'package:aravt/screens/contact_screen.dart';
 import 'package:aravt/models/combat_flow_state.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:aravt/widgets/tutorial_overlay_widget.dart';
@@ -218,14 +221,17 @@ class _AravtGameState extends State<AravtGame> {
           ],
         );
       },
-      initialRoute: '/mainMenu',
+      initialRoute: '/loading',
       routes: {
+        '/loading': (context) => const LoadingScreen(),
         '/mainMenu': (context) => const MainMenuScreen(),
         '/newGame': (context) => const NewGameScreen(),
         '/save_game': (context) => const SaveGameScreen(),
         '/load_game': (context) => const LoadGameScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/about': (context) => const AboutScreen(),
+        '/privacy': (context) => const PrivacyPolicyScreen(),
+        '/contact': (context) => const ContactScreen(),
 
         '/timelines': (context) => const TimelinesScreen(),
         '/gameOver': (context) => const GameOverScreen(),

@@ -45,14 +45,6 @@ class _NewGameScreenState extends State<NewGameScreen> {
               fit: BoxFit.cover,
             ),
           ),
-          Positioned(
-            top: 40,
-            left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
           Center(
             child: SingleChildScrollView(
               child: Padding(
@@ -109,6 +101,16 @@ class _NewGameScreenState extends State<NewGameScreen> {
                     _buildStartButton(),
                   ],
                 ),
+              ),
+            ),
+          ),
+          // Back button last so it stays on top of the SingleChildScrollView
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ),

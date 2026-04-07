@@ -17,6 +17,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/training_report.dart';
+import 'package:aravt/widgets/paper_panel.dart';
 
 class TrainingReportTab extends StatelessWidget {
   final int? soldierId;
@@ -47,50 +48,59 @@ class TrainingReportTab extends StatelessWidget {
         itemCount: reversedReports.length,
         itemBuilder: (context, index) {
           final report = reversedReports[index];
-          return Card(
-            color: Colors.black.withOpacity(0.6),
-            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            child: ExpansionTile(
-              leading: const Icon(Icons.fitness_center, color: Colors.amber),
-              title: Text(
-                "${report.trainingType} Training",
-                style: GoogleFonts.cinzel(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                "${report.date.toString()} - ${report.aravtName}",
-                style: const TextStyle(color: Colors.white70),
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Captain: ${report.captainName}",
-                          style: const TextStyle(color: Colors.white70)),
-                      Text("Drill Sergeant: ${report.drillSergeantName}",
-                          style: const TextStyle(color: Colors.white70)),
-                      const Divider(color: Colors.white24),
-                      ...report.individualResults.map((res) {
-                        if (soldierId != null && res.soldierId != soldierId) {
-                          return const SizedBox.shrink();
-                        }
-                        return ListTile(
-                          dense: true,
-                          title: Text(res.soldierName,
-                              style: const TextStyle(color: Colors.white)),
-                          subtitle: Text("Trained ${res.skillTrained}",
-                              style: const TextStyle(color: Colors.white70)),
-                          trailing: Text(
-                              "+${res.xpGained.toStringAsFixed(2)} Skill",
-                              style: const TextStyle(color: Colors.green)),
-                        );
-                      }),
-                    ],
-                  ),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            child: PaperPanel(
+              padding: EdgeInsets.zero,
+              irregularity: 2.0,
+              segmentsPerSide: 12,
+              seed: index,
+              backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+              borderColor: Colors.amber.withValues(alpha: 0.2),
+              borderWidth: 1.0,
+              elevation: 2.0,
+              child: ExpansionTile(
+                leading: const Icon(Icons.fitness_center, color: Colors.amber),
+                title: Text(
+                  "${report.trainingType} Training",
+                  style: GoogleFonts.cinzel(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-              ],
+                subtitle: Text(
+                  "${report.date.toString()} - ${report.aravtName}",
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Captain: ${report.captainName}",
+                            style: const TextStyle(color: Colors.white70)),
+                        Text("Drill Sergeant: ${report.drillSergeantName}",
+                            style: const TextStyle(color: Colors.white70)),
+                        const Divider(color: Colors.white24),
+                        ...report.individualResults.map((res) {
+                          if (soldierId != null && res.soldierId != soldierId) {
+                            return const SizedBox.shrink();
+                          }
+                          return ListTile(
+                            dense: true,
+                            title: Text(res.soldierName,
+                                style: const TextStyle(color: Colors.white)),
+                            subtitle: Text("Trained ${res.skillTrained}",
+                                style: const TextStyle(color: Colors.white70)),
+                            trailing: Text(
+                                "+${res.xpGained.toStringAsFixed(2)} Skill",
+                                style: const TextStyle(color: Colors.green)),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },

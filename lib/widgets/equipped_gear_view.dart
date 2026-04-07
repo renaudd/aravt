@@ -66,12 +66,12 @@ class EquippedGearView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Reduced for iPhone landscape — was 320 × 450
-    const double panelWidth = 200;
-    const double silhouetteHeight = 250;
-    const double silhouetteWidth = 96;
+    // Larger for iPhone landscape — scaled up and balanced
+    const double panelWidth = 220;
+    const double silhouetteHeight = 275;
+    const double silhouetteWidth = 106;
     const double centerOfSilhouette = panelWidth / 2;
-    const double scale = 0.625; // 200/320
+    const double scale = 0.688; // 1.10 * 0.625
 
     return Container(
       width: panelWidth,
@@ -165,10 +165,10 @@ class EquippedGearView extends StatelessWidget {
 
     if (isInteractive) {
       return Positioned(
-        top: top,
-        bottom: bottom,
-        left: left,
-        right: right,
+        top: top != null ? top - 16 : null,
+        bottom: bottom != null ? bottom - 16 : null,
+        left: left != null ? left - 16 : null,
+        right: right != null ? right - 16 : null,
         child: DragTarget<InventoryItem>(
           onWillAccept: (data) => data?.equippableSlot == slot,
           onAccept: (data) {
@@ -177,24 +177,46 @@ class EquippedGearView extends StatelessWidget {
           },
           builder: (context, candidateData, rejectedData) {
             return Container(
-              decoration: BoxDecoration(
-                border: candidateData.isNotEmpty
-                    ? Border.all(color: Colors.greenAccent, width: 2)
-                    : null,
-                borderRadius: BorderRadius.circular(6),
+              color: Colors.transparent, // Largehit area extender
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: candidateData.isNotEmpty
+                      ? Border.all(color: Colors.greenAccent, width: 2)
+                      : null,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: item != null
+                    ? Draggable<InventoryItem>(
+                        data: item,
+                        dragAnchorStrategy: pointerDragAnchorStrategy,
+                        feedback: Material(
+                          color: Colors.transparent,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.white, width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 4,
+                                  offset: const Offset(2, 2),
+                                )
+                              ],
+                            ),
+                            child: const Icon(Icons.inventory_2_outlined,
+                                color: Colors.white, size: 20),
+                          ),
+                        ),
+                        childWhenDragging:
+                            Opacity(opacity: 0.3, child: slotWidget),
+                        child: slotWidget,
+                      )
+                    : slotWidget,
               ),
-              child: item != null
-                  ? Draggable<InventoryItem>(
-                      data: item,
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: ItemSpriteWidget(item: item, size: size * 1.1),
-                      ),
-                      childWhenDragging:
-                          Opacity(opacity: 0.3, child: slotWidget),
-                      child: slotWidget,
-                    )
-                  : slotWidget,
             );
           },
         ),

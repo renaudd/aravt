@@ -29,13 +29,16 @@ class TutorialStepData {
   /// position (Alignment coords: -1,-1 = top-left, 1,1 = bottom-right)
   /// instead of tracking the widget's render-box position.  Use this for
   /// buttons that live inside Transform.scale widgets whose coordinates are
-  /// unreliable via localToGlobal.
+  /// Unreliable via localToGlobal.
   final Alignment? screenAnchor;
+  /// Direction the arrow should point. 0 = down (default), pi/2 = left, -pi/2 = right, pi = up.
+  final double arrowRotation;
   TutorialStepData(this.text,
       {this.requiredRoute,
       this.highlightKey,
       this.isConclude = false,
-      this.screenAnchor});
+      this.screenAnchor,
+      this.arrowRotation = 0.0});
 }
 
 class TutorialService extends ChangeNotifier {
@@ -95,11 +98,12 @@ class TutorialService extends ChangeNotifier {
         "You are the captain of the Third Aravt. Press your profile icon to inspect your own file.",
         requiredRoute: '/camp',
         highlightKey: 'open_player_profile'),
-    // 2. Navigation (Profile) -> Direct to Next
     TutorialStepData(
         "Now, press the navigate next button to cycle through the members of your aravt.",
         requiredRoute: null,
-        highlightKey: 'navigate_next_soldier'),
+        highlightKey: 'navigate_next_soldier',
+        screenAnchor: const Alignment(0.8, -0.9),
+        arrowRotation: -pi / 2),
     // 3. Inquire (Profile) -> Highlight only the Inquire button
     TutorialStepData(
         "Get to know your men. Use the 'Inquire' button to uncover a soldier's traits and history. Each interaction costs a token.",
@@ -107,7 +111,9 @@ class TutorialService extends ChangeNotifier {
         highlightKey: 'inquire_soldier'),
     // 4. Aravt Tab (Profile) -> Direct to Aravt Tab
     TutorialStepData("Go up to the Aravt tab.",
-        requiredRoute: null, highlightKey: 'open_aravt_tab'),
+        requiredRoute: null,
+        highlightKey: 'open_aravt_tab',
+        screenAnchor: const Alignment(-0.4, -0.465)),
     // 5. Next Turn
     TutorialStepData(
         "This is where you can assign duties to your men. You won't want to keep all these responsibilities to yourself. When you're done, hit the Next Turn button to advance to the next day.",
@@ -174,7 +180,12 @@ class TutorialService extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isAdvancing = false;
+
   void advance(BuildContext context, GameState gameState) {
+    if (_isAdvancing) return;
+    _isAdvancing = true;
+
     _highlightPosition = null;
     cyclePortrait(
         angry:
@@ -194,6 +205,11 @@ class TutorialService extends ChangeNotifier {
       }
       notifyListeners();
     }
+
+    // Reset advancing flag after a short delay
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _isAdvancing = false;
+    });
   }
 
   void advanceIfHighlighted(
@@ -249,6 +265,8 @@ class TutorialService extends ChangeNotifier {
   }
 
   void complete(GameState gameState, {required bool success}) {
+    print(
+        "[TUTORIAL] Completing tutorial. Success: $success, Dismissal Count: ${gameState.tutorialDismissalCount}, Current Index: $_currentIndex");
     _isActive = false;
     gameState.tutorialCompleted = true;
 
@@ -269,11 +287,14 @@ class TutorialService extends ChangeNotifier {
     if (captain != null) {
       // Captain -> Player relationship
       final rel = captain.getRelationship(player.id);
-      rel.admiration = (rel.admiration + admirationChange).clamp(0.0, 5.0);
+      final oldRespect = rel.respect;
+      final oldAdmiration = rel.admiration;
+
       rel.respect = (rel.respect + respectChange).clamp(0.0, 5.0);
+      rel.admiration = (rel.admiration + admirationChange).clamp(0.0, 5.0);
 
       print(
-          "[TUTORIAL] Reputation update for ${captain.name}: Adm ${rel.admiration}, Res ${rel.respect}");
+          "[TUTORIAL] Reputation Change: Respect ${oldRespect.toStringAsFixed(2)} -> ${rel.respect.toStringAsFixed(2)} (${respectChange > 0 ? '+' : ''}${respectChange.toStringAsFixed(2)}), Admiration ${oldAdmiration.toStringAsFixed(2)} -> ${rel.admiration.toStringAsFixed(2)} (${admirationChange > 0 ? '+' : ''}${admirationChange.toStringAsFixed(2)})");
 
       gameState.logEvent(
           admirationChange > 0

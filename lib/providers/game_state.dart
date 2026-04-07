@@ -130,6 +130,7 @@ class GameState with ChangeNotifier {
 
   String difficulty = 'medium';
   String hordeName = "Player Horde";
+  double? hordePanelHeight;
 
   // Game Over State
   bool isGameOver = false;
@@ -169,6 +170,18 @@ class GameState with ChangeNotifier {
   }
 
   Map<String, GameArea> worldMap = {};
+  HexCoordinates? _cachedPlayerCampPosition;
+  HexCoordinates? get playerCampPosition {
+    if (_cachedPlayerCampPosition != null) return _cachedPlayerCampPosition;
+    // Initial lookup
+    for (var area in worldMap.values) {
+      if (area.type == AreaType.PlayerCamp) {
+        _cachedPlayerCampPosition = area.coordinates;
+        return _cachedPlayerCampPosition;
+      }
+    }
+    return null;
+  }
 
   // --- Caravan / Pack State ---
   bool isCaravanMode = false;
@@ -209,6 +222,7 @@ class GameState with ChangeNotifier {
       caravanPosition = currentArea!.coordinates;
     }
 
+    _cachedPlayerCampPosition = null;
     notifyListeners();
   }
 
@@ -216,6 +230,7 @@ class GameState with ChangeNotifier {
     isCaravanMode = false;
     packingProgress = 0.0;
     caravanPosition = null;
+    _cachedPlayerCampPosition = position;
 
     // Find area at position and make it PlayerCamp
     for (var area in worldMap.values) {
@@ -297,6 +312,13 @@ class GameState with ChangeNotifier {
   void setHordePanelOpen(bool isOpen) {
     if (isHordePanelOpen != isOpen) {
       isHordePanelOpen = isOpen;
+      notifyListeners();
+    }
+  }
+
+  void setHordePanelHeight(double height) {
+    if (hordePanelHeight != height) {
+      hordePanelHeight = height;
       notifyListeners();
     }
   }
@@ -1335,6 +1357,8 @@ class GameState with ChangeNotifier {
           ],
         ),
       ];
+
+      unreadReportCounts['Games'] = 1;
 
       logEvent(
         "The Great Downsizing Tournament has been announced! You have 7 days to prepare. The weakest Aravt will be exiled.",

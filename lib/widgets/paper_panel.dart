@@ -91,7 +91,11 @@ class _PaperClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => true;
+  bool shouldReclip(covariant _PaperClipper oldClipper) {
+    return oldClipper.irregularity != irregularity ||
+        oldClipper.seed != seed ||
+        oldClipper.segmentsPerSide != segmentsPerSide;
+  }
 }
 
 class _PaperPainter extends CustomPainter {
@@ -139,7 +143,15 @@ class _PaperPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _PaperPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.borderColor != borderColor ||
+        oldDelegate.borderWidth != borderWidth ||
+        oldDelegate.irregularity != irregularity ||
+        oldDelegate.elevation != elevation ||
+        oldDelegate.seed != seed ||
+        oldDelegate.segmentsPerSide != segmentsPerSide;
+  }
 }
 
 Path _generatePaperPath(

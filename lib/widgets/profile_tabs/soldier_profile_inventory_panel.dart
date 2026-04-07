@@ -36,14 +36,22 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // --- Equipped Gear Panel ---
+        // Increase left padding to move it away from the extreme screen edge
         Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.only(left: 48, top: 8, bottom: 8, right: 8),
           child:
               EquippedGearView(soldier: soldier, isInteractive: isInteractive),
         ),
 
-        // --- Inventory Grid ---
-        Expanded(child: _buildInventoryGrid(context, gameState, isInteractive)),
+        // --- Inventory Grid (Personal Item Ledger) ---
+        // Use a flex ratio to make it narrower (approx 10% reduction from Expanded)
+        Expanded(
+          flex: 4,
+          child: _buildInventoryGrid(context, gameState, isInteractive),
+        ),
+        
+        // Add a small spacer at the end to balance the right side
+        const SizedBox(width: 24),
       ],
     );
   }
@@ -101,19 +109,44 @@ class SoldierProfileInventoryPanel extends StatelessWidget {
                             final Widget tile = _buildItemTile(item);
 
                             if (isInteractive && item.equippableSlot != null) {
-                              return Draggable<InventoryItem>(
-                                data: item,
-                                feedback: Material(
-                                  color: Colors.transparent,
-                                  child: Container(
-                                    width: 300,
-                                    child:
-                                        _buildItemTile(item, isDragging: true),
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Draggable<InventoryItem>(
+                                      data: item,
+                                      feedback: Material(
+                                        color: Colors.transparent,
+                                        child: Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.withOpacity(0.8),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: Colors.white, width: 1.5),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.5),
+                                                blurRadius: 4,
+                                                offset: const Offset(2, 2),
+                                              )
+                                            ],
+                                          ),
+                                          child: const Icon(Icons.inventory_2_outlined,
+                                              color: Colors.white, size: 20),
+                                        ),
+                                      ),
+                                      childWhenDragging:
+                                          Opacity(opacity: 0.4, child: tile),
+                                      child: tile,
+                                    ),
                                   ),
-                                ),
-                                childWhenDragging:
-                                    Opacity(opacity: 0.4, child: tile),
-                                child: tile,
+                                  // Right portion is for scrolling
+                                  const Expanded(
+                                    flex: 2,
+                                    child: SizedBox(height: 50),
+                                  ),
+                                ],
                               );
                             }
                             return tile;

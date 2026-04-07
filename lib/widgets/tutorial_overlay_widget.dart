@@ -169,16 +169,34 @@ class _TutorialOverlayWidgetState extends State<TutorialOverlayWidget>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () =>
-                                    setState(() => _isExpanded = !_isExpanded),
-                                child: Icon(
-                                  _isExpanded
-                                      ? Icons.keyboard_arrow_down
-                                      : Icons.keyboard_arrow_up,
-                                  color: Colors.white38,
-                                  size: 14,
-                                ),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  // Use TextPainter to check if the text would overflow 2 lines
+                                  final textPainter = TextPainter(
+                                    text: TextSpan(
+                                      text: step.text,
+                                      style: GoogleFonts.inter(fontSize: 11, height: 1.25),
+                                    ),
+                                    maxLines: 2,
+                                    textDirection: TextDirection.ltr,
+                                  )..layout(maxWidth: constraints.maxWidth > 0 ? constraints.maxWidth : _kBubbleMaxWidth - 20);
+                                  
+                                  if (!textPainter.didExceedMaxLines) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  return GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _isExpanded = !_isExpanded),
+                                    child: Icon(
+                                      _isExpanded
+                                          ? Icons.keyboard_arrow_down
+                                          : Icons.keyboard_arrow_up,
+                                      color: Colors.white38,
+                                      size: 14,
+                                    ),
+                                  );
+                                }
                               ),
                             ],
                           ),
@@ -316,6 +334,14 @@ class _TutorialOverlayWidgetState extends State<TutorialOverlayWidget>
               final double arrowT =
                   (arrowTarget.dy - 65).clamp(0.0, screenSize.height - 50);
 
+              // Hide arrow if it would be pushed off or sit strangely above a
+              // target that is already off-screen (e.g. scrolled up).
+              // We only do this for widget-tracking arrows, not screen anchors.
+              if (arrowStep?.screenAnchor == null &&
+                  (arrowTarget.dy < 20 || arrowTarget.dy > screenSize.height)) {
+                return const SizedBox.shrink();
+              }
+
               return Positioned(
                 left: arrowL,
                 top: arrowT,
@@ -325,11 +351,14 @@ class _TutorialOverlayWidgetState extends State<TutorialOverlayWidget>
                     builder: (context, child) {
                       return Transform.translate(
                         offset: Offset(0, _arrowAnimation.value),
-                        child: SizedBox(
-                          width: 50,
-                          height: 50,
-                          child: CustomPaint(
-                            painter: _RedArrowPainter(),
+                        child: Transform.rotate(
+                          angle: arrowStep?.arrowRotation ?? 0.0,
+                          child: SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: CustomPaint(
+                              painter: _RedArrowPainter(),
+                            ),
                           ),
                         ),
                       );

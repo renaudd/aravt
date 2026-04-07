@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:aravt/providers/game_state.dart';
 import 'package:aravt/models/game_event.dart';
 import 'package:aravt/models/settlement_data.dart';
+import 'package:aravt/widgets/paper_panel.dart';
 
 class DiplomacyReportTab extends StatelessWidget {
   final int? soldierId; // Kept for consistency, though likely unused for now
@@ -93,39 +94,39 @@ class DiplomacyReportTab extends StatelessWidget {
     // Assuming 'Player' is the faction ID we care about for now
     final rel = settlement.getRelationship('Player');
 
-    return Card(
-      color: Colors.black.withOpacity(0.6),
-      margin: const EdgeInsets.only(bottom: 8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  settlement.name,
-                  style: GoogleFonts.cinzel(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+    return PaperPanel(
+      backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+      borderColor: Colors.amber.withValues(alpha: 0.2),
+      irregularity: 2.0,
+      elevation: 6,
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                settlement.name,
+                style: GoogleFonts.cinzel(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
-                Icon(Icons.location_city, color: Colors.white70),
-              ],
-            ),
-            const Divider(color: Colors.white24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStat("Respect", rel.respect, Colors.blue[300]!),
-                _buildStat("Admiration", rel.admiration, Colors.green[300]!),
-                _buildStat("Fear", rel.fear, Colors.red[300]!),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const Icon(Icons.location_city, color: Colors.white70),
+            ],
+          ),
+          const Divider(color: Colors.white24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStat("Respect", rel.respect, Colors.blue[300]!),
+              _buildStat("Admiration", rel.admiration, Colors.green[300]!),
+              _buildStat("Fear", rel.fear, Colors.red[300]!),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -143,15 +144,20 @@ class DiplomacyReportTab extends StatelessWidget {
   }
 
   Widget _buildEventCard(GameEvent event) {
-    return Card(
-      color: Colors.black.withOpacity(0.5),
-      margin: const EdgeInsets.only(bottom: 8.0),
-      child: ListTile(
-        leading: const Icon(Icons.handshake, color: Colors.amber),
-        title: Text(event.message, style: const TextStyle(color: Colors.white)),
-        subtitle: Text(
-          event.date.toShortString(),
-          style: const TextStyle(color: Colors.white54),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: PaperPanel(
+        backgroundColor: const Color(0xFF1A1A1A).withValues(alpha: 0.8),
+        borderColor: Colors.amber.withValues(alpha: 0.2),
+        elevation: 2.0,
+        padding: EdgeInsets.zero,
+        child: ListTile(
+          leading: const Icon(Icons.handshake, color: Colors.amber),
+          title: Text(event.message, style: const TextStyle(color: Colors.white)),
+          subtitle: Text(
+            event.date.toShortString(),
+            style: const TextStyle(color: Colors.white54),
+          ),
         ),
       ),
     );

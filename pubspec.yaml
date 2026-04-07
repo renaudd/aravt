@@ -15,7 +15,7 @@
 name: aravt
 description: "A Flutter project for the game Aravt."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment:
  sdk: '>=3.2.3 < 4.0.0'
@@ -48,3 +48,9 @@ flutter:
    - assets/images/terrain/
    - assets/backgrounds/
    - assets/tiles/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/horse_archer_icon.png"
+  min_sdk_android: 21

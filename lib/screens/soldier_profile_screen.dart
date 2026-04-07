@@ -1401,34 +1401,34 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
     );
   }
 
-  Future<void> _showConfirmationDialog(
+  void _showConfirmationDialog(
     BuildContext context,
     String title,
     String content,
     VoidCallback onConfirm,
   ) async {
-    final titleStyle = GoogleFonts.cinzel(
-        color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold);
-    final bodyStyle = GoogleFonts.cinzel(color: Colors.black, fontSize: 14);
-
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.grey[200],
-          title: Text(title, style: titleStyle),
-          content: Text(content, style: bodyStyle),
+          backgroundColor: const Color(0xFFEADBBE),
+          title: Text(title,
+              style: GoogleFonts.cinzel(
+                  color: Colors.black87, fontWeight: FontWeight.bold)),
+          content: Text(content, style: GoogleFonts.cinzel(color: Colors.black87)),
           actions: <Widget>[
             TextButton(
-              child: Text('Cancel', style: GoogleFonts.cinzel()),
+              child: Text('Cancel',
+                  style: GoogleFonts.cinzel(color: Colors.black54)),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red[900]),
-              child: Text('Confirm', style: GoogleFonts.cinzel()),
+              child: Text('Confirm',
+                  style: GoogleFonts.cinzel(fontWeight: FontWeight.bold)),
               onPressed: () {
                 onConfirm();
                 Navigator.of(context).pop();
@@ -1559,19 +1559,10 @@ class _SoldierProfileScreenState extends State<SoldierProfileScreen>
       ),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SMALL REUSABLE WIDGETS
-// ─────────────────────────────────────────────────────────────────────────────
+  // --- PRIVATE HELPER METHODS ---
 
-/// Semi-transparent dark card with amber border
-class _SectionCard extends StatelessWidget {
-  final Widget child;
-  const _SectionCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _SectionCard({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -1583,18 +1574,8 @@ class _SectionCard extends StatelessWidget {
       child: child,
     );
   }
-}
 
-/// Small colored chip showing a single stat
-class _StatChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color? color;
-  const _StatChip(
-      {required this.label, required this.icon, this.color});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _StatChip({required String label, required IconData icon, Color? color}) {
     final bg = color ?? Colors.white.withOpacity(0.12);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1608,22 +1589,13 @@ class _StatChip extends StatelessWidget {
         children: [
           Icon(icon, size: 11, color: Colors.white70),
           const SizedBox(width: 4),
-          Text(label,
-              style: GoogleFonts.cinzel(
-                  color: Colors.white, fontSize: 11)),
+          Text(label, style: GoogleFonts.cinzel(color: Colors.white, fontSize: 11)),
         ],
       ),
     );
   }
-}
 
-/// Pale amber badge for titles/roles
-class _TitleBadge extends StatelessWidget {
-  final String title;
-  const _TitleBadge({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _TitleBadge({required String title}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -1632,39 +1604,23 @@ class _TitleBadge extends StatelessWidget {
         border: Border.all(color: Colors.amber.withOpacity(0.4)),
       ),
       child: Text(title,
-          style: GoogleFonts.cinzel(
-              color: Colors.amber.shade200, fontSize: 10)),
+          style: GoogleFonts.cinzel(color: Colors.amber.shade200, fontSize: 10)),
     );
   }
-}
 
-/// Large tappable button that shows a summary and opens a detail sheet
-class _HighlightButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final VoidCallback? onTap;
-  final Color? color;
-  /// Optional widget shown below the label row (e.g. gear grid, stat bars).
-  final Widget? preview;
-
-  const _HighlightButton({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    this.onTap,
-    this.color,
-    this.preview,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _HighlightButton({
+    required IconData icon,
+    required String label,
+    required String sublabel,
+    VoidCallback? onTap,
+    Color? color,
+    Widget? preview,
+  }) {
     final enabled = onTap != null;
     final bg = enabled
         ? (color ?? Colors.white.withOpacity(0.10))
         : Colors.white.withOpacity(0.04);
-    final borderColor =
-        enabled ? Colors.amber.withOpacity(0.4) : Colors.white12;
+    final borderColor = enabled ? Colors.amber.withOpacity(0.4) : Colors.white12;
     final textColor = enabled ? Colors.white : Colors.white38;
     final subColor = enabled ? Colors.white60 : Colors.white24;
     final iconColor = enabled ? Colors.amber.shade300 : Colors.white24;
@@ -1672,7 +1628,7 @@ class _HighlightButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(10),
@@ -1695,8 +1651,7 @@ class _HighlightButton extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.bold)),
                       Text(sublabel,
-                          style: GoogleFonts.cinzel(
-                              color: subColor, fontSize: 9)),
+                          style: GoogleFonts.cinzel(color: subColor, fontSize: 9)),
                     ],
                   ),
                 ),
@@ -1705,24 +1660,15 @@ class _HighlightButton extends StatelessWidget {
             ),
             if (preview != null) ...[
               const SizedBox(height: 6),
-              preview!,
+              preview,
             ],
           ],
         ),
       ),
     );
   }
-}
 
-/// A simple label: value row for detail sheets
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final TextStyle style;
-  const _DetailRow(this.label, this.value, this.style);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _DetailRow(String label, String value, TextStyle style) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -1743,7 +1689,7 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-/// Legacy UiPanel kept for compatibility with other tabs that may still reference it.
+/// Legacy UiPanel kept for compatibility
 class UiPanel extends StatelessWidget {
   final Widget child;
   final double width;
