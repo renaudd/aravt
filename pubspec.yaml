@@ -15,7 +15,7 @@
 name: aravt
 description: "A strategic game of the Eurasian Steppe."
 publish_to: 'none'
-version: 1.0.0+4
+version: 1.0.1+5
 
 environment:
   sdk: '>=3.2.3 < 4.0.0'
