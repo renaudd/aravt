@@ -54,7 +54,7 @@ class InfirmaryService {
         soldier.isInfirm = true;
         gameState.logEvent(
           "${soldier.name} has been moved to the infirmary.",
-          category: EventCategory.health,
+          category: EventCategory.general,
           severity: EventSeverity.normal,
         );
       }
@@ -119,7 +119,7 @@ class InfirmaryService {
         if (_random.nextDouble() < (healingPerPatient / 100.0)) {
           gameState.logEvent(
             "${patient.name} has recovered from ${patient.currentDisease!.type.name}.",
-            category: EventCategory.health,
+            category: EventCategory.general,
             severity: EventSeverity.high,
           );
           patient.currentDisease = null;
@@ -155,7 +155,7 @@ class InfirmaryService {
         soldier.isInfirm = false;
         gameState.logEvent(
           "${soldier.name} has been discharged from the infirmary.",
-          category: EventCategory.health,
+          category: EventCategory.general,
           severity: EventSeverity.high,
         );
       }

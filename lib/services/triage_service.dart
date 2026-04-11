@@ -44,7 +44,7 @@ class TriageService {
 
     if (patients.isEmpty) {
       gameState.logEvent("No wounded survivors require triage.",
-          category: EventCategory.health);
+          category: EventCategory.general);
       return;
     }
 
@@ -60,7 +60,7 @@ class TriageService {
 
     if (surgeons.isEmpty) {
       gameState.logEvent("No surgeons are available to treat the wounded!",
-          category: EventCategory.health, severity: EventSeverity.critical);
+          category: EventCategory.general, severity: EventSeverity.critical);
       // Run one bleed-out tick for the hour spent finding no one
       _processBleedOut(gameState, patients);
       return;
@@ -68,7 +68,7 @@ class TriageService {
 
     gameState.logEvent(
         "Triage begins: ${patients.length} wounded, ${surgeons.length} surgeons available.",
-        category: EventCategory.health,
+        category: EventCategory.general,
         severity: EventSeverity.high);
 
     // 3. Calculate Initial Priority for all patients
@@ -91,7 +91,7 @@ class TriageService {
       // If still 'Waiting', their injuries remain untreated.
     }
 
-    gameState.logEvent("Triage complete.", category: EventCategory.health);
+    gameState.logEvent("Triage complete.", category: EventCategory.general);
   }
 
   /// The main hourly simulation loop.
@@ -108,7 +108,7 @@ class TriageService {
       if (simulationHours > 72) {
         gameState.logEvent(
             "Triage halted after 72 hours; remaining patients must wait.",
-            category: EventCategory.health,
+            category: EventCategory.general,
             severity: EventSeverity.critical);
         break;
       }
@@ -157,7 +157,7 @@ class TriageService {
           patient.soldier.status = SoldierStatus.killed; // Mark as dead
           gameState.logEvent(
               "${patient.soldier.name} has bled out and died while waiting for treatment!",
-              category: EventCategory.health,
+              category: EventCategory.general,
               severity: EventSeverity.critical,
               soldierId: patient.soldier.id);
         }
@@ -179,7 +179,7 @@ class TriageService {
           surgeon.restEndsAt = null;
           gameState.logEvent(
               "${surgeon.soldier.name} is rested and ready to resume triage.",
-              category: EventCategory.health,
+              category: EventCategory.general,
               soldierId: surgeon.soldier.id);
         }
       }
@@ -291,7 +291,7 @@ class TriageService {
 
     gameState.logEvent(
       "${surgeon.soldier.name} begins operating on ${patient.soldier.name} (treating ${injuryToTreat.name}). Estimated $hours hours.",
-      category: EventCategory.health,
+      category: EventCategory.general,
       soldierId: surgeon.soldier.id,
     );
   }
@@ -342,7 +342,7 @@ class TriageService {
 
     gameState.logEvent(
       "${surgeon.soldier.name} finished operating on ${patient.soldier.name} (treated ${originalInjury.name}).",
-      category: EventCategory.health,
+      category: EventCategory.general,
       soldierId: surgeon.soldier.id,
     );
 
@@ -355,13 +355,13 @@ class TriageService {
       patient.status = TriageStatus.Recovering;
       gameState.logEvent(
           "${patient.soldier.name} is fully treated and recovering.",
-          category: EventCategory.health,
+          category: EventCategory.general,
           soldierId: patient.soldier.id);
     } else if (patient.currentBleedRate > 0) {
       patient.status = TriageStatus.Waiting; // Still bleeding, back to queue
       gameState.logEvent(
           "${patient.soldier.name} is stabilized, but still has bleeding injuries.",
-          category: EventCategory.health,
+          category: EventCategory.general,
           severity: EventSeverity.normal,
           soldierId: patient.soldier.id);
     } else {
@@ -369,7 +369,7 @@ class TriageService {
           TriageStatus.Stabilized; // No more bleeding, but needs ops
       gameState.logEvent(
           "${patient.soldier.name} is stabilized, but requires further operations.",
-          category: EventCategory.health,
+          category: EventCategory.general,
           soldierId: patient.soldier.id);
     }
 
@@ -379,7 +379,7 @@ class TriageService {
       surgeon.restEndsAt = gameState.gameDate.copy()..addHours(8);
       gameState.logEvent(
         "${surgeon.soldier.name} has worked for ${surgeon.hoursWorkedThisShift} hours and must rest for 8 hours.",
-        category: EventCategory.health,
+        category: EventCategory.general,
         severity: EventSeverity.normal,
         soldierId: surgeon.soldier.id,
       );

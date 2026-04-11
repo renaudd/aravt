@@ -13,44 +13,47 @@
 # limitations under the License.
 
 name: aravt
-description: "A Flutter project for the game Aravt."
+description: "A strategic game of the Eurasian Steppe."
 publish_to: 'none'
-version: 1.0.0+3
+version: 1.0.0+4
 
 environment:
- sdk: '>=3.2.3 < 4.0.0'
+  sdk: '>=3.2.3 < 4.0.0'
 
 dependencies:
- flutter:
-   sdk: flutter
- provider: ^6.1.2  
- google_fonts: ^6.2.1
- path_provider: ^2.0.0
- uuid: ^4.4.0
- cupertino_icons: ^1.0.6
- window_manager: ^0.5.1
- shared_preferences: ^2.2.2
- url_launcher: ^6.2.1
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  google_fonts: ^6.2.1
+  path_provider: ^2.0.0
+  uuid: ^4.4.0
+  cupertino_icons: ^1.0.6
+  window_manager: ^0.5.1
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.2.1
 
 dev_dependencies:
- flutter_test:
-   sdk: flutter
- flutter_lints: ^3.0.0
- flutter_launcher_icons: ^0.14.4
-
-flutter:
- uses-material-design: true
-
- assets:
-   - assets/images/
-   - assets/images/items/
-   - assets/images/sprites/
-   - assets/images/terrain/
-   - assets/backgrounds/
-   - assets/tiles/
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/horse_archer_icon.png"
+  macos:
+    generate: true
+  image_path: "assets/images/app_icon_opaque.png"
+  remove_alpha_ios: true
   min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/images/items/
+    - assets/images/sprites/
+    - assets/images/terrain/
+    - assets/backgrounds/
+    - assets/tiles/

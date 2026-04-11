@@ -109,15 +109,9 @@ class Aravt {
         orElse: () => soldiers.first);
     if (currentCaptain.status == SoldierStatus.killed ||
         currentCaptain.status == SoldierStatus.fled) {
-      // Find new captain
-      final newCaptain = soldiers.firstWhere(
-          (s) => s.status == SoldierStatus.alive,
-          orElse: () => soldiers.first);
-      // We can't easily change captainId here as it's final in some contexts,
-      // but we can update it if we make it non-final or handle it in the caller.
-      // For now, let's just print a warning or rely on caller to handle succession.
-      print(
-          "Warning: Aravt $id has dead captain ${currentCaptain.name}. Succession required.");
+      // Find new captain - logic for succession should be handled by caller
+      // by updating captainId. We just log the warning here for now.
+      print("Warning: Aravt $id has dead captain ${currentCaptain.name}. Succession required.");
     }
   }
 

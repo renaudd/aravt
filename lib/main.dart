@@ -192,14 +192,15 @@ class _AravtGameState extends State<AravtGame> {
     return MaterialApp(
       title: 'Aravt',
       navigatorKey: navigatorKey,
+      navigatorObservers: [TutorialRouteObserver(context.read<TutorialService>())],
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: const Color(0xFFEADBBE), // Brighter Parchment
         scaffoldBackgroundColor: const Color(0xFF1a1a1a),
         textTheme:
             GoogleFonts.cinzelTextTheme(ThemeData.light().textTheme).apply(
-          bodyColor: const Color(0xFF2D241E), // Deep Espresso
-          displayColor: const Color(0xFF1A1A1A), // Charcoal
+          bodyColor: const Color(0xFFEADBBE), // Bright Parchment
+          displayColor: const Color(0xFFEADBBE), // Bright Parchment
         ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFD4C5A8),
@@ -482,5 +483,34 @@ class _MenuButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class TutorialRouteObserver extends NavigatorObserver {
+  final TutorialService tutorialService;
+  TutorialRouteObserver(this.tutorialService);
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _updateRoute(route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _updateRoute(previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _updateRoute(newRoute);
+  }
+
+  void _updateRoute(Route<dynamic>? route) {
+    if (route is PageRoute) {
+      tutorialService.updateRoute(route.settings.name);
+    }
   }
 }

@@ -308,7 +308,7 @@ class CombatSoldier {
 
     gameState.logEvent(
         "${soldier.name} suffers: ${injury.name} (from ${injury.inflictedBy})!",
-        category: EventCategory.health,
+        category: EventCategory.general,
         severity:
             injury.severity >= 3 ? EventSeverity.critical : EventSeverity.high,
         soldierId: soldier.id,
@@ -356,7 +356,7 @@ class CombatSoldier {
       if (!limbAlreadyLost) {
         gameState.logEvent(
             "${soldier.name} loses their ${injury.location.name}!",
-            category: EventCategory.health,
+            category: EventCategory.general,
             severity: EventSeverity.critical,
             soldierId: soldier.id);
       }
@@ -372,7 +372,7 @@ class CombatSoldier {
       if (bleedDmg > 0) {
         takeDamage(HitLocation.body, bleedDmg);
         gameState.logEvent("${soldier.name} bleeds for $bleedDmg dmg.",
-            category: EventCategory.health,
+            category: EventCategory.general,
             severity: EventSeverity.normal,
             soldierId: soldier.id);
 

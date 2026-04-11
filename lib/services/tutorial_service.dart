@@ -31,6 +31,7 @@ class TutorialStepData {
   /// buttons that live inside Transform.scale widgets whose coordinates are
   /// Unreliable via localToGlobal.
   final Alignment? screenAnchor;
+
   /// Direction the arrow should point. 0 = down (default), pi/2 = left, -pi/2 = right, pi = up.
   final double arrowRotation;
   TutorialStepData(this.text,
@@ -54,10 +55,12 @@ class TutorialService extends ChangeNotifier {
   int? _tutorialSoldierId;
   int? _tutorialTabIndex;
   bool _shouldOpenHordePanel = false;
+  String? _currentRoute;
 
   bool get isActive => _isActive;
   int get captainPortraitIndex => _captainPortraitIndex;
   bool get isShowingAngryPortrait => _isShowingAngryPortrait;
+  String? get currentRoute => _currentRoute;
   int get lastTurnStarted => _lastTurnStarted;
   int? get tutorialSoldierId => _tutorialSoldierId;
   int? get tutorialTabIndex => _tutorialTabIndex;
@@ -86,6 +89,14 @@ class TutorialService extends ChangeNotifier {
         : 'assets/images/happy_captain.png';
   }
 
+  /// Returns the step at the given index, or null if out of bounds.
+  TutorialStepData? getStep(int index) {
+    if (index >= 0 && index < _steps.length) {
+      return _steps[index];
+    }
+    return null;
+  }
+
   // --- THE TUTORIAL SCRIPT ---
   final List<TutorialStepData> _steps = [
     // 0. Intro (Camp) -> Direct to Horde
@@ -109,11 +120,12 @@ class TutorialService extends ChangeNotifier {
         "Get to know your men. Use the 'Inquire' button to uncover a soldier's traits and history. Each interaction costs a token.",
         requiredRoute: null,
         highlightKey: 'inquire_soldier'),
-    // 4. Aravt Tab (Profile) -> Direct to Aravt Tab
     TutorialStepData("Go up to the Aravt tab.",
         requiredRoute: null,
         highlightKey: 'open_aravt_tab',
-        screenAnchor: const Alignment(-0.4, -0.465)),
+        // -0.40 is the correct placement
+        screenAnchor: const Alignment(-0.40, -0.34),
+        arrowRotation: 3.14159),
     // 5. Next Turn
     TutorialStepData(
         "This is where you can assign duties to your men. You won't want to keep all these responsibilities to yourself. When you're done, hit the Next Turn button to advance to the next day.",
@@ -126,18 +138,18 @@ class TutorialService extends ChangeNotifier {
         requiredRoute: '/camp',
         highlightKey: 'open_horde_panel',
         // Horde button is the first icon in the nav bar, near bottom-right
-        screenAnchor: const Alignment(0.60, 0.92)),
+        screenAnchor: const Alignment(0.58, 0.92)),
     // 7. Reports Tab
     TutorialStepData(
         "Now you can see what our leader has assigned each aravt to do. Click on the Reports Tab.",
         requiredRoute: null,
         highlightKey: 'open_reports_tab',
         // Reports button is the second icon in the nav bar
-        screenAnchor: const Alignment(0.68, 0.92)),
+        screenAnchor: const Alignment(0.66, 0.92)),
     // 8. Conclude
     TutorialStepData(
         "Every assignment will produce a report upon completion. Study them to identify who deserves to be praised or scolded. You'll want to make the other captains respect you if you expect them to call you Khan some day.",
-        requiredRoute: null,
+        requiredRoute: '/reports',
         highlightKey: null,
         isConclude: true),
   ];
@@ -165,8 +177,15 @@ class TutorialService extends ChangeNotifier {
     notifyListeners();
   }
 
-  TutorialStepData? get currentStep =>
-      _isActive && _currentIndex < _steps.length ? _steps[_currentIndex] : null;
+  TutorialStepData? get currentStep {
+    final step = (_isActive && _currentIndex < _steps.length)
+        ? _steps[_currentIndex]
+        : null;
+    return step;
+  }
+
+  int get currentIndex => _currentIndex;
+  int get stepsLength => _steps.length;
 
   void cyclePortrait({bool angry = false}) {
     // If already angry, stay angry. Otherwise, set to requested state.
@@ -187,22 +206,29 @@ class TutorialService extends ChangeNotifier {
     _isAdvancing = true;
 
     _highlightPosition = null;
-    cyclePortrait(
-        angry:
-            false); // Cycle to next portrait, will stay angry if already angry
+    cyclePortrait(angry: false); // Will stay angry if already angry
+    final oldIndex = _currentIndex;
     gameState.tutorialStepIndex++;
     _currentIndex = gameState.tutorialStepIndex;
+    print("[TUTORIAL] ===== advance() called: $oldIndex -> $_currentIndex =====");
 
     if (_currentIndex >= _steps.length) {
+      print("[TUTORIAL] ===== advance() triggered complete() at index $_currentIndex =====");
       complete(gameState, success: true);
     } else {
-      if (_steps[_currentIndex].requiredRoute != null) {
-        _checkAndNavigate(context, _steps[_currentIndex].requiredRoute,
-            isResume: false);
-      } else {
-        // If no required route, still check for complex navigation
-        _checkAndNavigate(context, null, isResume: false);
+      final step = _steps[_currentIndex];
+      print("[TUTORIAL] ===== Step $_currentIndex active. isConclude=${step.isConclude}, highlightKey=${step.highlightKey}, isActive=$_isActive =====");
+      // For the final (conclude) step, close the Horde Panel — it slides up
+      // from the bottom and can cover the tutorial dialogue at the bottom-left.
+      if (step.isConclude) {
+        print("[TUTORIAL] ===== Step 8 (CONCLUDE) entered — closing Horde Panel =====");
+        gameState.setHordePanelOpen(false);
       }
+      // Navigate to the required route for the new step where needed.
+      // _checkAndNavigate has a !isResume guard that skips navigation for steps
+      // 5+ during live play (the widget tap already handles those), while still
+      // performing navigation for steps 1–2 (soldier profile) on live advances.
+      _checkAndNavigate(context, step.requiredRoute);
       notifyListeners();
     }
 
@@ -214,14 +240,30 @@ class TutorialService extends ChangeNotifier {
 
   void advanceIfHighlighted(
       BuildContext context, GameState gameState, String key) {
-    if (_isActive &&
+    // Accept both _isActive and "in-progress-but-transiently-inactive" state.
+    // The latter can occur during route transitions where _isActive briefly
+    // drops to false between the overlay's reactivation post-frame callbacks.
+    final bool tutorialInProgress = !gameState.tutorialCompleted &&
+        !gameState.tutorialPermanentlyDismissed;
+    if ((_isActive || tutorialInProgress) &&
         _currentIndex < _steps.length &&
         _steps[_currentIndex].highlightKey == key) {
+      // Ensure the service is active before advancing.
+      if (!_isActive) {
+        _isActive = true;
+      }
+      
+      // Safety check: if we somehow are already at the conclude step, don't advance again automatically.
+      if (_currentIndex < _steps.length && _steps[_currentIndex].isConclude) {
+         return;
+      }
+
       advance(context, gameState);
     }
   }
 
   void dismiss(BuildContext context, GameState gameState) {
+    print("[TUTORIAL] ===== dismiss() called at step $_currentIndex (dismissalCount now ${gameState.tutorialDismissalCount + 1}) =====");
     _highlightPosition = null;
     gameState.tutorialDismissalCount++;
     cyclePortrait(angry: true);
@@ -256,7 +298,11 @@ class TutorialService extends ChangeNotifier {
   /// Call this when the player quits to the main menu so the dialogue
   /// doesn't bleed into a new session.
   void deactivateForQuit() {
+    // Fully reset the service so portrait state doesn't bleed into a new game.
     _isActive = false;
+    _isShowingAngryPortrait = false;
+    _captainPortraitIndex = 0;
+    _currentIndex = 0;
     _highlightPosition = null;
     _tutorialSoldierId = null;
     _tutorialTabIndex = null;
@@ -264,9 +310,28 @@ class TutorialService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateRoute(String? routeName) {
+    if (routeName == null) return;
+    if (_currentRoute != routeName) {
+      print(
+          "[TUTORIAL] Route changed: '$_currentRoute' -> '$routeName'. Current Step: $_currentIndex, Required: ${currentStep?.requiredRoute}");
+      _currentRoute = routeName;
+
+      // Delay notification to avoid "setState() or markNeedsBuild() called during build"
+      // errors that can occur when the RouteObserver fires during a navigation build phase.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    }
+  }
+
   void complete(GameState gameState, {required bool success}) {
-    print(
-        "[TUTORIAL] Completing tutorial. Success: $success, Dismissal Count: ${gameState.tutorialDismissalCount}, Current Index: $_currentIndex");
+    print("[TUTORIAL] ===== complete() called! Success: $success, Dismissal Count: ${gameState.tutorialDismissalCount}, Current Index: $_currentIndex =====");
+    // Capture a stack trace so we can see who called complete() if it fires prematurely.
+    assert(() {
+      print("[TUTORIAL] complete() stack trace: ${StackTrace.current}");
+      return true;
+    }());
     _isActive = false;
     gameState.tutorialCompleted = true;
 
@@ -314,6 +379,7 @@ class TutorialService extends ChangeNotifier {
     _shouldOpenHordePanel = false;
 
     final gameState = context.read<GameState>();
+    notifyListeners();
 
     // Handle specific steps
     print(
@@ -357,6 +423,13 @@ class TutorialService extends ChangeNotifier {
       }
       return;
     }
+
+    // Steps 5+ (Next Turn, Open Horde, Reports, Conclude) are driven purely
+    // by the player tapping the highlighted widget. The widget's own tap
+    // handler already performs any needed navigation, so we only force-navigate
+    // during a resume (e.g. app restart or re-activating mid-session),
+    // never during a live advance() — doing so would cause a double-push.
+    if (!isResume) return;
 
     if (routeName == null) return;
 

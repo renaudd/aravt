@@ -173,16 +173,23 @@ class _NestedReportCategoryState extends State<NestedReportCategory>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         final gameState = context.read<GameState>();
-        gameState.markReportTabViewed(widget.categoryName,
-            subTab: widget.tabNames[_tabController.index]);
+        final subTabName = widget.tabNames[_tabController.index];
+        
+        // CRITICAL: Do not clear 'Games' subtab badge automatically. 
+        // It must persist until the tournament panel is expanded.
+        if (subTabName != 'Games') {
+          gameState.markReportTabViewed(widget.categoryName, subTab: subTabName);
+        }
       }
     });
 
-    // Mark current subtab as viewed
+    // Mark initial subtab as viewed (if not Games)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<GameState>().markReportTabViewed(widget.categoryName,
-          subTab: widget.tabNames[_tabController.index]);
+      final subTabName = widget.tabNames[_tabController.index];
+      if (subTabName != 'Games') {
+        context.read<GameState>().markReportTabViewed(widget.categoryName, subTab: subTabName);
+      }
     });
   }
 
@@ -2204,7 +2211,7 @@ class GamesReportTab extends StatelessWidget {
         padding: const EdgeInsets.all(8.0).copyWith(bottom: 80.0),
         children: [
           if (gameState.activeTournament != null) ...[
-            _buildActiveTournamentCard(gameState.activeTournament!),
+            _buildActiveTournamentCard(context, gameState.activeTournament!),
             const Divider(color: Colors.white24, height: 30),
           ],
           if (upcoming.isNotEmpty) ...[
@@ -2217,7 +2224,7 @@ class GamesReportTab extends StatelessWidget {
                       fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center),
             ),
-            ...upcoming.map((future) => _buildFutureTournamentCard(future)),
+            ...upcoming.map((future) => _buildFutureTournamentCard(context, gameState, future)),
             const Divider(color: Colors.white24, height: 30),
           ],
           if (history.isNotEmpty) ...[
@@ -2254,18 +2261,51 @@ class GamesReportTab extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveTournamentCard(ActiveTournament active) {
+  Widget _buildActiveTournamentCard(BuildContext context, ActiveTournament active) {
     return Card(
       color: Colors.teal[900]!.withOpacity(0.7),
       child: ExpansionTile(
         leading:
             const Icon(Icons.play_circle_filled, color: Colors.greenAccent),
-        title: Text(active.name,
-            style: GoogleFonts.cinzel(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(active.name,
+                style: GoogleFonts.cinzel(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Consumer<GameState>(
+              builder: (context, gameState, _) {
+                final unread = gameState.unreadReportCounts['Games'] ?? 0;
+                if (unread > 0) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      unread.toString(),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
         subtitle: Text("Day ${active.currentDay} of ${active.duration}",
             style: const TextStyle(
                 color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+        onExpansionChanged: (expanded) {
+          if (expanded) {
+             context.read<GameState>().markReportTabViewed('Military', subTab: 'Games');
+          }
+        },
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -2385,15 +2425,33 @@ class GamesReportTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFutureTournamentCard(FutureTournament future) {
+  Widget _buildFutureTournamentCard(BuildContext context, GameState gameState, FutureTournament future) {
     return Card(
       color: Colors.black.withOpacity(0.7),
       child: ExpansionTile(
+        onExpansionChanged: (expanded) {
+          if (expanded) {
+            context.read<GameState>().markReportTabViewed('Military', subTab: 'Games');
+          }
+        },
         leading: Icon(Icons.calendar_today,
             color: future.isCritical ? Colors.red : Colors.amber),
-        title: Text(future.name,
-            style: GoogleFonts.cinzel(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(future.name,
+                style: GoogleFonts.cinzel(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+            if (future.name.contains("Downsizing") && (gameState.unreadReportCounts['Games'] ?? 0) > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 12.0),
+                child: NotificationBadge(
+                  count: gameState.unreadReportCounts['Games']!,
+                  size: 16,
+                ),
+              ),
+          ],
+        ),
         subtitle: Text(
             future.name.contains("Downsizing")
                 ? "05/01/1140"

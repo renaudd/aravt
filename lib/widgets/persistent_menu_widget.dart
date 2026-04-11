@@ -173,6 +173,7 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
 
     return Positioned.fill(
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           //  Horde Panel Overlay
           //  Animated Horde Panel Overlay
@@ -331,7 +332,9 @@ class _PersistentMenuWidgetState extends State<PersistentMenuWidget> {
                                         .read<TutorialService>()
                                         .advanceIfHighlighted(context, gameState,
                                             'open_reports_tab');
-                                    Navigator.pushNamed(context, '/reports');
+                                    if (currentRouteName != '/reports') {
+                                      Navigator.pushNamed(context, '/reports');
+                                    }
                                   }),
                             ),
                             _buildMenuButton(

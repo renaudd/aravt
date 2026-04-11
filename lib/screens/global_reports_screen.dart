@@ -99,64 +99,64 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
 
     return Scaffold(
       // No AppBar — we build our own compact header row inside the body
-      body: Column(
+      body: Stack(
         children: [
-          // ── Compact header: [←] [Tab] [Tab] [Tab] [Tab] [Tab] ──
-          Container(
-            color: Colors.black.withOpacity(0.85),
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 2,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Back arrow — same visual weight as a tab
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  constraints: const BoxConstraints(),
-                  onPressed: () => Navigator.of(context).pop(),
+          Column(
+            children: [
+              // ── Compact header: [←] [Tab] [Tab] [Tab] [Tab] [Tab] ──
+              Container(
+                color: Colors.black.withOpacity(0.85),
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 2,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                 ),
-                // Tab bar fills the rest of the row
-                Expanded(
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    indicatorColor: Colors.amber,
-                    indicatorWeight: 2,
-                    labelStyle: GoogleFonts.cinzel(
-                        fontSize: 11, fontWeight: FontWeight.bold),
-                    unselectedLabelStyle: GoogleFonts.cinzel(fontSize: 11),
-                    labelColor: Colors.amber,
-                    unselectedLabelColor: Colors.white70,
-                    dividerColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                    tabs: [
-                      _buildTab("Chronicle", Icons.book,
-                          gameState.getBadgeCountForTab("Chronicle")),
-                      _buildTab("Logistics", Icons.warehouse,
-                          gameState.getBadgeCountForTab("Logistics")),
-                      _buildTab("Provisions", Icons.savings,
-                          gameState.getBadgeCountForTab("Provisions")),
-                      _buildTab("Military", Icons.military_tech,
-                          gameState.getBadgeCountForTab("Military")),
-                      _buildTab("World", Icons.public,
-                          gameState.getBadgeCountForTab("World")),
-                    ],
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Back arrow — same visual weight as a tab
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      constraints: const BoxConstraints(),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    // Tab bar fills the rest of the row
+                    Expanded(
+                      child: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        indicatorColor: Colors.amber,
+                        indicatorWeight: 2,
+                        labelStyle: GoogleFonts.cinzel(
+                            fontSize: 11, fontWeight: FontWeight.bold),
+                        unselectedLabelStyle: GoogleFonts.cinzel(fontSize: 11),
+                        labelColor: Colors.amber,
+                        unselectedLabelColor: Colors.white70,
+                        dividerColor: Colors.transparent,
+                        padding: EdgeInsets.zero,
+                        tabs: [
+                          _buildTab("Chronicle", Icons.book,
+                              gameState.getBadgeCountForTab("Chronicle")),
+                          _buildTab("Logistics", Icons.warehouse,
+                              gameState.getBadgeCountForTab("Logistics")),
+                          _buildTab("Provisions", Icons.savings,
+                              gameState.getBadgeCountForTab("Provisions")),
+                          _buildTab("Military", Icons.military_tech,
+                              gameState.getBadgeCountForTab("Military")),
+                          _buildTab("World", Icons.public,
+                              gameState.getBadgeCountForTab("World")),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          // ── Tab content fills the rest of the screen ──
-          Expanded(
-            child: Stack(
-              children: [
-                TabBarView(
+              ),
+              // ── Tab content fills the rest of the screen ──
+              Expanded(
+                child: TabBarView(
                   controller: _tabController,
                   children: [
                     // 1. Chronicle: Event Log, Combat, Timelines
@@ -238,10 +238,10 @@ class _GlobalReportsScreenState extends State<GlobalReportsScreen>
                     const DiplomacyReportTab(soldierId: null),
                   ],
                 ),
-                const PersistentMenuWidget(),
-              ],
-            ),
+              ),
+            ],
           ),
+          const PersistentMenuWidget(),
         ],
       ),
     );

@@ -34,6 +34,8 @@ enum EventCategory {
   industry,
   medical,
   training,
+  inventory,
+  global,
 }
 
 // --- Helper function for serialization ---

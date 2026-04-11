@@ -727,7 +727,7 @@ class UnassignedActionsService {
       // 10% chance to log
       gameState.logEvent(
           "${action.soldier.name} organized a pickup game with some soldiers.",
-          category: EventCategory.games,
+          category: EventCategory.general,
           severity: EventSeverity.low);
     }
   }

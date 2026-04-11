@@ -176,7 +176,7 @@ class TournamentService {
     // Log as Critical Event (for immediate visibility)
     gameState.logEvent(
       "Day ${active.currentDay} of ${active.name} is complete. Check the Games Tab for details.",
-      category: EventCategory.games,
+      category: EventCategory.general,
       severity: EventSeverity.normal,
     );
 
@@ -262,13 +262,18 @@ class TournamentService {
           if (soldier != null) {
             gameState.logEvent(
                 "${soldier.name} is now the ${type.name.replaceAll(RegExp(r'(?<!^)(?=[A-Z])'), ' ')} Champion!",
-                category: EventCategory.games,
-                severity: EventSeverity.high,
+                category: EventCategory.general,
+                severity: EventSeverity.normal,
                 soldierId: soldier.id);
           }
         }
       }
     });
+
+    gameState.logEvent(
+        "Tournament Champions have been crowned and results are in! Check the ledger for prizes and glory.",
+        category: EventCategory.general,
+        severity: EventSeverity.high);
   }
 
   void _distributeRewards(TournamentResult result, GameState gameState) {
@@ -290,7 +295,7 @@ class TournamentService {
           soldier.personalInventory.add(horse);
           gameState.logEvent(
               "${soldier.name} received a fine horse named ${horse.name} as a tournament reward!",
-              category: EventCategory.games,
+              category: EventCategory.general,
               soldierId: soldier.id);
         }
       }
@@ -305,10 +310,14 @@ class TournamentService {
         captain.personalInventory.add(gift);
         gameState.logEvent(
             "${captain.name} received a golden ring for leading the winning Aravt!",
-            category: EventCategory.games,
+            category: EventCategory.general, // Logged as general to avoid badge overcounting
             soldierId: captain.id);
       }
     }
+
+    gameState.logEvent(
+        "Prizes and glory distributed to the winners of the ${result.winnerAravtId!}!",
+        category: EventCategory.general);
   }
 
   void _updateStandings(Map<String, int> standings, EventResult result,

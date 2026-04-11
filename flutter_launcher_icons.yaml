@@ -1,4 +1,0 @@
-flutter_launcher_icons:
-  macos:
-    generate: true
-    image_path: "assets/images/Aravt.ico"

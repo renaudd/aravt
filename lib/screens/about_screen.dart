@@ -62,7 +62,7 @@ class AboutScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                       Text(
-                        'Aravt is a historical strategy and social simulation game set on the Mongolian steppe. Lead your nomadic horde through a vast, procedurally generated world, managing resources, engaging in tactical combat, and building deep relationships with your soldiers.',
+                        'Aravt is a historical strategy and social simulation game set on the Mongolian steppe. Manage resources, lead your soldiers, dominate your neighbors, and become the next Great Khan.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.cinzel(
                             fontSize: 16, height: 1.5, color: Colors.white),
@@ -140,7 +140,8 @@ class AboutScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => Navigator.pushNamed(context, '/privacy'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/privacy'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black.withOpacity(0.6),
                           foregroundColor: Colors.white,
@@ -154,7 +155,8 @@ class AboutScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => Navigator.pushNamed(context, '/contact'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/contact'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black.withOpacity(0.6),
                           foregroundColor: Colors.white,

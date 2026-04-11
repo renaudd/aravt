@@ -33,7 +33,7 @@ class WorldMapDatabase {
     Map<String, GameArea> worldMap = {};
     const int radius = 3;
 
-    Map<String, dynamic> _getAreaProperties(HexCoordinates coords) {
+    Map<String, dynamic> getAreaProperties(HexCoordinates coords) {
       final double distance = sqrt(coords.q * coords.q +
               coords.r * coords.r +
               (coords.q + coords.r) * (coords.q + coords.r)) /
@@ -46,60 +46,67 @@ class WorldMapDatabase {
         };
       }
       if (distance < 1.5) {
-        if (_random.nextDouble() < 0.3)
+        if (_random.nextDouble() < 0.3) {
           return {
             'type': AreaType.Forest,
             'terrain': 'Light Forest',
             'name': 'Forested Hills'
           };
-        if (_random.nextDouble() < 0.6)
+        }
+        if (_random.nextDouble() < 0.6) {
           return {
             'type': AreaType.Plains,
             'terrain': 'Open Steppe',
             'name': 'Rolling Steppe'
           };
+        }
         return {
           'type': AreaType.River,
           'terrain': 'Riverbend',
           'name': 'Riverbend Fields'
         };
       } else if (distance < 2.5) {
-        if (_random.nextDouble() < 0.4)
+        if (_random.nextDouble() < 0.4) {
           return {
             'type': AreaType.Mountain,
             'terrain': 'Rocky Foothills',
             'name': 'Mountain Foothills'
           };
-        if (_random.nextDouble() < 0.7)
+        }
+        if (_random.nextDouble() < 0.7) {
           return {
             'type': AreaType.Forest,
             'terrain': 'Dense Forest',
             'name': 'Deep Woods'
           };
+        }
         return {
           'type': AreaType.Plains,
           'terrain': 'Wide Plains',
           'name': 'Vast Plains'
         };
       } else {
-        if (_random.nextDouble() < 0.2)
+        if (_random.nextDouble() < 0.2) {
           return {
             'type': AreaType.Lake,
             'terrain': 'Lake Shore',
             'name': 'Baikal Shore'
           };
-        if (_random.nextDouble() < 0.5)
+        }
+        if (_random.nextDouble() < 0.5) {
           return {
             'type': AreaType.Mountain,
             'terrain': 'Rugged Mountains',
             'name': 'High Peaks'
           };
-        if (_random.nextDouble() < 0.8)
+        }
+        if (_random.nextDouble() < 0.8) {
           return {
             'type': AreaType.Tundra,
             'terrain': 'Frozen Tundra',
             'name': 'Cold Tundra'
           };
+        }
         return {
           'type': AreaType.Steppe,
           'terrain': 'Arid Steppe',
@@ -108,19 +115,19 @@ class WorldMapDatabase {
       }
     }
 
-    List<Offset> _createPoiSlots() {
+    List<Offset> createPoiSlots() {
       final List<Offset> slots = [
-        Offset(0.5, 0.5),
-        Offset(0.3, 0.3),
-        Offset(0.7, 0.3),
-        Offset(0.3, 0.7),
-        Offset(0.7, 0.7),
+        const Offset(0.5, 0.5),
+        const Offset(0.3, 0.3),
+        const Offset(0.7, 0.3),
+        const Offset(0.3, 0.7),
+        const Offset(0.7, 0.7),
       ];
       slots.shuffle(_random);
       return slots;
     }
 
-    Offset _getNextOffset(List<Offset> slots) {
+    Offset getNextOffset(List<Offset> slots) {
       if (slots.isEmpty) {
         return Offset(
             _random.nextDouble() * 0.4 + 0.3, _random.nextDouble() * 0.4 + 0.3);
@@ -133,7 +140,7 @@ class WorldMapDatabase {
       int r2 = min(radius, -q + radius);
       for (int r = r1; r <= r2; r++) {
         final coords = HexCoordinates(q, r);
-        final properties = _getAreaProperties(coords);
+        final properties = getAreaProperties(coords);
 
         final String id = 'area_${coords.q}_${coords.r}';
         final String name = properties['name'];
@@ -197,12 +204,14 @@ class WorldMapDatabase {
 
         // --- PROCEDURAL POI GENERATION ---
         List<PointOfInterest> pois = [];
-        List<Offset> poiOffsets = _createPoiSlots();
+        List<Offset> poiOffsets = createPoiSlots();
         int numPois = 1 + _random.nextInt(4);
 
         for (int i = 0; i < numPois; i++) {
-          if (poiOffsets.isEmpty) break;
-          var offset = _getNextOffset(poiOffsets);
+          if (poiOffsets.isEmpty) {
+            break;
+          }
+          var offset = getNextOffset(poiOffsets);
 
           switch (type) {
             case AreaType.Forest:
@@ -318,7 +327,7 @@ class WorldMapDatabase {
         }
 
         if (pois.isEmpty) {
-          var offset = _getNextOffset(poiOffsets);
+          var offset = getNextOffset(poiOffsets);
           pois.add(PointOfInterest(
               id: _getUniquePoiId('wilds_fallback'),
               name: 'Wilderness',
